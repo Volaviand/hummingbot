@@ -22,12 +22,6 @@ from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, Can
 
 
 
-### attempt to add your own code from earlier
-import sqlite3
-import sys
-sys.path.append('/home/tyler/hummingbot/hummingbot/strategy/cross_exchange_market_making')
-from manual_cache import CachedManualRatio, update_cache
-cached_manual = CachedManualRatio("/home/tyler/hummingbot/cached_data.db")
 
 
 class SimplePMM(ScriptStrategyBase):
@@ -42,7 +36,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.006
+    min_profitability = 0.02
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
@@ -393,11 +387,11 @@ class SimplePMM(ScriptStrategyBase):
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 False,
-                                                cached_manual.get_cached_bid_amount("BSXEUR", 97.5, 2000)).result_price
+                                                200000).result_price
 
         vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 True,
-                                                cached_manual.get_cached_ask_amount("BSXEUR", 97.5, 2000)).result_price
+                                                200000).result_price
         return top_bid_price, top_ask_price, vwap_bid, vwap_ask
 
     def get_current_positions(self):
