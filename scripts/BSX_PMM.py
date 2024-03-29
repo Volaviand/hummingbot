@@ -381,9 +381,10 @@ class SimplePMM(ScriptStrategyBase):
         # Create an instance of Trades (Market Trades, don't confuse with Limit)
         buy_trades_instance = BuyTrades('BSXEUR')
         sell_trades_instance = SellTrades('BSXEUR')
-        # Assuming you want to calculate the 95th percentile CDF of buy volumes within the last 1000 data points
-        target_percentile = 97.5
-        window_size = 2000
+        # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
+        # Data points are in trades collected
+        target_percentile = 99.7
+        window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
         bid_volume_cdf_value = sell_trades_instance.get_volume_cdf(target_percentile, window_size)
