@@ -21,6 +21,11 @@ from hummingbot.connector.connector_base import ConnectorBase, Dict
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
 
 
+### attempt to add your own code from earlier
+import sqlite3
+import sys
+sys.path.append('/home/tyler/quant/API_call_tests/')
+from Kraken_Calculations import BuyTrades, SellTrades
 
 
 
@@ -373,6 +378,18 @@ class SimplePMM(ScriptStrategyBase):
     #################
     def get_top_bid_ask(self):
 
+        # Create an instance of Trades (Market Trades, don't confuse with Limit)
+        buy_trades_instance = BuyTrades('BSXEUR')
+        sell_trades_instance = SellTrades('BSXEUR')
+        # Assuming you want to calculate the 95th percentile CDF of buy volumes within the last 1000 data points
+        target_percentile = 97.5
+        window_size = 2000
+
+        # Call the method (Market Buy into ask, Sell into bid)
+        bid_volume_cdf_value = sell_trades_instance.get_volume_cdf(target_percentile, window_size)
+        ask_volume_cdf_value = buy_trades_instance.get_volume_cdf(target_percentile, window_size)
+
+
 
         #top_bid_price = self.connectors[self.exchange].get_price(self.trading_pair, False)
         #top_ask_price = self.connectors[self.exchange].get_price(self.trading_pair, True)    
@@ -387,11 +404,11 @@ class SimplePMM(ScriptStrategyBase):
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 False,
-                                                200000).result_price
+                                                bid_volume_cdf_value).result_price
 
         vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 True,
-                                                200000).result_price
+                                                ask_volume_cdf_value).result_price
         return top_bid_price, top_ask_price, vwap_bid, vwap_ask
 
     def get_current_positions(self):
