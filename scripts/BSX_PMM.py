@@ -134,10 +134,10 @@ class SimplePMM(ScriptStrategyBase):
             
 
         for trading_pair, candles in self.candles.items():
-            if not candles.is_ready:
+            if not candles.ready:
                 self.logger().info(
                     f"Candles not ready yet for {trading_pair}! Missing {candles._candles.maxlen - len(candles._candles)}")
-        if all(candle.is_ready for candle in self.candles.values()):
+        if all(candle.ready for candle in self.candles.values()):
             if self.current_timestamp - self.last_time_reported > self.report_interval:
                 self.last_time_reported = self.current_timestamp
                 self.notify_hb_app(self.get_formatted_market_analysis())
@@ -328,7 +328,7 @@ class SimplePMM(ScriptStrategyBase):
         return volatility_metrics_pct_str
 
     def format_status(self) -> str:
-        if all(candle.is_ready for candle in self.candles.values()):
+        if all(candle.ready for candle in self.candles.values()):
             lines = []
             lines.extend(["Configuration:", f"Volatility Interval: {self.volatility_interval}"])
             lines.extend(["", "Volatility Metrics", ""])
