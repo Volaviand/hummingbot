@@ -131,6 +131,7 @@ class SimplePMM(ScriptStrategyBase):
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
+            time.sleep(5)
             proposal: List[OrderCandidate] = self.create_proposal()
             proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
             self.place_orders(proposal_adjusted)
@@ -221,7 +222,7 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-        time.sleep(2)
+        
 
 
     def did_fill_order(self, event: OrderFilledEvent):
