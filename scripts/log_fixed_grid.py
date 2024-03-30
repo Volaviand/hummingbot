@@ -20,7 +20,7 @@ class FixedGrid(ScriptStrategyBase):
     n_levels = 10
     min_spread = Decimal("0.01")
     grid_price_ceiling = Decimal("0.045")
-    grid_price_floor = Decimal("0.01")
+    grid_price_floor = Decimal("0.023")
     min_spread = Decimal("0.01")
     order_amount = Decimal("0.003001")
     # Optional ----------------------
@@ -59,33 +59,26 @@ class FixedGrid(ScriptStrategyBase):
             self.quote_inv_levels_current_price.append(self.quote_inv_levels[i] / self.price_levels[i])
 
     def calculate_logarithmic_price_levels_and_amounts(self):
-        # Initial level difference based on min_spread
-        initial_diff = max(self.min_spread, (self.grid_price_ceiling - self.grid_price_floor) / self.n_levels)
+        # Calculate the ratio for logarithmic distribution of price levels
+        log_min_spread = np.log(float(self.min_spread))
+        log_ratio = max(log_min_spread, (np.log(float(self.grid_price_ceiling)) - np.log(float(self.grid_price_floor)))) / (self.n_levels - 1)
         
-        # Recalculate log_ratio considering the initial level difference
-        total_diff = self.grid_price_ceiling - self.grid_price_floor
-        remaining_diff = total_diff - initial_diff
-        adjusted_levels = self.n_levels - 1
+
+
+        # Generate price levels
+        self.price_levels = [Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i)) for i in range(self.n_levels)]
         
-        # Ensure adjusted_levels > 0 to avoid division by zero
-        if adjusted_levels > 0:
-            log_ratio = (np.log(float(self.grid_price_ceiling - initial_diff)) - np.log(float(self.grid_price_floor))) / adjusted_levels
-        else:
-            log_ratio = 0
-        
-        # Calculate price levels starting with the second level adjusted by initial_diff
-        self.price_levels = [self.grid_price_floor]
-        for i in range(1, self.n_levels):
-            price = Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * (i - 1))) + initial_diff
-            self.price_levels.append(price)
-        
-        # Adjust order amounts based on symmetrical distribution
+        # Calculate midpoint index for symmetrical volume distribution
         midpoint_index = self.n_levels // 2
+
+        # Generate order amounts with higher volumes at the extremes and the minimum volume near the midpoint
         for i in range(self.n_levels):
+            # Calculate distance from midpoint
             distance_from_midpoint = abs(i - midpoint_index)
+
+            # Scale order amounts based on distance from midpoint
             order_amount = self.order_amount * Decimal(self.amount_scale_factor) ** distance_from_midpoint
             self.order_amount_levels.append(order_amount)
-
 
     def get_current_top_bid_ask(self):
         top_bid_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
