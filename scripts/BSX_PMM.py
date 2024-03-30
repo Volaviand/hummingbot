@@ -377,6 +377,7 @@ class SimplePMM(ScriptStrategyBase):
     ### Added calculations
     #################
     def get_top_bid_ask(self):
+        q, _, _, _,_, _, _ = self.get_current_positions()
 
         # Create an instance of Trades (Market Trades, don't confuse with Limit)
         buy_trades_instance = BuyTrades('BSXEUR')
@@ -391,6 +392,19 @@ class SimplePMM(ScriptStrategyBase):
         ask_volume_cdf_value = buy_trades_instance.get_volume_cdf(target_percentile, window_size)
 
 
+        bid_depth_difference = abs(bid_volume_cdf_value - self.order_amount)
+        ask_depth_difference = abs(ask_volume_cdf_value - self.order_amount)
+        
+        # Determine the strength ( size ) of volume by how much you want to balance
+        if q > 0:
+            bid_depth = bid_volume_cdf_value
+            ask_depth = max(self.order_amount, ask_volume_cdf_value - (Decimal(ask_depth_difference) * q) )
+        elif q < 0:
+            bid_depth = max(self.order_amount, bid_volume_cdf_value - abs(Decimal(bid_depth_difference) * q) )
+            ask_depth = ask_volume_cdf_value
+        else:
+            bid_depth = bid_volume_cdf_value
+            ask_depth = ask_volume_cdf_value
 
         #top_bid_price = self.connectors[self.exchange].get_price(self.trading_pair, False)
         #top_ask_price = self.connectors[self.exchange].get_price(self.trading_pair, True)    
@@ -405,11 +419,11 @@ class SimplePMM(ScriptStrategyBase):
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 False,
-                                                bid_volume_cdf_value).result_price
+                                                bid_depth).result_price
 
         vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 True,
-                                                ask_volume_cdf_value).result_price
+                                                ask_depth).result_price
         return top_bid_price, top_ask_price, vwap_bid, vwap_ask
 
     def get_current_positions(self):
