@@ -66,14 +66,23 @@ class FixedGrid(ScriptStrategyBase):
         # Assuming equal order amounts for simplicity, but you could adjust this
         self.order_amount_levels = [self.order_amount for _ in range(self.n_levels)]
 
+    def get_current_top_bid_ask(self):
+        top_bid_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                False,
+                                                self.order_amount).result_price
+
+        top_ask_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                True,
+                                                self.order_amount).result_price
+
+        top_mid_price = (top_ask_price + top_bid_price) / 2
+        return top_mid_price
     def on_tick(self):
         proposal = None
-        price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
-
         if self.create_timestamp <= self.current_timestamp:
             # If grid level not yet set, find it.
             if self.current_level == -100:
-                price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
+                price = self.get_current_top_bid_ask()
                 # Find level closest to market
                 min_diff = 1e8
                 for i in range(self.n_levels):
