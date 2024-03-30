@@ -68,6 +68,8 @@ class FixedGrid(ScriptStrategyBase):
 
     def on_tick(self):
         proposal = None
+        price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
+
         if self.create_timestamp <= self.current_timestamp:
             # If grid level not yet set, find it.
             if self.current_level == -100:
