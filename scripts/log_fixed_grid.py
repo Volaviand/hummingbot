@@ -20,7 +20,7 @@ class FixedGrid(ScriptStrategyBase):
     n_levels = 10
     min_spread = Decimal("0.01")
     grid_price_ceiling = Decimal("0.045")
-    grid_price_floor = Decimal("0.023")
+    grid_price_floor = Decimal("0.01")
     min_spread = Decimal("0.01")
     order_amount = Decimal("0.003001")
     # Optional ----------------------
