@@ -15,14 +15,14 @@ from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
 
 class FixedGrid(ScriptStrategyBase):
     # Parameters to modify -----------------------------------------
-    trading_pair = "PAXG-BTC"
+    trading_pair = "BSX-EUR"
     exchange = "kraken"
     n_levels = 10
     min_spread = Decimal("0.01")
-    grid_price_ceiling = Decimal("0.045")
-    grid_price_floor = Decimal("0.023")
+    grid_price_ceiling = Decimal("0.0005")
+    grid_price_floor = Decimal("0.00002")
     min_spread = Decimal("0.01")
-    order_amount = Decimal("0.003001")
+    order_amount = Decimal("40000")
     # Optional ----------------------
     spread_scale_factor = Decimal("1.0")  # Not used in logarithmic calculation but kept for potential future use
     amount_scale_factor = Decimal("1.01")  
