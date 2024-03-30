@@ -18,6 +18,7 @@ class FixedGrid(ScriptStrategyBase):
     trading_pair = "PAXG-BTC"
     exchange = "kraken"
     n_levels = 10
+    min_spread = Decimal("0.01")
     grid_price_ceiling = Decimal("0.045")
     grid_price_floor = Decimal("0.023")
     order_amount = Decimal("0.003001")
@@ -57,23 +58,33 @@ class FixedGrid(ScriptStrategyBase):
             self.quote_inv_levels_current_price.append(self.quote_inv_levels[i] / self.price_levels[i])
 
     def calculate_logarithmic_price_levels_and_amounts(self):
-        # Calculate the ratio for logarithmic distribution of price levels
-        log_ratio = (np.log(float(self.grid_price_ceiling)) - np.log(float(self.grid_price_floor))) / (self.n_levels - 1)
+            log_ratio = (np.log(float(self.grid_price_ceiling)) - np.log(float(self.grid_price_floor))) / (self.n_levels - 1)
+            self.price_levels = [Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i)) for i in range(self.n_levels)]
+            
+            # Adjust price levels for minimum spread after initial calculation
+            self.adjust_for_minimum_spread()
 
-        # Generate price levels
-        self.price_levels = [Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i)) for i in range(self.n_levels)]
-        
-        # Calculate midpoint index for symmetrical volume distribution
-        midpoint_index = self.n_levels // 2
+            midpoint_index = self.n_levels // 2
+            self.order_amount_levels = []
+            for i in range(self.n_levels):
+                distance_from_midpoint = abs(i - midpoint_index)
+                order_amount = self.order_amount * Decimal(self.amount_scale_factor) ** distance_from_midpoint
+                self.order_amount_levels.append(order_amount)
 
-        # Generate order amounts with higher volumes at the extremes and the minimum volume near the midpoint
-        for i in range(self.n_levels):
-            # Calculate distance from midpoint
-            distance_from_midpoint = abs(i - midpoint_index)
+    def adjust_for_minimum_spread(self):
+        for i in range(1, len(self.price_levels)):
+            prev_level = self.price_levels[i - 1]
+            current_level = self.price_levels[i]
 
-            # Scale order amounts based on distance from midpoint
-            order_amount = self.order_amount * Decimal(self.amount_scale_factor) ** distance_from_midpoint
-            self.order_amount_levels.append(order_amount)
+            # Ensure minimum spread
+            if current_level - prev_level < self.min_spread:
+                # Adjust current level to maintain minimum spread
+                self.price_levels[i] = prev_level + self.min_spread
+
+                # Recalculate subsequent levels based on new current level
+                log_ratio = (np.log(float(self.grid_price_ceiling)) - np.log(float(self.price_levels[i]))) / (self.n_levels - 1 - i)
+                for j in range(i + 1, self.n_levels):
+                    self.price_levels[j] = Decimal(np.exp(np.log(float(self.price_levels[i])) + log_ratio * (j - i)))
 
     def get_current_top_bid_ask(self):
         top_bid_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
