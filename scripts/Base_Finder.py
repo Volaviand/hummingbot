@@ -456,7 +456,7 @@ class SimplePMM(ScriptStrategyBase):
             self.top_bid_ask_df = pd.concat([self.top_bid_ask_df, new_data_df], ignore_index=True)
         
         # Optionally, limit the size of the DataFrame to keep only recent data
-        self.top_bid_ask_df = self.top_bid_ask_df.tail(1000)  # Keep the last 1000 entries, for example
+        self.top_bid_ask_df = self.top_bid_ask_df.tail(3600)  # Keep the last 1000 entries, for example
 
     def calculate_highest_high_lowest_low(self):
         self.update_top_bid_ask_df(self.top_bid_calc, self.top_ask_calc)
@@ -469,13 +469,13 @@ class SimplePMM(ScriptStrategyBase):
         #volatility_bid = df["volatility_bid"].iloc[-1]
 
         # Ensure there's enough data
-        initial_top = self.top_bid_ask_df["top_ask"].iloc[-1] #+ (self.top_bid_ask_df["top_ask"].iloc[-1] * volatility_ask )
-        initial_base = self.top_bid_ask_df["top_bid"].iloc[-1] #- (self.top_bid_ask_df["top_bid"].iloc[-1] * volatility_bid )
+        initial_top = self.top_bid_ask_df["top_ask"].iloc[-1] * Decimal(1.02) #+ (self.top_bid_ask_df["top_ask"].iloc[-1] * volatility_ask )
+        initial_base = self.top_bid_ask_df["top_bid"].iloc[-1] * Decimal(0.98) #- (self.top_bid_ask_df["top_bid"].iloc[-1] * volatility_bid )
 
 
-        if len(self.top_bid_ask_df) > self.volatility_interval:
-            self.top_bid_ask_df["highest_high"] = self.top_bid_ask_df["top_bid"].rolling(window=self.volatility_interval).max()
-            self.top_bid_ask_df["lowest_low"] = self.top_bid_ask_df["top_ask"].rolling(window=self.volatility_interval).min()
+        if len(self.top_bid_ask_df) > 3600:
+            self.top_bid_ask_df["highest_high"] = self.top_bid_ask_df["top_bid"].rolling(window=3600).max()
+            self.top_bid_ask_df["lowest_low"] = self.top_bid_ask_df["top_ask"].rolling(window=3600).min()
             
             # Access the latest calculated values
             latest_highest_high = self.top_bid_ask_df["highest_high"].iloc[-1] #+ (self.top_bid_ask_df["highest_high"].iloc[-1] * volatility_ask)
