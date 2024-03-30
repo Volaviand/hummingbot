@@ -17,15 +17,15 @@ class FixedGrid(ScriptStrategyBase):
     # Parameters to modify -----------------------------------------
     trading_pair = "PAXG-BTC"
     exchange = "kraken"
-    n_levels = 8
+    n_levels = 10
     grid_price_ceiling = Decimal("0.045")
     grid_price_floor = Decimal("0.023")
     order_amount = Decimal("0.003001")
     # Optional ----------------------
     spread_scale_factor = Decimal("1.0")  # Not used in logarithmic calculation but kept for potential future use
-    amount_scale_factor = Decimal("1.0")  # Not used in this example but kept for potential future use
+    amount_scale_factor = Decimal("1.01")  
     rebalance_order_type = "limit"
-    rebalance_order_spread = Decimal("0.02")
+    rebalance_order_spread = Decimal("0.01")
     rebalance_order_refresh_time = 60.0
     grid_orders_refresh_time = 3600000.0
     price_source = "MidPrice"  # Assuming PriceType.MidPrice is defined elsewhere
@@ -47,7 +47,7 @@ class FixedGrid(ScriptStrategyBase):
         super().__init__(connectors)
         
         # Calculate logarithmic price levels
-        self.calculate_logarithmic_price_levels()
+        self.calculate_logarithmic_price_levels_and_amounts()
 
         # Base and quote inventory levels calculations...
         for i in range(1, self.n_levels + 1):
@@ -56,15 +56,19 @@ class FixedGrid(ScriptStrategyBase):
         for i in range(self.n_levels):
             self.quote_inv_levels_current_price.append(self.quote_inv_levels[i] / self.price_levels[i])
 
-    def calculate_logarithmic_price_levels(self):
-        # Calculate the ratio for logarithmic distribution
+    def calculate_logarithmic_price_levels_and_amounts(self):
+        # Calculate the ratio for logarithmic distribution of price levels
         log_ratio = (np.log(float(self.grid_price_ceiling)) - np.log(float(self.grid_price_floor))) / (self.n_levels - 1)
 
-        # Generate price levels
-        self.price_levels = [Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i)) for i in range(self.n_levels)]
+        # Generate price levels and order amounts
+        for i in range(self.n_levels):
+            # Price levels
+            price = Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i))
+            self.price_levels.append(price)
 
-        # Assuming equal order amounts for simplicity, but you could adjust this
-        self.order_amount_levels = [self.order_amount for _ in range(self.n_levels)]
+            # Order amounts: scale each subsequent order amount by the amount_scale_factor
+            order_amount = self.order_amount * Decimal(self.amount_scale_factor) ** i
+            self.order_amount_levels.append(order_amount)
 
     def get_current_top_bid_ask(self):
         top_bid_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
@@ -77,6 +81,7 @@ class FixedGrid(ScriptStrategyBase):
 
         top_mid_price = (top_ask_price + top_bid_price) / 2
         return top_mid_price
+    
     def on_tick(self):
         proposal = None
         if self.create_timestamp <= self.current_timestamp:
