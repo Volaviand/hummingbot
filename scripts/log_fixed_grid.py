@@ -25,7 +25,7 @@ class FixedGrid(ScriptStrategyBase):
     spread_scale_factor = Decimal("1.0")  # Not used in logarithmic calculation but kept for potential future use
     amount_scale_factor = Decimal("1.01")  
     rebalance_order_type = "limit"
-    rebalance_order_spread = Decimal("0.01")
+    rebalance_order_spread = Decimal("0.03")
     rebalance_order_refresh_time = 60.0
     grid_orders_refresh_time = 3600000.0
     price_source = "MidPrice"  # Assuming PriceType.MidPrice is defined elsewhere
@@ -117,40 +117,40 @@ class FixedGrid(ScriptStrategyBase):
             base_balance = float(market.get_balance(base_asset))
             quote_balance = float(market.get_balance(quote_asset) / self.price_levels[self.current_level])
 
-            if base_balance < self.base_inv_levels[self.current_level]:
-                self.inv_correct = False
-                msg = (f"WARNING: Insuffient {base_asset} balance for grid bot. Will attempt to rebalance")
-                self.log_with_clock(logging.WARNING, msg)
-                self.notify_hb_app_with_timestamp(msg)
-                if base_balance + quote_balance < self.base_inv_levels[self.current_level] + self.quote_inv_levels_current_price[self.current_level]:
-                    msg = (f"WARNING: Insuffient {base_asset} and {quote_asset} balance for grid bot. Unable to rebalance."
-                           f"Please add funds or change grid parameters")
-                    self.log_with_clock(logging.WARNING, msg)
-                    self.notify_hb_app_with_timestamp(msg)
-                    return
-                else:
-                    # Calculate additional base required with 5% tolerance
-                    base_required = (Decimal(self.base_inv_levels[self.current_level]) - Decimal(base_balance)) * Decimal(1.05)
-                    self.rebalance_order_buy = True
-                    self.rebalance_order_amount = Decimal(base_required)
-            elif quote_balance < self.quote_inv_levels_current_price[self.current_level]:
-                self.inv_correct = False
-                msg = (f"WARNING: Insuffient {quote_asset} balance for grid bot. Will attempt to rebalance")
-                self.log_with_clock(logging.WARNING, msg)
-                self.notify_hb_app_with_timestamp(msg)
-                if base_balance + quote_balance < self.base_inv_levels[self.current_level] + self.quote_inv_levels_current_price[self.current_level]:
-                    msg = (f"WARNING: Insuffient {base_asset} and {quote_asset} balance for grid bot. Unable to rebalance."
-                           f"Please add funds or change grid parameters")
-                    self.log_with_clock(logging.WARNING, msg)
-                    self.notify_hb_app_with_timestamp(msg)
-                    return
-                else:
-                    # Calculate additional quote required with 5% tolerance
-                    quote_required = (Decimal(self.quote_inv_levels_current_price[self.current_level]) - Decimal(quote_balance)) * Decimal(1.05)
-                    self.rebalance_order_buy = False
-                    self.rebalance_order_amount = Decimal(quote_required)
-            else:
-                self.inv_correct = True
+            #if base_balance < self.base_inv_levels[self.current_level]:
+            #    self.inv_correct = False
+            #    msg = (f"WARNING: Insuffient {base_asset} balance for grid bot. Will attempt to rebalance")
+            #    self.log_with_clock(logging.WARNING, msg)
+            #    self.notify_hb_app_with_timestamp(msg)
+            #    if base_balance + quote_balance < self.base_inv_levels[self.current_level] + self.quote_inv_levels_current_price[self.current_level]:
+            #        msg = (f"WARNING: Insuffient {base_asset} and {quote_asset} balance for grid bot. Unable to rebalance."
+            #               f"Please add funds or change grid parameters")
+            #        self.log_with_clock(logging.WARNING, msg)
+            #        self.notify_hb_app_with_timestamp(msg)
+            #        return
+            #    else:
+            #        # Calculate additional base required with 5% tolerance
+            #        base_required = (Decimal(self.base_inv_levels[self.current_level]) - Decimal(base_balance)) * Decimal(1.05)
+            #        self.rebalance_order_buy = True
+            #        self.rebalance_order_amount = Decimal(base_required)
+            #elif quote_balance < self.quote_inv_levels_current_price[self.current_level]:
+            #    self.inv_correct = False
+            #    msg = (f"WARNING: Insuffient {quote_asset} balance for grid bot. Will attempt to rebalance")
+            #    self.log_with_clock(logging.WARNING, msg)
+            #    self.notify_hb_app_with_timestamp(msg)
+            #    if base_balance + quote_balance < self.base_inv_levels[self.current_level] + self.quote_inv_levels_current_price[self.current_level]:
+            #        msg = (f"WARNING: Insuffient {base_asset} and {quote_asset} balance for grid bot. Unable to rebalance."
+            #               f"Please add funds or change grid parameters")
+            #       self.log_with_clock(logging.WARNING, msg)
+            #        self.notify_hb_app_with_timestamp(msg)
+            #       return
+            #    else:
+            #        # Calculate additional quote required with 5% tolerance
+            #        quote_required = (Decimal(self.quote_inv_levels_current_price[self.current_level]) - Decimal(quote_balance)) * Decimal(1.05)
+            #        self.rebalance_order_buy = False
+            #        self.rebalance_order_amount = Decimal(quote_required)
+            #else:
+            self.inv_correct = True
 
             if self.inv_correct is True:
                 # Create proposals for Grid
