@@ -100,8 +100,8 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
-        min_refresh_time = 60
-        max_refresh_time = 90
+        min_refresh_time = 5
+        max_refresh_time = 15
 
         # Generate a random integer between min and max using randint
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
@@ -131,7 +131,8 @@ class SimplePMM(ScriptStrategyBase):
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
-            time.sleep(5)
+            time.sleep(2)
+
             proposal: List[OrderCandidate] = self.create_proposal()
             proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
             self.place_orders(proposal_adjusted)
@@ -179,20 +180,20 @@ class SimplePMM(ScriptStrategyBase):
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                     order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
-            buy_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price2)
+            #buy_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+            #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price2)
             
-            buy_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price3)
+            #buy_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+            #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price3)
         if sell_price > self._last_trade_price:
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
             
-            sell_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price2)
+            #sell_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+            #                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price2)
 
-            sell_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price3)
+            #sell_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+            #                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price3)
         
         #msg1 = (f" Trades Placed ::  Bid Price : {buy_price:.8f} , Ask Price : {sell_price:.8f}")
         #self.log_with_clock(logging.INFO, msg1)
@@ -201,7 +202,7 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg2)
         #self.notify_hb_app_with_timestamp(msg)
 
-        return [buy_order ,buy_order2 ,buy_order3,  sell_order, sell_order2, sell_order3]
+        return [buy_order , sell_order]
 
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
@@ -222,7 +223,6 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-        
 
 
     def did_fill_order(self, event: OrderFilledEvent):
