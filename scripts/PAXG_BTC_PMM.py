@@ -377,17 +377,11 @@ class SimplePMM(ScriptStrategyBase):
     ### Added calculations
     #################
     def get_current_top_bid_ask(self):
-        top_bid_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                False,
-                                                self.order_amount).result_price
-
-        top_ask_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                True,
-                                                self.order_amount).result_price
+        top_bid_price = self.connectors[self.exchange].get_price(self.trading_pair, False)
+        top_ask_price = self.connectors[self.exchange].get_price(self.trading_pair, True) 
         return top_bid_price, top_ask_price
     
     def get_vwap_bid_ask(self):
-        top_bid_price, top_ask_price = self.get_current_top_bid_ask()
         q, _, _, _,_, _, _ = self.get_current_positions()
 
         # Create an instance of Trades (Market Trades, don't confuse with Limit)
@@ -417,9 +411,6 @@ class SimplePMM(ScriptStrategyBase):
             bid_depth = bid_volume_cdf_value
             ask_depth = ask_volume_cdf_value
 
-        #top_bid_price = self.connectors[self.exchange].get_price(self.trading_pair, False)
-        #top_ask_price = self.connectors[self.exchange].get_price(self.trading_pair, True)    
-        
 
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
