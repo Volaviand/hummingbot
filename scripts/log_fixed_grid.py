@@ -60,14 +60,19 @@ class FixedGrid(ScriptStrategyBase):
         # Calculate the ratio for logarithmic distribution of price levels
         log_ratio = (np.log(float(self.grid_price_ceiling)) - np.log(float(self.grid_price_floor))) / (self.n_levels - 1)
 
-        # Generate price levels and order amounts
-        for i in range(self.n_levels):
-            # Price levels
-            price = Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i))
-            self.price_levels.append(price)
+        # Generate price levels
+        self.price_levels = [Decimal(np.exp(np.log(float(self.grid_price_floor)) + log_ratio * i)) for i in range(self.n_levels)]
+        
+        # Calculate midpoint index for symmetrical volume distribution
+        midpoint_index = self.n_levels // 2
 
-            # Order amounts: scale each subsequent order amount by the amount_scale_factor
-            order_amount = self.order_amount * Decimal(self.amount_scale_factor) ** i
+        # Generate order amounts with higher volumes at the extremes and the minimum volume near the midpoint
+        for i in range(self.n_levels):
+            # Calculate distance from midpoint
+            distance_from_midpoint = abs(i - midpoint_index)
+
+            # Scale order amounts based on distance from midpoint
+            order_amount = self.order_amount * Decimal(self.amount_scale_factor) ** distance_from_midpoint
             self.order_amount_levels.append(order_amount)
 
     def get_current_top_bid_ask(self):
