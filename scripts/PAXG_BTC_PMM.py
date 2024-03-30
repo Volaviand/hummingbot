@@ -49,12 +49,12 @@ class SimplePMM(ScriptStrategyBase):
 
 
     #order_refresh_time = 30
-    order_amount = Decimal(40000)
+    order_amount = Decimal(0.00301)
     create_timestamp = 0
-    trading_pair = "BSX-EUR"
+    trading_pair = "PAXG-BTC"
     exchange = "kraken"
-    base_asset = "BSX"
-    quote_asset = "EUR"
+    base_asset = "PAXG"
+    quote_asset = "BTC"
 
     #Maximum amount of orders  Bid + Ask
     maximum_orders = 7
@@ -80,7 +80,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 ################ Volatility Initializtions  
-    trading_pairs = ["BSX-EUR"] #"BTC-USD", "ETH-USD", "PAXG-USD", "PAXG-BTC", "BSX-EUR",, "EUR-USD"]
+    trading_pairs = ["PAXG-BTC"] #"BTC-USD", "ETH-USD", "PAXG-USD", "PAXG-BTC", "BSX-EUR",, "EUR-USD"]
                     # "LPT-USDT", "SOL-USDT", "LTC-USDT", "DOT-USDT", "LINK-USDT", "UNI-USDT", "AAVE-USDT"]
 
     intervals = ["1m"]
@@ -379,8 +379,8 @@ class SimplePMM(ScriptStrategyBase):
     def get_top_bid_ask(self):
 
         # Create an instance of Trades (Market Trades, don't confuse with Limit)
-        buy_trades_instance = BuyTrades('BSXEUR')
-        sell_trades_instance = SellTrades('BSXEUR')
+        buy_trades_instance = BuyTrades('PAXGXBT')
+        sell_trades_instance = SellTrades('PAXGXBT')
         # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
         # Data points are in trades collected
         target_percentile = 99.7
