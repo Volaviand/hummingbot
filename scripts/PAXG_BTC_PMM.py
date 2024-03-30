@@ -399,8 +399,8 @@ class SimplePMM(ScriptStrategyBase):
         window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
-        bid_volume_cdf_value = sell_trades_instance.get_volume_cdf(target_percentile, window_size)
-        ask_volume_cdf_value = buy_trades_instance.get_volume_cdf(target_percentile, window_size)
+        bid_volume_cdf_value = Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
+        ask_volume_cdf_value = Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
         bid_depth_difference = abs(bid_volume_cdf_value - self.order_amount)
@@ -432,13 +432,8 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
-        top_bid_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                False,
-                                                self.order_amount).result_price
+        top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
-        top_ask_price = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                True,
-                                                self.order_amount).result_price
 
         amount_base_to_hold = Decimal(0.10)
         amount_base_rate = Decimal(1.0) - amount_base_to_hold
