@@ -17,7 +17,7 @@ class FixedGrid(ScriptStrategyBase):
     # Parameters to modify -----------------------------------------
     trading_pair = "PAXG-BTC"
     exchange = "kraken"
-    n_levels = 30
+    n_levels = 10
     min_spread = Decimal("0.01")
     grid_price_ceiling = Decimal("0.045")
     grid_price_floor = Decimal("0.023")
