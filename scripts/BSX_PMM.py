@@ -131,7 +131,7 @@ class SimplePMM(ScriptStrategyBase):
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
-            time.sleep(2)
+            #time.sleep(2)
 
             proposal: List[OrderCandidate] = self.create_proposal()
             proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
