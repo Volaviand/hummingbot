@@ -74,7 +74,7 @@ class SimplePMM(ScriptStrategyBase):
     _last_trade_price = None
     _vwap_midprice = None
 
-    self.price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
+    price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
 
