@@ -277,7 +277,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # initialize all values of the citionary with none
         for i in range(1, num_trades + 1):
-            entry_percents[i] = geom_entry_percents[i - 1]  
+            # Ensure each entry percent is at least i * min_profitability
+            min_threshold = i * self.target_profitability
+            entry_percents[i] = max(geom_entry_percents[i - 1], min_threshold)
 
         return entry_percents
 
