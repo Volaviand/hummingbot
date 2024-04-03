@@ -74,7 +74,7 @@ class SimplePMM(ScriptStrategyBase):
     _last_trade_price = None
     _vwap_midprice = None
 
-    price_source = PriceType.LastOwnTrade
+    self.price_source = PriceType.LastOwnTrade
 
     markets = {exchange: {trading_pair}}
 
