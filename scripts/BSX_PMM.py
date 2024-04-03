@@ -74,7 +74,7 @@ class SimplePMM(ScriptStrategyBase):
     _last_trade_price = None
     _vwap_midprice = None
 
-    #price_source = PriceType.LastOwnTrade
+    price_source = Decimal(self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade))
 
     markets = {exchange: {trading_pair}}
 
@@ -494,7 +494,7 @@ class SimplePMM(ScriptStrategyBase):
                 self.initialize_flag = False  # Set flag to prevent further updates
         elif not self.initialize_flag and self.price_source != None:
 
-
+            
             self._last_trade_price = Decimal(self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade))
 
 
