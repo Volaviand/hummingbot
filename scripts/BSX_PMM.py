@@ -98,7 +98,7 @@ class SimplePMM(ScriptStrategyBase):
     
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
-        self.price_source = Decimal(self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade))
+        self.price_source = self.price_source if (value := self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)) is None else Decimal(value)
 
         min_refresh_time = 15
         max_refresh_time = 30
