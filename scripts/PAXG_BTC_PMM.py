@@ -126,7 +126,7 @@ class SimplePMM(ScriptStrategyBase):
         self.entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 1
+        self.buy_counter = 2
         self.sell_counter = 1
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
