@@ -638,7 +638,7 @@ class SimplePMM(ScriptStrategyBase):
         #self.log_with_clock(logging.INFO, msg_6)
 
         # Get 3 stdevs from price to use in volatility measurements upcoming. 
-        msg = (f"Ask_RP :: {ask_reservation_price:.8f}  , Last TP :: {self._vwap_midprice:.8f} , Bid_RP :: {bid_reservation_price:.8f}")
+        msg = (f"Ask_RP :: {ask_reservation_price:.8f}  , Last TP :: {self._last_trade_price:.8f} , Bid_RP :: {bid_reservation_price:.8f}")
         self.log_with_clock(logging.INFO, msg)
 
         bid_stdev_price = bid_reservation_price - (Decimal(3) * (max_bid_volatility * s))
