@@ -492,7 +492,7 @@ class SimplePMM(ScriptStrategyBase):
         last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
         if last_trade_price == None:
-            if self.initialize_flag:
+            if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
                     midprice = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
@@ -501,10 +501,11 @@ class SimplePMM(ScriptStrategyBase):
                         self._last_trade_price = Decimal(midprice)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
-
-        elif last_trade_price is not None:
+        else:
                 self._last_trade_price = Decimal(last_trade_price)
 
+        msg_lastrade = (f"PriceType Last Trade @ {last_trade_price:.8f} ::: _last_trade_price @ {self._last_trade_price:.8f}")
+        self.log_with_clock(logging.INFO, msg_lastrade)
 
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
 
