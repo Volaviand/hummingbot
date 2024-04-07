@@ -246,8 +246,6 @@ class SimplePMM(ScriptStrategyBase):
             if self.sell_counter <= 0:
                 self.sell_counter = 1
 
-        #reset S midprice to last traded value
-        #self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, event.price) 
         self.initialize_flag = False
 
         # Print log
@@ -255,7 +253,8 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
 
-        self._last_trade_price = event.price
+        #reset S midprice to last traded value
+        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, event.price) 
         time.sleep(1)
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
@@ -489,7 +488,6 @@ class SimplePMM(ScriptStrategyBase):
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
 
     def get_midprice(self):
-        #last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
         if self._last_trade_price == None:
             if self.initialize_flag == True:
@@ -504,7 +502,7 @@ class SimplePMM(ScriptStrategyBase):
         else:
                 self._last_trade_price = Decimal(self._last_trade_price)
 
-        msg_lastrade = (f"_last_trade_price @ {self._last_trade_price:.8f}")
+        msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)
 
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
