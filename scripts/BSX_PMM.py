@@ -391,7 +391,7 @@ class SimplePMM(ScriptStrategyBase):
         sell_trades_instance = SellTrades('BSXEUR')
         # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
         # Data points are in trades collected
-        target_percentile = 99.7
+        target_percentile = 97.5
         window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
