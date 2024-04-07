@@ -505,7 +505,7 @@ class SimplePMM(ScriptStrategyBase):
         else:
                 self._last_trade_price = Decimal(last_trade_price)
 
-        msg_lastrade = (f"PriceType Last Trade @ {last_trade_price:.8f} ::: _last_trade_price @ {self._last_trade_price:.8f}")
+        msg_lastrade = (f"PriceType Last Trade @ {last_trade_price} ::: _last_trade_price @ {self._last_trade_price:.8f}")
         self.log_with_clock(logging.INFO, msg_lastrade)
 
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
