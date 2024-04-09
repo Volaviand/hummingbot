@@ -493,7 +493,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.00015260 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
