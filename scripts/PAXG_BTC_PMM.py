@@ -287,8 +287,8 @@ class SimplePMM(ScriptStrategyBase):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         #if q > 0:
-        #    geom_bid_percent = self.entry_percents.get(bid_num , None)
-        #    geom_ask_percent = self.min_profitability #
+        geom_bid_percent = self.entry_percents.get(bid_num , None)
+        geom_ask_percent = self.min_profitability #
 
         #    geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
         #    geom_ask_percent2 = self.entry_percents.get(ask_num + 1 , None) 
