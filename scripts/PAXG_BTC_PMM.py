@@ -126,7 +126,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         self.buy_counter = 1
-        self.sell_counter = 4
+        self.sell_counter = 5
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
@@ -429,10 +429,10 @@ class SimplePMM(ScriptStrategyBase):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
 
-        amount_base_to_hold = Decimal(0.10)
+        amount_base_to_hold = Decimal(0.025)
         amount_base_rate = Decimal(1.0) - amount_base_to_hold
         
-        amount_quote_to_hold = Decimal(0.10)
+        amount_quote_to_hold = Decimal(0.025)
         amount_quote_rate = Decimal(1.0) - amount_base_to_hold
         
 
@@ -495,7 +495,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0369860 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0415450 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
