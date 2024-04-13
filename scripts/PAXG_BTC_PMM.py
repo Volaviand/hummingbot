@@ -288,7 +288,7 @@ class SimplePMM(ScriptStrategyBase):
         
         #if q > 0:
         geom_bid_percent = self.entry_percents.get(bid_num , None)
-        geom_ask_percent = self.min_profitability #
+        geom_ask_percent = self.entry_percents.get(ask_num , None)##self.min_profitability #
 
         #    geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
         #    geom_ask_percent2 = self.entry_percents.get(ask_num + 1 , None) 
