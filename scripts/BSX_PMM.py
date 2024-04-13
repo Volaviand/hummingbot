@@ -284,43 +284,44 @@ class SimplePMM(ScriptStrategyBase):
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        
-        if q > 0:
-            geom_bid_percent = self.entry_percents.get(bid_num , None)
-            geom_ask_percent = self.min_profitability 
+        geom_bid_percent = self.entry_percents.get(bid_num , None)
+        geom_ask_percent = self.entry_percents.get(ask_num  , None)   
+        #if q > 0:
+        #    geom_bid_percent = self.entry_percents.get(bid_num , None)
+        #    geom_ask_percent = self.min_profitability 
 
-            geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
-            geom_ask_percent2 = self.entry_percents.get(ask_num + 1 , None) 
+        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
+        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 1 , None) 
 
-            geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
-            geom_ask_percent3 = self.entry_percents.get(ask_num + 2, None)
-        if q < 0:
-            geom_bid_percent = self.min_profitability
-            geom_ask_percent = self.entry_percents.get(ask_num , None)
+        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
+        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 2, None)
+        #if q < 0:
+        #    geom_bid_percent = self.min_profitability
+        #    geom_ask_percent = self.entry_percents.get(ask_num , None)
 
-            geom_bid_percent2 = self.entry_percents.get(bid_num + 1, None)
-            geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
+        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 1, None)
+        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
 
-            geom_bid_percent3 = self.entry_percents.get(bid_num + 2, None)
-            geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
-        if q == 0:
-            geom_bid_percent = self.min_profitability
-            geom_ask_percent = self.min_profitability
+        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 2, None)
+        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
+       # if q == 0:
+         #   geom_bid_percent = self.min_profitability
+         #   geom_ask_percent = self.min_profitability
 
-            geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
-            geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
+         #   geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
+         #   geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
 
-            geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
-            geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
+         #   geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
+         #   geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
         
         geom_bid_percent = Decimal(geom_bid_percent)
         geom_ask_percent = Decimal(geom_ask_percent)
 
-        geom_bid_percent2 = Decimal(geom_bid_percent2)
-        geom_ask_percent2 = Decimal(geom_ask_percent2)
+        geom_bid_percent2 = Decimal(geom_bid_percent)
+        geom_ask_percent2 = Decimal(geom_ask_percent)
 
-        geom_bid_percent3 = Decimal(geom_bid_percent3)
-        geom_ask_percent3 = Decimal(geom_ask_percent3)
+        geom_bid_percent3 = Decimal(geom_bid_percent)
+        geom_ask_percent3 = Decimal(geom_ask_percent)
         return geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3
 
     def on_stop(self):
