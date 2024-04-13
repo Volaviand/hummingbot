@@ -317,11 +317,11 @@ class SimplePMM(ScriptStrategyBase):
         geom_bid_percent = Decimal(geom_bid_percent)
         geom_ask_percent = Decimal(geom_ask_percent)
 
-        geom_bid_percent2 = Decimal(geom_bid_percent2)
-        geom_ask_percent2 = Decimal(geom_ask_percent2)
+        geom_bid_percent2 = Decimal(geom_bid_percent)
+        geom_ask_percent2 = Decimal(geom_ask_percent)
 
-        geom_bid_percent3 = Decimal(geom_bid_percent3)
-        geom_ask_percent3 = Decimal(geom_ask_percent3)
+        geom_bid_percent3 = Decimal(geom_bid_percent)
+        geom_ask_percent3 = Decimal(geom_ask_percent)
         return geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3
 
     def on_stop(self):
