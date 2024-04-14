@@ -41,7 +41,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.015
+    min_profitability = 0.0075
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
@@ -62,7 +62,7 @@ class SimplePMM(ScriptStrategyBase):
     inv_target_percent = Decimal(0.50)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
-    order_shape_factor = Decimal(1.1) 
+    order_shape_factor = Decimal(1.25) 
     # Here you can use for example the LastTrade price to use in your strategy
     #MidPrice 
     #BestBid 
@@ -222,6 +222,7 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+        time.sleep(10)
 
 
     def did_fill_order(self, event: OrderFilledEvent):
@@ -494,7 +495,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0001070 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.00011730 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
