@@ -100,8 +100,8 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
-        min_refresh_time = 5
-        max_refresh_time = 15
+        min_refresh_time = 30
+        max_refresh_time = 60
 
         # Generate a random integer between min and max using randint
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
@@ -130,7 +130,7 @@ class SimplePMM(ScriptStrategyBase):
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
-            time.sleep(10)
+            #time.sleep(10)
 
             proposal: List[OrderCandidate] = self.create_proposal()
             proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
@@ -256,7 +256,7 @@ class SimplePMM(ScriptStrategyBase):
         #reset S midprice to last traded value
         self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, event.price) 
 
-        time.sleep(30)
+        time.sleep(20)
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
 
