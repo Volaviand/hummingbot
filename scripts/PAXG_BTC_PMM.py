@@ -126,7 +126,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         self.buy_counter = 1
-        self.sell_counter = 1
+        self.sell_counter = 3
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
