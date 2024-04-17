@@ -41,7 +41,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.03
+    min_profitability = 0.034
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
