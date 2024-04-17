@@ -225,27 +225,41 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def did_fill_order(self, event: OrderFilledEvent):
-        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        #q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
 
         #update Trade Counters :
-        if q > 0:
+        #if q > 0:
+        #    self.sell_counter = 1
+        #    if event.price < self._last_trade_price: ##event.trade_type == TradeType.BUY:
+        #        self.buy_counter += 1
+        #    if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
+        #        self.buy_counter -=1
+        #    if self.buy_counter<= 0:
+        #        self.buy_counter = 1
+
+        #if q < 0:    
+        #    self.buy_counter = 1
+        #    if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
+        #        self.sell_counter += 1
+        #    if event.price < self._last_trade_price: #event.trade_type == TradeType.BUY:
+        #        self.sell_counter -= 1
+        #    if self.sell_counter <= 0:
+        #        self.sell_counter = 1
+
+        if event.price < self._last_trade_price:
+            self.sell_counter -= 1
+            self.buy_counter += 1
+            
+        if event.price > self._last_trade_price:
+            self.sell_counter += 1
+            self.buy_counter -= 1
+
+        if self.sell_counter <= 0:
             self.sell_counter = 1
-            if event.price < self._last_trade_price: ##event.trade_type == TradeType.BUY:
-                self.buy_counter += 1
-            if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
-                self.buy_counter -=1
-            if self.buy_counter<= 0:
-                self.buy_counter = 1
 
-        if q < 0:    
+        if self.buy_counter<= 0:
             self.buy_counter = 1
-            if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
-                self.sell_counter += 1
-            if event.price < self._last_trade_price: #event.trade_type == TradeType.BUY:
-                self.sell_counter -= 1
-            if self.sell_counter <= 0:
-                self.sell_counter = 1
-
+            
         self.initialize_flag = False
 
         # Print log
