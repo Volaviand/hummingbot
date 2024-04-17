@@ -278,8 +278,8 @@ class SimplePMM(ScriptStrategyBase):
         # Initialize and adjust the values of the dictionary with transformed geometric progression
         for i in range(1, num_trades + 1):
             # Ensure each entry percent is at least i * min_profitability
-            #min_threshold = i * self.target_profitability
-            entry_percents[i] =transformed_percents[i - 1] #max(transformed_percents[i - 1], min_threshold)
+            min_threshold = self.target_profitability # * i
+            entry_percents[i] =max(transformed_percents[i - 1], min_threshold)
 
         msg_lastrade = (f"entry_percents {entry_percents}")
         self.log_with_clock(logging.INFO, msg_lastrade)
