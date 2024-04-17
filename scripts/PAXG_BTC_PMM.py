@@ -281,6 +281,8 @@ class SimplePMM(ScriptStrategyBase):
             min_threshold = i * self.target_profitability
             entry_percents[i] = max(transformed_percents[i - 1], min_threshold)
 
+        msg_lastrade = (f"entry_percents {entry_percents}")
+        self.log_with_clock(logging.INFO, msg_lastrade)
         return entry_percents
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
