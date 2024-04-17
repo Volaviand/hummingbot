@@ -247,19 +247,19 @@ class SimplePMM(ScriptStrategyBase):
         #        self.sell_counter = 1
 
         if event.price < self._last_trade_price:
-            self.sell_counter -= 1
+            self.sell_counter = 1
             self.buy_counter += 1
             
         if event.price > self._last_trade_price:
             self.sell_counter += 1
-            self.buy_counter -= 1
+            self.buy_counter = 1
 
         if self.sell_counter <= 0:
             self.sell_counter = 1
 
         if self.buy_counter<= 0:
             self.buy_counter = 1
-            
+
         self.initialize_flag = False
 
         # Print log
@@ -490,9 +490,9 @@ class SimplePMM(ScriptStrategyBase):
         #to market overcorrection
         if q > 0 :
             base_balancing_volume =  abs(entry_size_by_percentage) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume = entry_size_by_percentage
+            quote_balancing_volume = abs(entry_size_by_percentage) * Decimal.exp(self.order_shape_factor * q) 
         elif q < 0 :
-            base_balancing_volume = entry_size_by_percentage
+            base_balancing_volume = abs(entry_size_by_percentage) *  Decimal.exp(-self.order_shape_factor * q)
             quote_balancing_volume = abs(entry_size_by_percentage) * Decimal.exp(self.order_shape_factor * q)     
         else :
             base_balancing_volume = entry_size_by_percentage
@@ -511,7 +511,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.037336 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0384640 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
