@@ -267,10 +267,10 @@ class SimplePMM(ScriptStrategyBase):
         max_percent = 1  # Maximum drop planned for
 
         # Calculate logarithmically spaced entry percents
-        geom_entry_percents = np.round(np.geomspace(self.target_profitability, max_percent, num_trades).astype(float), 6)
+        geom_entry_percents = np.geomspace(self.target_profitability, max_percent, num_trades).astype(float)
 
         # Reverse the order and transform values
-        transformed_percents = np.round(abs(max_percent - geom_entry_percents[::-1]), 6)
+        transformed_percents = abs(max_percent - geom_entry_percents[::-1])
         
         # Create an empty dictionary to store the adjusted entry percentages
         entry_percents = {}
