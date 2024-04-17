@@ -41,7 +41,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.0075
+    min_profitability = 0.03
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
@@ -57,7 +57,7 @@ class SimplePMM(ScriptStrategyBase):
     quote_asset = "EUR"
 
     #Maximum amount of orders  Bid + Ask
-    maximum_orders = 7
+    maximum_orders = 30
 
     inv_target_percent = Decimal(0.50)   
 
@@ -125,7 +125,7 @@ class SimplePMM(ScriptStrategyBase):
         self.entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 2
+        self.buy_counter = 1
         self.sell_counter = 1
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -225,27 +225,41 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def did_fill_order(self, event: OrderFilledEvent):
-        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        #q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
 
         #update Trade Counters :
-        if q > 0:
+        #if q > 0:
+        #    self.sell_counter = 1
+        #    if event.price < self._last_trade_price: ##event.trade_type == TradeType.BUY:
+        #        self.buy_counter += 1
+        #    if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
+        #        self.buy_counter -=1
+        #    if self.buy_counter<= 0:
+        #        self.buy_counter = 1
+
+        #if q < 0:    
+        #    self.buy_counter = 1
+        #    if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
+        #        self.sell_counter += 1
+        #    if event.price < self._last_trade_price: #event.trade_type == TradeType.BUY:
+        #        self.sell_counter -= 1
+        #    if self.sell_counter <= 0:
+        #        self.sell_counter = 1
+
+        if event.price < self._last_trade_price:
+            self.sell_counter -= 1
+            self.buy_counter += 1
+            
+        if event.price > self._last_trade_price:
+            self.sell_counter += 1
+            self.buy_counter -= 1
+
+        if self.sell_counter <= 0:
             self.sell_counter = 1
-            if event.price < self._last_trade_price: ##event.trade_type == TradeType.BUY:
-                self.buy_counter += 1
-            if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
-                self.buy_counter -=1
-            if self.buy_counter<= 0:
-                self.buy_counter = 1
 
-        if q < 0:    
+        if self.buy_counter<= 0:
             self.buy_counter = 1
-            if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
-                self.sell_counter += 1
-            if event.price < self._last_trade_price: #event.trade_type == TradeType.BUY:
-                self.sell_counter -= 1
-            if self.sell_counter <= 0:
-                self.sell_counter = 1
-
+            
         self.initialize_flag = False
 
         # Print log
@@ -255,31 +269,34 @@ class SimplePMM(ScriptStrategyBase):
 
         #reset S midprice to last traded value
         self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, event.price) 
-        time.sleep(20)
+
+        time.sleep(10)
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
 
     
 
     def geometric_entry_levels(self):
-        
-        #how many entries do you plan on having on the bid side? (compare to your balance ratio and available funds per trade)
-        num_trades = math.floor(self.maximum_orders )
-        # Maximum drop that you want to plan for, 1 = 100% drop
-        max_percent = 1
-        
+        num_trades = math.floor(self.maximum_orders)
+        max_percent = 1  # Maximum drop planned for
 
-        geom_entry_percents = np.round(np.geomspace(self.target_profitability, max_percent, num_trades).astype(float), 6) # {occurrences} logarithmically spaced
+        # Calculate logarithmically spaced entry percents
+        geom_entry_percents = np.geomspace(self.target_profitability, max_percent, num_trades).astype(float)
 
-        #Create an empty Dictionary
+        # Reverse the order and transform values
+        transformed_percents = abs(max_percent - geom_entry_percents[::-1])
+        
+        # Create an empty dictionary to store the adjusted entry percentages
         entry_percents = {}
 
-        # initialize all values of the citionary with none
+        # Initialize and adjust the values of the dictionary with transformed geometric progression
         for i in range(1, num_trades + 1):
             # Ensure each entry percent is at least i * min_profitability
-            min_threshold = i * self.target_profitability
-            entry_percents[i] = max(geom_entry_percents[i - 1], min_threshold)
+            min_threshold = self.target_profitability # * i
+            entry_percents[i] =max(transformed_percents[i - 1], min_threshold)
 
+        msg_lastrade = (f"entry_percents {entry_percents}")
+        self.log_with_clock(logging.INFO, msg_lastrade)
         return entry_percents
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
