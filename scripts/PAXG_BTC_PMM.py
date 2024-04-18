@@ -490,9 +490,9 @@ class SimplePMM(ScriptStrategyBase):
         #to market overcorrection
         if q > 0 :
             base_balancing_volume =  abs(entry_size_by_percentage) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume = abs(entry_size_by_percentage) * Decimal.exp(self.order_shape_factor * q) 
+            quote_balancing_volume = abs(entry_size_by_percentage) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
         elif q < 0 :
-            base_balancing_volume = abs(entry_size_by_percentage) *  Decimal.exp(-self.order_shape_factor * q)
+            base_balancing_volume = abs(entry_size_by_percentage) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
             quote_balancing_volume = abs(entry_size_by_percentage) * Decimal.exp(self.order_shape_factor * q)     
         else :
             base_balancing_volume = entry_size_by_percentage
