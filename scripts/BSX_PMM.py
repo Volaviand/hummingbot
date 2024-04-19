@@ -209,6 +209,9 @@ class SimplePMM(ScriptStrategyBase):
         
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)
+
+        msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
+        self.log_with_clock(logging.INFO, msgbe)
         #self.notify_hb_app_with_timestamp(msg)
 
         return [buy_order , sell_order]
