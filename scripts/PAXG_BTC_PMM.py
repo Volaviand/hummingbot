@@ -94,6 +94,14 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+    ## Breakeven Initialization
+    ## Trading Fee for one side Limit
+    fee_percent = 0.25 / 100  # Convert percentage to a decimal
+    total_spent = 0
+    total_bought = 0
+    total_earned = 0
+    total_sold = 0
+    break_even_price = None  # Store the break-even price
 
 
     
@@ -125,17 +133,8 @@ class SimplePMM(ScriptStrategyBase):
         self.entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 1
-        self.sell_counter = 2
-
-        ## Breakeven Initialization
-            ## Trading Fee for one side Limit
-        self.fee_percent = 0.25 / 100  # Convert percentage to a decimal
-        self.total_spent = 0
-        self.total_bought = 0
-        self.total_earned = 0
-        self.total_sold = 0
-        self.break_even_price = None  # Store the break-even price
+        self.buy_counter = 3
+        self.sell_counter = 1
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -264,7 +263,7 @@ class SimplePMM(ScriptStrategyBase):
             self.total_bought += event.amount
             if self.total_bought > 0:
                 self.break_even_price = self.total_spent / self.total_bought
-        elif event.price > self._last_trade_price:
+        if event.price > self._last_trade_price:
             self.total_earned += (event.price * event.amount) - fee
             self.total_sold += event.amount
             if self.total_bought > 0:
@@ -521,7 +520,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0396270 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0368620 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
