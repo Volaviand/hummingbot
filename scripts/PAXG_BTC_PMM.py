@@ -127,6 +127,14 @@ class SimplePMM(ScriptStrategyBase):
 
         self.buy_counter = 1
         self.sell_counter = 1
+
+        ## Breakeven Initialization
+        self.total_spent = 0
+        self.total_bought = 0
+        self.total_earned = 0
+        self.total_sold = 0
+        self.break_even_price = None  # Store the break-even price
+
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
@@ -199,6 +207,9 @@ class SimplePMM(ScriptStrategyBase):
         
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)
+
+        msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
+        self.log_with_clock(logging.INFO, msgbe)
         #self.notify_hb_app_with_timestamp(msg)
 
         return [buy_order , sell_order]
@@ -225,26 +236,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def did_fill_order(self, event: OrderFilledEvent):
-        #q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-
-        #update Trade Counters :
-        #if q > 0:
-        #    self.sell_counter = 1
-        #    if event.price < self._last_trade_price: ##event.trade_type == TradeType.BUY:
-        #        self.buy_counter += 1
-        #    if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
-        #        self.buy_counter -=1
-        #    if self.buy_counter<= 0:
-        #        self.buy_counter = 1
-
-        #if q < 0:    
-        #    self.buy_counter = 1
-        #    if event.price > self._last_trade_price: #event.trade_type == TradeType.SELL:
-        #        self.sell_counter += 1
-        #    if event.price < self._last_trade_price: #event.trade_type == TradeType.BUY:
-        #        self.sell_counter -= 1
-        #    if self.sell_counter <= 0:
-        #        self.sell_counter = 1
 
         if event.price < self._last_trade_price:
             self.sell_counter = 1
@@ -262,6 +253,22 @@ class SimplePMM(ScriptStrategyBase):
 
         self.initialize_flag = False
 
+
+
+        # Update totals and calculate break-even price based on trade type
+        if event.price < self._last_trade_price:
+            self.total_spent += event.price * event.amount
+            self.total_bought += event.amount
+            if self.total_bought > 0:
+                self.break_even_price = self.total_spent / self.total_bought
+        elif event.price > self._last_trade_price:
+            self.total_earned += event.price * event.amount
+            self.total_sold += event.amount
+            # Optionally adjust the break-even price if considering sells in calculation
+            if self.total_bought > 0:
+                net_spent = self.total_spent - self.total_earned
+                self.break_even_price = net_spent / self.total_bought if self.total_bought > 0 else None
+        
         # Print log
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg)
