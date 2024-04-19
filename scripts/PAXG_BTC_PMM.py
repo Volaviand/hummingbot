@@ -129,6 +129,8 @@ class SimplePMM(ScriptStrategyBase):
         self.sell_counter = 2
 
         ## Breakeven Initialization
+            ## Trading Fee for one side Limit
+        self.fee_percent = 0.25 / 100  # Convert percentage to a decimal
         self.total_spent = 0
         self.total_bought = 0
         self.total_earned = 0
@@ -256,18 +258,19 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Update totals and calculate break-even price based on trade type
+        fee = event.price * event.amount * self.fee_percent
         if event.price < self._last_trade_price:
-            self.total_spent += event.price * event.amount
+            self.total_spent += (event.price * event.amount) + fee
             self.total_bought += event.amount
             if self.total_bought > 0:
                 self.break_even_price = self.total_spent / self.total_bought
         elif event.price > self._last_trade_price:
-            self.total_earned += event.price * event.amount
+            self.total_earned += (event.price * event.amount) - fee
             self.total_sold += event.amount
-            # Optionally adjust the break-even price if considering sells in calculation
             if self.total_bought > 0:
                 net_spent = self.total_spent - self.total_earned
                 self.break_even_price = net_spent / self.total_bought if self.total_bought > 0 else None
+
         
         # Print log
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
