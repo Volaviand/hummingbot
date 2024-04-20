@@ -133,8 +133,8 @@ class SimplePMM(ScriptStrategyBase):
         self.entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 3
-        self.sell_counter = 1
+        self.buy_counter = 1
+        self.sell_counter = 2
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -256,6 +256,11 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
+
+        #reset S midprice to last traded value
+        self._last_trade_price = event.price
+
         # Update totals and calculate break-even price based on trade type
         fee = event.price * event.amount * self.fee_percent
         if event.price < self._last_trade_price:
@@ -276,12 +281,7 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
 
-        #reset S midprice to last traded value
-        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, event.price) 
-
         time.sleep(10)
-
-    #def trade_completion_counter(self, event: OrderFilledEvent):
 
     
 
@@ -520,7 +520,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0368620 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0379740 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
@@ -528,6 +528,8 @@ class SimplePMM(ScriptStrategyBase):
 
         else:
                 self._last_trade_price = Decimal(self._last_trade_price)
+
+
 
         msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)

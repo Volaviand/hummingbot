@@ -257,6 +257,11 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
+
+        #reset S midprice to last traded value
+        self._last_trade_price = event.price
+
         # Update totals and calculate break-even price based on trade type
         fee = event.price * event.amount * self.fee_percent
         if event.price < self._last_trade_price:
@@ -277,10 +282,8 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
 
-        #reset S midprice to last traded value
-        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, event.price) 
-
         time.sleep(10)
+
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
 
