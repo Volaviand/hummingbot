@@ -461,6 +461,8 @@ class SimplePMM(ScriptStrategyBase):
         ### For Entry Size to have /10 (/2 for) orders on each side of the bid/ask
         ### In terms of Maker Base asset
         entry_size_by_percentage = (total_balance_in_base * self.inv_target_percent) / maximum_number_of_orders 
+        minimum_size = max(self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount), entry_size_by_percentage)
+
 
 
         ## Q relation in percent relative terms, later it is in base(abolute)terms
@@ -479,14 +481,14 @@ class SimplePMM(ScriptStrategyBase):
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
         if q > 0 :
-            base_balancing_volume =  abs(entry_size_by_percentage) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume = abs(entry_size_by_percentage) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
+            base_balancing_volume =  abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
+            quote_balancing_volume = abs(minimum_size) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
         elif q < 0 :
-            base_balancing_volume = abs(entry_size_by_percentage) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
-            quote_balancing_volume = abs(entry_size_by_percentage) * Decimal.exp(self.order_shape_factor * q)     
+            base_balancing_volume = abs(minimum_size) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
+            quote_balancing_volume = abs(minimum_size) * Decimal.exp(self.order_shape_factor * q)     
         else :
-            base_balancing_volume = entry_size_by_percentage
-            quote_balancing_volume = entry_size_by_percentage
+            base_balancing_volume = minimum_size
+            quote_balancing_volume = minimum_size
 
             
 
