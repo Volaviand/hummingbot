@@ -130,11 +130,11 @@ class SimplePMM(ScriptStrategyBase):
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
         self._vwap_midprice = None
-        self.entry_percents = self.geometric_entry_levels()
+        self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 1
-        self.sell_counter = 2
+        self.buy_counter = 2
+        self.sell_counter = 1
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -287,57 +287,38 @@ class SimplePMM(ScriptStrategyBase):
 
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders)
-        max_percent = 1  # Maximum drop planned for
-
+        max_ask_percent = 1  # Maximum Rise planned for, Numbers are addative so 1 = 200% rise
+        max_bid_percent = 0.5 # Numbers are addative so 0.5 = 100% drop
         # Calculate logarithmically spaced entry percents
-        geom_entry_percents = np.geomspace(self.target_profitability, max_percent, num_trades).astype(float)
+        ask_geom_entry_percents = np.geomspace(self.target_profitability, max_ask_percent, num_trades).astype(float)
+        bid_geom_entry_percents = np.geomspace(self.target_profitability, max_bid_percent, num_trades).astype(float)
 
         # Reverse the order and transform values
-        transformed_percents = abs(max_percent - geom_entry_percents[::-1])
-        
+        ask_transformed_percents = abs(max_ask_percent - ask_geom_entry_percents[::-1])
+        bid_transformed_percents = abs(max_bid_percent - bid_geom_entry_percents[::-1])
         # Create an empty dictionary to store the adjusted entry percentages
-        entry_percents = {}
+        ask_entry_percents = {}
+        bid_entry_percents = {}
 
         # Initialize and adjust the values of the dictionary with transformed geometric progression
         for i in range(1, num_trades + 1):
             # Ensure each entry percent is at least i * min_profitability
             min_threshold = self.target_profitability # * i
-            entry_percents[i] =max(transformed_percents[i - 1], min_threshold)
+            ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
+            bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
 
-        msg_lastrade = (f"entry_percents {entry_percents}")
+        msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
         self.log_with_clock(logging.INFO, msg_lastrade)
-        return entry_percents
+        return ask_entry_percents, bid_entry_percents
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         #if q > 0:
-        geom_bid_percent = self.entry_percents.get(bid_num , None)
-        geom_ask_percent = self.entry_percents.get(ask_num , None)##self.min_profitability #
+        geom_bid_percent = self.bid_entry_percents.get(bid_num , None)
+        geom_ask_percent = self.ask_entry_percents.get(ask_num , None)##self.min_profitability #
 
-        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
-        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 1 , None) 
 
-        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
-        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 2, None)
-        #if q < 0:
-        #    geom_bid_percent = self.min_profitability
-        #    geom_ask_percent = self.entry_percents.get(ask_num , None)
-
-        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 1, None)
-        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
-
-        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 2, None)
-        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
-        #if q == 0:
-        #    geom_bid_percent = self.min_profitability
-        #    geom_ask_percent = self.min_profitability
-
-        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
-        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
-
-        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
-        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
         
         geom_bid_percent = Decimal(geom_bid_percent)
         geom_ask_percent = Decimal(geom_ask_percent)
@@ -520,7 +501,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0379740 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.036770 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
