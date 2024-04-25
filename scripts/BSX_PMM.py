@@ -41,7 +41,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.015
+    min_profitability = 0.02
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
@@ -129,11 +129,11 @@ class SimplePMM(ScriptStrategyBase):
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
         self._vwap_midprice = None
-        self.entry_percents = self.geometric_entry_levels()
+        self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 1
-        self.sell_counter = 2
+        self.buy_counter = 2
+        self.sell_counter = 1
 
 
 
@@ -291,58 +291,38 @@ class SimplePMM(ScriptStrategyBase):
 
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders)
-        max_percent = 1  # Maximum drop planned for
-
+        max_ask_percent = 1  # Maximum Rise planned for, Numbers are addative so 1 = 200% rise
+        max_bid_percent = 0.5 # Numbers are addative so 0.5 = 100% drop
         # Calculate logarithmically spaced entry percents
-        geom_entry_percents = np.geomspace(self.target_profitability, max_percent, num_trades).astype(float)
+        ask_geom_entry_percents = np.geomspace(self.target_profitability, max_ask_percent, num_trades).astype(float)
+        bid_geom_entry_percents = np.geomspace(self.target_profitability, max_bid_percent, num_trades).astype(float)
 
         # Reverse the order and transform values
-        transformed_percents = abs(max_percent - geom_entry_percents[::-1])
-        
+        ask_transformed_percents = abs(max_ask_percent - ask_geom_entry_percents[::-1])
+        bid_transformed_percents = abs(max_bid_percent - bid_geom_entry_percents[::-1])
         # Create an empty dictionary to store the adjusted entry percentages
-        entry_percents = {}
+        ask_entry_percents = {}
+        bid_entry_percents = {}
 
         # Initialize and adjust the values of the dictionary with transformed geometric progression
         for i in range(1, num_trades + 1):
             # Ensure each entry percent is at least i * min_profitability
             min_threshold = self.target_profitability # * i
-            entry_percents[i] =max(transformed_percents[i - 1], min_threshold)
+            ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
+            bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
 
-        msg_lastrade = (f"entry_percents {entry_percents}")
+        msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
         self.log_with_clock(logging.INFO, msg_lastrade)
-        return entry_percents
+        return ask_entry_percents, bid_entry_percents
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        geom_bid_percent = self.entry_percents.get(bid_num , None)
-        geom_ask_percent = self.entry_percents.get(ask_num  , None)   
+        
         #if q > 0:
-        #    geom_bid_percent = self.entry_percents.get(bid_num , None)
-        #    geom_ask_percent = self.min_profitability 
+        geom_bid_percent = self.bid_entry_percents.get(bid_num , None)
+        geom_ask_percent = self.ask_entry_percents.get(ask_num , None)##self.min_profitability #
 
-        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
-        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 1 , None) 
 
-        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
-        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 2, None)
-        #if q < 0:
-        #    geom_bid_percent = self.min_profitability
-        #    geom_ask_percent = self.entry_percents.get(ask_num , None)
-
-        #    geom_bid_percent2 = self.entry_percents.get(bid_num + 1, None)
-        #    geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
-
-        #    geom_bid_percent3 = self.entry_percents.get(bid_num + 2, None)
-        #    geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
-       # if q == 0:
-         #   geom_bid_percent = self.min_profitability
-         #   geom_ask_percent = self.min_profitability
-
-         #   geom_bid_percent2 = self.entry_percents.get(bid_num + 2, None)
-         #   geom_ask_percent2 = self.entry_percents.get(ask_num + 2, None)
-
-         #   geom_bid_percent3 = self.entry_percents.get(bid_num + 3, None)
-         #   geom_ask_percent3 = self.entry_percents.get(ask_num + 3, None)
         
         geom_bid_percent = Decimal(geom_bid_percent)
         geom_ask_percent = Decimal(geom_ask_percent)
@@ -484,6 +464,8 @@ class SimplePMM(ScriptStrategyBase):
         ### For Entry Size to have /10 (/2 for) orders on each side of the bid/ask
         ### In terms of Maker Base asset
         entry_size_by_percentage = (total_balance_in_base * self.inv_target_percent) / maximum_number_of_orders 
+        minimum_size = max(self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount), entry_size_by_percentage)
+
 
 
         ## Q relation in percent relative terms, later it is in base(abolute)terms
@@ -502,14 +484,14 @@ class SimplePMM(ScriptStrategyBase):
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
         if q > 0 :
-            base_balancing_volume =  abs(entry_size_by_percentage) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume = abs(entry_size_by_percentage) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
+            base_balancing_volume =  abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
+            quote_balancing_volume = abs(minimum_size) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
         elif q < 0 :
-            base_balancing_volume = abs(entry_size_by_percentage) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
-            quote_balancing_volume = abs(entry_size_by_percentage) * Decimal.exp(self.order_shape_factor * q)     
+            base_balancing_volume = abs(minimum_size) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
+            quote_balancing_volume = abs(minimum_size) * Decimal.exp(self.order_shape_factor * q)     
         else :
-            base_balancing_volume = entry_size_by_percentage
-            quote_balancing_volume = entry_size_by_percentage
+            base_balancing_volume = minimum_size
+            quote_balancing_volume = minimum_size
 
             
 
@@ -517,14 +499,30 @@ class SimplePMM(ScriptStrategyBase):
         quote_balancing_volume = Decimal(quote_balancing_volume)
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
+    
+    def percentage_order_size(self):
+        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        
 
+
+        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
+
+        order_size_bid = base_balancing_volume #max(minimum_size, quote_balancing_volume)
+        order_size_ask = quote_balancing_volume  #max(minimum_size, base_balancing_volume)
+
+        order_size_bid = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid))
+        order_size_ask = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask))
+
+
+        return order_size_bid, order_size_ask
+    
     def get_midprice(self):
 
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.00011110 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.00010940 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
@@ -668,21 +666,7 @@ class SimplePMM(ScriptStrategyBase):
         
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
-    def percentage_order_size(self):
-        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        
 
-
-        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
-
-        order_size_bid = base_balancing_volume #max(minimum_size, quote_balancing_volume)
-        order_size_ask = quote_balancing_volume  #max(minimum_size, base_balancing_volume)
-
-        order_size_bid = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid))
-        order_size_ask = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask))
-
-
-        return order_size_bid, order_size_ask
 
 
     def optimal_bid_ask_spread(self):
