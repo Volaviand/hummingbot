@@ -494,7 +494,23 @@ class SimplePMM(ScriptStrategyBase):
         quote_balancing_volume = Decimal(quote_balancing_volume)
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
+    
+    def percentage_order_size(self):
+        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        
 
+
+        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
+
+        order_size_bid = base_balancing_volume #max(minimum_size, quote_balancing_volume)
+        order_size_ask = quote_balancing_volume  #max(minimum_size, base_balancing_volume)
+
+        order_size_bid = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid))
+        order_size_ask = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask))
+
+
+        return order_size_bid, order_size_ask
+    
     def get_midprice(self):
 
         if self._last_trade_price == None:
@@ -647,21 +663,6 @@ class SimplePMM(ScriptStrategyBase):
         
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
-    def percentage_order_size(self):
-        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        
-
-
-        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
-
-        order_size_bid = base_balancing_volume #max(minimum_size, quote_balancing_volume)
-        order_size_ask = quote_balancing_volume  #max(minimum_size, base_balancing_volume)
-
-        order_size_bid = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid))
-        order_size_ask = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask))
-
-
-        return order_size_bid, order_size_ask
 
 
     def optimal_bid_ask_spread(self):
