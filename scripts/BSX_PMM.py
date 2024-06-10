@@ -41,7 +41,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.02
+    min_profitability = 0.0142
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
@@ -57,7 +57,7 @@ class SimplePMM(ScriptStrategyBase):
     quote_asset = "EUR"
 
     #Maximum amount of orders  Bid + Ask
-    maximum_orders = 30
+    maximum_orders = 100
 
     inv_target_percent = Decimal(0.50)   
 
@@ -107,8 +107,8 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
-        min_refresh_time = 30
-        max_refresh_time = 60
+        min_refresh_time = 15
+        max_refresh_time = 30
 
         # Generate a random integer between min and max using randint
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
@@ -132,8 +132,8 @@ class SimplePMM(ScriptStrategyBase):
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 2
-        self.sell_counter = 1
+        self.buy_counter = 1
+        self.sell_counter = 2
 
 
 
@@ -522,7 +522,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.00010940 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0000956 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
