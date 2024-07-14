@@ -241,12 +241,12 @@ class SimplePMM(ScriptStrategyBase):
     def did_fill_order(self, event: OrderFilledEvent):
 
         if event.price < self._last_trade_price:
-            self.sell_counter = 1
+            self.sell_counter -= 1
             self.buy_counter += 1
             
         if event.price > self._last_trade_price:
             self.sell_counter += 1
-            self.buy_counter = 1
+            self.buy_counter -= 1
 
         if self.sell_counter <= 0:
             self.sell_counter = 1
