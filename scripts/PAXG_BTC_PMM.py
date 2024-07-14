@@ -287,8 +287,8 @@ class SimplePMM(ScriptStrategyBase):
 
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
-        max_ask_percent = 1  # Maximum Rise planned for, Numbers are addative so 1 = 200% rise
-        max_bid_percent = 0.5 # Numbers are addative so 0.5 = 100% drop
+        max_ask_percent = 1  # Maximum Rise planned for, Numbers are addative so 1 = 200% rise, example: (1 + max_ask_percent)*current ask price  = ask order price
+        max_bid_percent = 1 # Numbers are subtractive so 1 = 100% drop,  example:  (1 - max_bid_percent)*current bid price = bid order price 
         # Calculate logarithmically spaced entry percents
         ask_geom_entry_percents = np.geomspace(self.target_profitability, max_ask_percent, num_trades).astype(float)
         bid_geom_entry_percents = np.geomspace(self.target_profitability, max_bid_percent, num_trades).astype(float)
