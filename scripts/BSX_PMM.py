@@ -585,7 +585,11 @@ class SimplePMM(ScriptStrategyBase):
         volatility_bid_rank = (df["volatility_bid"].iloc[-1] - df["volatility_bid_min"].iloc[-1]) / (df["volatility_bid_max"].iloc[-1] - df["volatility_bid_min"].iloc[-1])
         volatility_ask_rank = (df["volatility_ask"].iloc[-1] - df["volatility_ask_min"].iloc[-1]) / (df["volatility_ask_max"].iloc[-1] - df["volatility_ask_min"].iloc[-1])
 
+        if volatility_bid_rank <= 0:
+            volatility_bid_rank = 0.000000001
 
+        if volatility_ask_rank <= 0:
+            volatility_ask_rank = 0.000000001
 
 
         volatility_bid_rank = Decimal(volatility_bid_rank)
