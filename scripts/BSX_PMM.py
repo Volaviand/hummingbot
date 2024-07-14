@@ -520,7 +520,7 @@ class SimplePMM(ScriptStrategyBase):
     def get_midprice(self):
 
         context = decimal.getcontext()
-        context.prec = 20
+        context.prec = 10
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
