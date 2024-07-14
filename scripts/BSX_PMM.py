@@ -74,9 +74,6 @@ class SimplePMM(ScriptStrategyBase):
     _last_trade_price = None
     _vwap_midprice = None
 
-    
-
-
     #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
@@ -132,10 +129,6 @@ class SimplePMM(ScriptStrategyBase):
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
         self._vwap_midprice = None
-        self._starting_price = 0.0000668
-        _first_bid_price = None
-        _first_ask_price = None
-
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
@@ -298,7 +291,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
-        max_ask_percent = 1  # Maximum Rise planned for, Numbers are addative so 1 = 200% rise, example: (1 + max_ask_percent)*current ask price  = ask order price
+        max_ask_percent = 1  # Maximum Rise planned for, Numbers are additive and factorial, example: (1 + max_ask_percent)*current ask price  = ask order price PLUS all of the trades previous % from original
         max_bid_percent = 1 # Numbers are subtractive so 1 = 100% drop,  example:  (1 - max_bid_percent)*current bid price = bid order price 
         # Calculate logarithmically spaced entry percents
         ask_geom_entry_percents = np.geomspace(self.target_profitability, max_ask_percent, num_trades).astype(float)
@@ -530,7 +523,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = self._starting_price #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0000668 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
@@ -564,6 +557,7 @@ class SimplePMM(ScriptStrategyBase):
         self._vwap_midprice = self._last_trade_price
 
         return self._last_trade_price, self._vwap_midprice
+        
 
     def reservation_price(self):
         volatility_metrics_df, self.target_profitability = self.get_market_analysis()
