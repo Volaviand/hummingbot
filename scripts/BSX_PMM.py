@@ -529,7 +529,7 @@ class SimplePMM(ScriptStrategyBase):
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
         else:
-                self._last_trade_price = Decimal('self._last_trade_price')
+                self._last_trade_price = Decimal('{self._last_trade_price}')
 
         msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)
