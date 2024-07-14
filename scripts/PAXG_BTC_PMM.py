@@ -134,7 +134,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         self.buy_counter = 1
-        self.sell_counter = 9
+        self.sell_counter = 3
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -398,7 +398,7 @@ class SimplePMM(ScriptStrategyBase):
         sell_trades_instance = SellTrades('PAXGXBT')
         # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
         # Data points are in trades collected
-        target_percentile = 97.5
+        target_percentile = 75
         window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
@@ -519,7 +519,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.036989 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.039809 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
