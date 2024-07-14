@@ -739,16 +739,6 @@ class SimplePMM(ScriptStrategyBase):
             optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
         
-        ## Counter Levels which to calculate from:: 
-        if self.sell_counter == 1:
-            ask_level_price = 0.0000695
-        else:
-            ask_level_price = 0.0000695 # Value when first sell counter
-
-        if self.buy_counter == 1:
-            bid_level_price = 0.0000668
-        else:
-            bid_level_price = 0.0000668  #value when first buy counter
 
         #1
         geom_spread_bid = 1 - Decimal(geom_bid_percent)
