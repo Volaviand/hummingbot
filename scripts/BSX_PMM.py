@@ -1,5 +1,6 @@
 import logging
-from decimal import Decimal, Context
+import decimal
+from decimal import Decimal
 from typing import List
 import math
 from math import floor, ceil
@@ -517,8 +518,9 @@ class SimplePMM(ScriptStrategyBase):
         return order_size_bid, order_size_ask
     
     def get_midprice(self):
-        Context(prec=28, rounding=ROUND_HALF_EVEN, Emin=-999999999, Emax=999999999, capitals=1, flags=[], traps=[Overflow, InvalidOperation, DivisionByZero])
 
+        context = decimal.getcontext()
+        context.prec = 20
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
@@ -530,7 +532,7 @@ class SimplePMM(ScriptStrategyBase):
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
         else:
-                self._last_trade_price = Decimal(self._last_trade_price)
+                self._last_trade_price = decimal.Decimal(str(self._last_trade_price))
 
         msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)
