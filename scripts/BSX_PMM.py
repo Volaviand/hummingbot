@@ -75,8 +75,7 @@ class SimplePMM(ScriptStrategyBase):
     _vwap_midprice = None
 
     
-    _first_bid_price = None
-    _first_ask_price = None
+
 
     #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
@@ -134,6 +133,9 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = True
         self._vwap_midprice = None
         self._starting_price = 0.0000668
+        _first_bid_price = None
+        _first_ask_price = None
+
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
