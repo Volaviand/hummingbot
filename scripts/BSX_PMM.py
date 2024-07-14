@@ -741,12 +741,12 @@ class SimplePMM(ScriptStrategyBase):
         
         ## Counter Levels which to calculate from:: 
         if self.sell_counter == 1:
-            ask_level_price = s
+            ask_level_price = 0.0000695
         else:
             ask_level_price = 0.0000695 # Value when first sell counter
 
         if self.buy_counter == 1:
-            bid_level_price = s
+            bid_level_price = 0.0000668
         else:
             bid_level_price = 0.0000668  #value when first buy counter
 
