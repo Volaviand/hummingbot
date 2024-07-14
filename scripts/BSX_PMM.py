@@ -47,6 +47,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
     #order_refresh_time = 30
     order_amount = Decimal(40000)
     create_timestamp = 0
@@ -556,7 +557,6 @@ class SimplePMM(ScriptStrategyBase):
         self._vwap_midprice = self._last_trade_price
 
         return self._last_trade_price, self._vwap_midprice
-        
 
     def reservation_price(self):
         volatility_metrics_df, self.target_profitability = self.get_market_analysis()
