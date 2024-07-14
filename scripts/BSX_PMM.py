@@ -173,7 +173,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def create_proposal(self) -> List[OrderCandidate]:
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
-        optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
+        bid_starting_price, ask_starting_price, optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
     
         #ref_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
         buy_price = optimal_bid_price ##ref_price * Decimal(1 - self.bid_spread)
@@ -210,9 +210,12 @@ class SimplePMM(ScriptStrategyBase):
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)
 
-        msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
-        self.log_with_clock(logging.INFO, msgbe)
+        #msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
+        #self.log_with_clock(logging.INFO, msgbe)
         #self.notify_hb_app_with_timestamp(msg)
+
+        msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
+        self.log_with_clock(logging.INFO, msgce)
 
         return [buy_order , sell_order]
 
@@ -841,7 +844,7 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_price3 = min( vwap_bid * geom_spread_bid3, geom_limit_bid3)
         optimal_ask_price3 = max( vwap_ask * geom_spread_ask3 , geom_limit_ask3)
         
-        return optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
+        return bid_starting_price, ask_starting_price, optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
 
 
     
