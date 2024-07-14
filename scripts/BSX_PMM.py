@@ -132,7 +132,7 @@ class SimplePMM(ScriptStrategyBase):
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 2
+        self.buy_counter = 3
         self.sell_counter = 1
 
 
@@ -525,7 +525,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0000689 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0000631 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
@@ -752,8 +752,8 @@ class SimplePMM(ScriptStrategyBase):
 
         ####  Reorder the counters to determine where you should start your percentage entries. 
         ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
-        bid_starting_price = Decimal(0.0000695)
-        ask_starting_price = Decimal(0.00006313)
+        bid_starting_price = Decimal(0.0000699)
+        ask_starting_price = Decimal(0.0000631)
 
         if self.buy_counter == 1:
             bid_starting_price = bid_reservation_price
