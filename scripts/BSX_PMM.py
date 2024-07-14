@@ -308,8 +308,8 @@ class SimplePMM(ScriptStrategyBase):
         for i in range(1, num_trades + 1):
             # Ensure each entry percent is at least i * min_profitability
             min_threshold = self.target_profitability # * i
-            ask_entry_percents[i] =Decimal.exp(max(ask_transformed_percents[i - 1], min_threshold))
-            bid_entry_percents[i] =Decimal.exp(max(bid_transformed_percents[i - 1], min_threshold))
+            ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
+            bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
 
 
         msg_lastrade = (f"Ask Entry Multiplier (1+) {ask_entry_percents}, Bid Entry Multiplier (1-) {bid_entry_percents}")
