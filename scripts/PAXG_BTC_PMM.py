@@ -582,9 +582,17 @@ class SimplePMM(ScriptStrategyBase):
         volatility_bid = df["volatility_bid"].iloc[-1]
         volatility_ask = df["volatility_ask"].iloc[-1]
 
-        volatility_bid_rank = (df["volatility_bid"].iloc[-1] - df["volatility_bid_min"].iloc[-1]) / (df["volatility_bid_max"].iloc[-1] - df["volatility_bid_min"].iloc[-1])
-        volatility_ask_rank = (df["volatility_ask"].iloc[-1] - df["volatility_ask_min"].iloc[-1]) / (df["volatility_ask_max"].iloc[-1] - df["volatility_ask_min"].iloc[-1])
+        volatility_bid_denominator = df["volatility_bid_max"].iloc[-1] - df["volatility_bid_min"].iloc[-1]
+        volatility_ask_denominator = df["volatility_ask_max"].iloc[-1] - df["volatility_ask_min"].iloc[-1]
 
+        if volatility_bid_denominator == 0:
+            volatility_bid_denominator = 0.0000000001
+
+        if volatility_ask_denominator == 0:
+            volatility_ask_denominator = 0.0000000001            
+
+        volatility_bid_rank = (df["volatility_bid"].iloc[-1] - df["volatility_bid_min"].iloc[-1]) / (volatility_bid_denominator)
+        volatility_ask_rank = (df["volatility_ask"].iloc[-1] - df["volatility_ask_min"].iloc[-1]) / (volatility_ask_denominator)
 
 
 
@@ -736,14 +744,26 @@ class SimplePMM(ScriptStrategyBase):
             optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
             optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
+        ####  Reorder the counters to determine where you should start your percentage entries. 
+        ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
+        bid_starting_price = Decimal(0.039809)
+        ask_starting_price = Decimal(0.036235)
+
+        if self.buy_counter == 1:
+            bid_starting_price = bid_reservation_price
+        
+        if self.sell_counter == 1:
+            ask_starting_price = ask_reservation_price
+
         
 
         #1
         geom_spread_bid = 1 - Decimal(geom_bid_percent)
         geom_spread_ask = 1 + Decimal(geom_ask_percent)
 
-        geom_limit_bid = bid_reservation_price * geom_spread_bid 
-        geom_limit_ask = ask_reservation_price * geom_spread_ask 
+        geom_limit_bid = bid_starting_price * geom_spread_bid 
+        geom_limit_ask = ask_starting_price * geom_spread_ask         
+
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
