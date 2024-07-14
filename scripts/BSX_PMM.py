@@ -752,10 +752,10 @@ class SimplePMM(ScriptStrategyBase):
         bid_starting_price = 0.0000695
         ask_starting_price = 0.0000668
 
-        if self.bid_counter == 1:
+        if self.buy_counter == 1:
             bid_starting_price = s
         
-        if self.ask_counter == 1:
+        if self.sell_counter == 1:
             ask_starting_price = s
 
         
