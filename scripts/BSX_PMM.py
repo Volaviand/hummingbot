@@ -749,14 +749,14 @@ class SimplePMM(ScriptStrategyBase):
 
         ####  Reorder the counters to determine where you should start your percentage entries. 
         ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
-        bid_starting_price = 0.0000695
-        ask_starting_price = 0.0000668
+        bid_starting_price = Decimal(0.0000695)
+        ask_starting_price = Decimal(0.0000668)
 
         if self.buy_counter == 1:
-            bid_starting_price = s
+            bid_starting_price = bid_reservation_price
         
         if self.sell_counter == 1:
-            ask_starting_price = s
+            ask_starting_price = ask_reservation_price
 
         
 
