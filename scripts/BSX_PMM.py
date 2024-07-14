@@ -311,8 +311,7 @@ class SimplePMM(ScriptStrategyBase):
             ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
             bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
 
-
-        msg_lastrade = (f"Ask Entry Multiplier (1+) {ask_entry_percents}, Bid Entry Multiplier (1-) {bid_entry_percents}")
+        msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
         self.log_with_clock(logging.INFO, msg_lastrade)
         return ask_entry_percents, bid_entry_percents
 
