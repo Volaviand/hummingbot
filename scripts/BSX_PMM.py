@@ -290,7 +290,7 @@ class SimplePMM(ScriptStrategyBase):
     
 
     def geometric_entry_levels(self):
-        num_trades = math.floor(self.maximum_orders)
+        num_trades = math.floor(self.maximum_orders/2)
         max_ask_percent = 1  # Maximum Rise planned for, Numbers are addative so 1 = 200% rise
         max_bid_percent = 0.5 # Numbers are addative so 0.5 = 100% drop
         # Calculate logarithmically spaced entry percents
