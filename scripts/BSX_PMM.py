@@ -519,8 +519,7 @@ class SimplePMM(ScriptStrategyBase):
     
     def get_midprice(self):
 
-        context = decimal.getcontext()
-        context.prec = 20
+
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
@@ -532,7 +531,8 @@ class SimplePMM(ScriptStrategyBase):
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
         else:
-                self._last_trade_price = Decimal(self._last_trade_price)
+                self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, Decimal(self._last_trade_price))
+
 
         msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)
