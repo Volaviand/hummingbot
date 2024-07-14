@@ -675,7 +675,7 @@ class SimplePMM(ScriptStrategyBase):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
         order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        self._last_trade_price, self._vwap_midprice = self.get_midprice()
+
         geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
         msg_7 = (f"geom_bid_percent {geom_bid_percent:.8f} ::: geom_ask_percent {geom_ask_percent:.8f}")
         self.log_with_clock(logging.INFO, msg_7)
@@ -742,12 +742,12 @@ class SimplePMM(ScriptStrategyBase):
         
         ## Counter Levels which to calculate from:: 
         if self.sell_counter == 1:
-            ask_level_price = self._last_trade_price
+            ask_level_price = s
         else:
             ask_level_price = 0.0000695 # Value when first sell counter
 
         if self.buy_counter == 1:
-            bid_level_price = self._last_trade_price
+            bid_level_price = s
         else:
             bid_level_price = 0.0000668  #value when first buy counter
 
