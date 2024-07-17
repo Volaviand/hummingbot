@@ -73,7 +73,8 @@ class SimplePMM(ScriptStrategyBase):
     #Custom 
     _last_trade_price = None
     _vwap_midprice = None
-
+    _bid_starting_price = None # 
+    _ask_starting_price = None # Decimal(0.0000631)
     #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
@@ -132,8 +133,11 @@ class SimplePMM(ScriptStrategyBase):
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
-        self.buy_counter = 3
-        self.sell_counter = 1
+        self.initialize_startprice_flag = True
+        self._bid_starting_price =  None
+        self._ask_starting_price =  None
+        self.buy_counter = 2
+        self.sell_counter = 2
 
 
 
@@ -173,7 +177,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def create_proposal(self) -> List[OrderCandidate]:
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
-        bid_starting_price, ask_starting_price, optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
+        optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
     
         #ref_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
         buy_price = optimal_bid_price ##ref_price * Decimal(1 - self.bid_spread)
@@ -214,7 +218,7 @@ class SimplePMM(ScriptStrategyBase):
         #self.log_with_clock(logging.INFO, msgbe)
         #self.notify_hb_app_with_timestamp(msg)
 
-        msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
+        msgce = (f"Bid Starting Price : {self._bid_starting_price:.8f}, Ask Starting Price : {self._ask_starting_price:.8f}")
         self.log_with_clock(logging.INFO, msgce)
 
         return [buy_order , sell_order]
@@ -525,12 +529,12 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.0000631 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0000800 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
-
+    
         else:
                 self._last_trade_price = Decimal(self._last_trade_price)
 
@@ -678,7 +682,24 @@ class SimplePMM(ScriptStrategyBase):
         
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
+    def get_starting_prices(self):
+        s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
+        if self.initialize_startprice_flag == True:
+            self._bid_starting_price = Decimal(0.0000985)
+            self._ask_starting_price = Decimal(0.0000631)
+            self.initialize_startprice_flag == False
+        else:
+            self._bid_starting_price = self._bid_starting_price
+            self._ask_starting_price = self._ask_starting_price
+            
+            ####  Use Highest and Lowest trade to determine where you should start your percentage entries. 
+            ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
+            if self.buy_counter == 1:
+                self._bid_starting_price = bid_reservation_price
+            
+            if self.sell_counter == 1:
+                self._ask_starting_price = ask_reservation_price
 
 
     def optimal_bid_ask_spread(self):
@@ -748,27 +769,14 @@ class SimplePMM(ScriptStrategyBase):
         else:
             optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
             optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-
-
-        ####  Reorder the counters to determine where you should start your percentage entries. 
-        ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
-        bid_starting_price = Decimal(0.0000699)
-        ask_starting_price = Decimal(0.0000631)
-
-        if self.buy_counter == 1:
-            bid_starting_price = bid_reservation_price
-        
-        if self.sell_counter == 1:
-            ask_starting_price = ask_reservation_price
-
-        
+     
 
         #1
         geom_spread_bid = 1 - Decimal(geom_bid_percent)
         geom_spread_ask = 1 + Decimal(geom_ask_percent)
 
-        geom_limit_bid = bid_starting_price * geom_spread_bid 
-        geom_limit_ask = ask_starting_price * geom_spread_ask 
+        geom_limit_bid = self._bid_starting_price * geom_spread_bid 
+        geom_limit_ask = self._ask_starting_price * geom_spread_ask 
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
@@ -844,7 +852,7 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_price3 = min( vwap_bid * geom_spread_bid3, geom_limit_bid3)
         optimal_ask_price3 = max( vwap_ask * geom_spread_ask3 , geom_limit_ask3)
         
-        return bid_starting_price, ask_starting_price, optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
+        return optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
 
 
     
