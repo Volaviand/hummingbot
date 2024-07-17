@@ -131,10 +131,11 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = True
         self._vwap_midprice = None
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
+        self.initialize_startprice_flag = True
 
 
-        self.buy_counter = 1
-        self.sell_counter = 3
+        self.buy_counter = 2
+        self.sell_counter = 2
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -172,8 +173,9 @@ class SimplePMM(ScriptStrategyBase):
 
     def create_proposal(self) -> List[OrderCandidate]:
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
-        bid_starting_price, ask_starting_price, optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
-    
+        optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
+        bid_starting_price, ask_starting_price = self.get_starting_prices()
+
         #ref_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
         buy_price = optimal_bid_price ##ref_price * Decimal(1 - self.bid_spread)
         sell_price = optimal_ask_price ##ref_price * Decimal(1 + self.ask_spread)
@@ -676,7 +678,26 @@ class SimplePMM(ScriptStrategyBase):
         
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
+    def get_starting_prices(self):
+        s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
+        if self.initialize_startprice_flag == True:
+            bid_starting_price = Decimal(0.039809)
+            ask_starting_price = Decimal(0.036235)
+            self.initialize_startprice_flag == False
+        else:
+            bid_starting_price = bid_starting_price
+            ask_starting_price = ask_starting_price
+            
+            ####  Use Highest and Lowest trade to determine where you should start your percentage entries. 
+            ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
+            if self.buy_counter == 1:
+                bid_starting_price = bid_reservation_price
+            
+            if self.sell_counter == 1:
+                ask_starting_price = ask_reservation_price
+
+        return bid_starting_price, ask_starting_price
 
     def optimal_bid_ask_spread(self):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
@@ -684,6 +705,10 @@ class SimplePMM(ScriptStrategyBase):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
 
         geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
+        
+        bid_starting_price, ask_starting_price = self.get_starting_prices()
+
+        
         msg_7 = (f"geom_bid_percent {geom_bid_percent:.8f} ::: geom_ask_percent {geom_ask_percent:.8f}")
         self.log_with_clock(logging.INFO, msg_7)
         TWO = Decimal(2.0)
@@ -745,19 +770,7 @@ class SimplePMM(ScriptStrategyBase):
         else:
             optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
             optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-
-        ####  Reorder the counters to determine where you should start your percentage entries. 
-        ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
-        bid_starting_price = Decimal(0.039809)
-        ask_starting_price = Decimal(0.036235)
-
-        if self.buy_counter == 1:
-            bid_starting_price = bid_reservation_price
-        
-        if self.sell_counter == 1:
-            ask_starting_price = ask_reservation_price
-
-        
+     
 
         #1
         geom_spread_bid = 1 - Decimal(geom_bid_percent)
@@ -841,7 +854,7 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_price3 = min( vwap_bid * geom_spread_bid3, geom_limit_bid3)
         optimal_ask_price3 = max( vwap_ask * geom_spread_ask3 , geom_limit_ask3)
         
-        return bid_starting_price, ask_starting_price, optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
+        return optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
 
 
     
