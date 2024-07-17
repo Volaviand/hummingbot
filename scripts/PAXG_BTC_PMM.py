@@ -135,7 +135,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         self.buy_counter = 2
-        self.sell_counter = 2
+        self.sell_counter = 1
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -524,7 +524,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.039809 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.039006 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
@@ -682,7 +682,7 @@ class SimplePMM(ScriptStrategyBase):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
         if self.initialize_startprice_flag == True:
-            bid_starting_price = Decimal(0.039809)
+            bid_starting_price = Decimal(0.039006)
             ask_starting_price = Decimal(0.036235)
             self.initialize_startprice_flag == False
         else:
