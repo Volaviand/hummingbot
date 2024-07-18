@@ -316,7 +316,7 @@ class SimplePMM(ScriptStrategyBase):
         
         #Average the trade distance percentages
         if buy_counter_adjusted > 0:
-            for i in range(1, buy_counter_adjusted)
+            for i in range(1, buy_counter_adjusted):
                 additive_buy += bp**i
                 avg_buy = additive_buy / buy_counter_adjusted
         else:
@@ -324,7 +324,7 @@ class SimplePMM(ScriptStrategyBase):
             avg_buy = self._last_trade_price
 
         if sell_counter_adjusted > 0:
-            for i in range(1, sell_counter_adjusted)
+            for i in range(1, sell_counter_adjusted):
                 additive_sell += sp**i
                 avg_sell = additive_sell/sell_counter_adjusted
         else:
