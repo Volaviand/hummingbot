@@ -319,8 +319,8 @@ class SimplePMM(ScriptStrategyBase):
         avg_buy_mult = 1
         avg_sell_mult = 1
 
-        buy_breakeven_mult = Decimal(1)
-        sell_breakeven_mult = Decimal(1)
+        buy_breakeven_mult = 1
+        sell_breakeven_mult = 1
 
         #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
         if buy_counter_adjusted > 0:
@@ -328,23 +328,21 @@ class SimplePMM(ScriptStrategyBase):
                 additive_buy += bp**i
                 avg_buy_mult = additive_buy / buy_counter_adjusted
                 buy_breakeven_mult = 1 + (avg_buy_mult - (bp**buy_counter_adjusted)) 
-                buy_breakeven_mult = Decimal(buy_breakeven_mult)
         else:
             additive_buy = 0
             avg_buy_mult = 1
-            buy_breakeven_mult = Decimal(1)
+            buy_breakeven_mult = 1
 
         if sell_counter_adjusted > 0:
             for i in range(1, sell_counter_adjusted):
                 additive_sell += sp**i
                 avg_sell_mult = additive_sell/sell_counter_adjusted
                 sell_breakeven_mult = 1 - ((sp**sell_counter_adjusted) - avg_sell_mult) 
-                sell_breakeven_mult = Decimal(sell_breakeven_mult)
 
         else:
             additive_sell = 0
             avg_sell_mult = 1
-            sell_breakeven_mult = Decimal(1)
+            sell_breakeven_mult = 1
 
         return buy_breakeven_mult, sell_breakeven_mult
         
@@ -718,8 +716,8 @@ class SimplePMM(ScriptStrategyBase):
         bid_reservation_adjustment = bid_risk_rate * bid_volatility_in_base * t
         ask_reservation_adjustment = ask_risk_rate * ask_volatility_in_base * t
 
-        bid_reservation_price = (s*sell_breakeven_mult) - (bid_reservation_adjustment) 
-        ask_reservation_price = (s*buy_breakeven_mult) - (ask_reservation_adjustment)
+        bid_reservation_price = (s*Decimal(sell_breakeven_mult)) - (bid_reservation_adjustment) 
+        ask_reservation_price = (s*Decimal(buy_breakeven_mult)) - (ask_reservation_adjustment)
 
         #msg_6 = (f" q {q} , bid_risk_rate {bid_risk_rate},ask_risk_rate {ask_risk_rate}  bid_reservation_adjustment {bid_reservation_adjustment}, ask_reservation_adjustment {ask_reservation_adjustment}")
         #self.log_with_clock(logging.INFO, msg_6)
