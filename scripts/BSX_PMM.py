@@ -330,6 +330,8 @@ class SimplePMM(ScriptStrategyBase):
         else:
             additive_sell = 0
             avg_sell = self._last_trade_price
+
+        return avg_buy, avg_sell
         
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
