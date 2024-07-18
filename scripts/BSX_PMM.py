@@ -311,19 +311,25 @@ class SimplePMM(ScriptStrategyBase):
     def determine_log_breakeven_levels(self):
         bp,sp = self.determine_log_multipliers()
         buy_counter_adjusted = self.buy_counter - 1
-        sell_counter_adjusted = self.sell_counter -1
+        sell_counter_adjusted = self.sell_counter - 1
 
-        # If there are no trade runs, then revert to the trade price
-        avg_buy = self._last_trade_price
-        avg_sell = self._last_trade_price
-
+        
+        #Average the trade distance percentages
         if buy_counter_adjusted > 0:
             for i in range(1, buy_counter_adjusted)
-                avg_buy += (bp**i)/buy_counter_adjusted
-                
+                additive_buy += bp**i
+                avg_buy = additive_buy / buy_counter_adjusted
+        else:
+            additive_buy = 0
+            avg_buy = self._last_trade_price
+
         if sell_counter_adjusted > 0:
             for i in range(1, sell_counter_adjusted)
-                avg_sell += (sp**i)/sell_counter_adjusted
+                additive_sell += sp**i
+                avg_sell = additive_sell/sell_counter_adjusted
+        else:
+            additive_sell = 0
+            avg_sell = self._last_trade_price
         
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
