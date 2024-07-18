@@ -846,8 +846,8 @@ class SimplePMM(ScriptStrategyBase):
         bp = Decimal(bp)
         sp = Decimal(sp)
 
-        geom_limit_bid = bid_starting_price * bp##geom_spread_bid 
-        geom_limit_ask = ask_starting_price * sp##geom_spread_ask 
+        geom_limit_bid = bid_starting_price * bp ##geom_spread_bid 
+        geom_limit_ask = ask_starting_price * sp ##geom_spread_ask 
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
