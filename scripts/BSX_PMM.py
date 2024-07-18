@@ -325,9 +325,9 @@ class SimplePMM(ScriptStrategyBase):
         sell_breakeven_mult = 1
 
         #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
-        if buy_counter_adjusted > 0:
-            for i in range(buy_counter_adjusted):
-                additive_buy += bp**i+1
+        if buy_counter_adjusted > 0 and self.buy_counter > 1:
+            for i in range(1, buy_counter_adjusted):
+                additive_buy += bp**i
                 avg_buy_mult = additive_buy / buy_counter_adjusted
                 buy_breakeven_mult = 1 + (avg_buy_mult - (bp**buy_counter_adjusted)) 
         else:
@@ -335,9 +335,9 @@ class SimplePMM(ScriptStrategyBase):
             avg_buy_mult = 1
             buy_breakeven_mult = 1
 
-        if sell_counter_adjusted > 0:
-            for i in range(sell_counter_adjusted):
-                additive_sell += sp**i+1
+        if sell_counter_adjusted > 0 and self.sell_counter > 1:
+            for i in range(1, sell_counter_adjusted):
+                additive_sell += sp**i
                 avg_sell_mult = additive_sell/sell_counter_adjusted
                 sell_breakeven_mult = 1 - ((sp**sell_counter_adjusted) - avg_sell_mult) 
 
