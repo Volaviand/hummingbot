@@ -290,9 +290,41 @@ class SimplePMM(ScriptStrategyBase):
 
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
+    def determine_log_multipliers(self):
+        """Determine the best placement of percentages based on the percentage/log values 
+        log(p)/log(d) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n)"""
+        n = math.floor(self.maximum_orders/2)
+        ## Buys
+        #Minimum Distance in percent. 0.01 = a drop of 99% from original value
+        bd = 0.01
+        ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
+        #p = (1 - 0.05)
+        bp = bd**(1/n)
 
-    
+        ## Sells
+        ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
+        sd = 3
+        sp = (sd**(1/n)) 
 
+        return bp, sp
+
+    def determine_log_breakeven_levels(self):
+        bp,sp = self.determine_log_multipliers()
+        buy_counter_adjusted = self.buy_counter - 1
+        sell_counter_adjusted = self.sell_counter -1
+
+        # If there are no trade runs, then revert to the trade price
+        avg_buy = self._last_trade_price
+        avg_sell = self._last_trade_price
+
+        if buy_counter_adjusted > 0:
+            for i in range(1, buy_counter_adjusted)
+                avg_buy += (bp**i)/buy_counter_adjusted
+                
+        if sell_counter_adjusted > 0:
+            for i in range(1, sell_counter_adjusted)
+                avg_sell += (sp**i)/sell_counter_adjusted
+        
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
         max_ask_percent = 2  # Maximum Rise planned for, Numbers are addative so 2 = 200% rise, example: (1 + max_ask_percent)*current ask price  = ask order price
