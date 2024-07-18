@@ -315,8 +315,8 @@ class SimplePMM(ScriptStrategyBase):
         buy_counter_adjusted = self.buy_counter - 1
         sell_counter_adjusted = self.sell_counter - 1
 
-        additive_buy = []
-        additive_sell = []
+        additive_buy = 0
+        additive_sell = 0
         
         avg_buy_mult = 1
         avg_sell_mult = 1
