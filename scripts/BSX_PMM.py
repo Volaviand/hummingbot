@@ -612,7 +612,7 @@ class SimplePMM(ScriptStrategyBase):
         
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
        
-
+        buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
 
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
@@ -708,8 +708,8 @@ class SimplePMM(ScriptStrategyBase):
         bid_reservation_adjustment = bid_risk_rate * bid_volatility_in_base * t
         ask_reservation_adjustment = ask_risk_rate * ask_volatility_in_base * t
 
-        bid_reservation_price = s - (bid_reservation_adjustment) 
-        ask_reservation_price = s - (ask_reservation_adjustment)
+        bid_reservation_price = (s*sell_breakeven_mult) - (bid_reservation_adjustment) 
+        ask_reservation_price = (s*buy_breakeven_mult) - (ask_reservation_adjustment)
 
         #msg_6 = (f" q {q} , bid_risk_rate {bid_risk_rate},ask_risk_rate {ask_risk_rate}  bid_reservation_adjustment {bid_reservation_adjustment}, ask_reservation_adjustment {ask_reservation_adjustment}")
         #self.log_with_clock(logging.INFO, msg_6)
