@@ -384,7 +384,9 @@ class SimplePMM(ScriptStrategyBase):
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        
+
+
+
         #if q > 0:
         geom_bid_percent = self.bid_entry_percents.get(bid_num , None)
         geom_ask_percent = self.ask_entry_percents.get(ask_num , None)##self.min_profitability #
@@ -839,8 +841,13 @@ class SimplePMM(ScriptStrategyBase):
         geom_spread_bid = 1 - Decimal(geom_bid_percent)
         geom_spread_ask = 1 + Decimal(geom_ask_percent)
 
-        geom_limit_bid = bid_starting_price * geom_spread_bid 
-        geom_limit_ask = ask_starting_price * geom_spread_ask 
+
+        bp, sp = self.determine_log_multipliers()
+        bp = Decimal(bp)
+        sp = Decimal(sp)
+
+        geom_limit_bid = bid_starting_price * bp##geom_spread_bid 
+        geom_limit_ask = ask_starting_price * sp##geom_spread_ask 
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
