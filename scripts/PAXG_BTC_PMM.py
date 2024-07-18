@@ -682,8 +682,8 @@ class SimplePMM(ScriptStrategyBase):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
         if self.initialize_startprice_flag == True:
-            bid_starting_price = Decimal(0.039006)
-            ask_starting_price = Decimal(0.036235)
+            bid_starting_price = bid_reservation_price#Decimal(0.039006)
+            ask_starting_price = ask_reservation_price#Decimal(0.036235)
             self.initialize_startprice_flag == False
         else:
             bid_starting_price = bid_starting_price
