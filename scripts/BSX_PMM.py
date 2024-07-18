@@ -346,11 +346,14 @@ class SimplePMM(ScriptStrategyBase):
             avg_sell_mult = 1
             sell_breakeven_mult = 1
 
+        msg2 = (f"additive_sell :: {additive_sell:.8f} , additive_buy :: {additive_buy:.8f}")
+        self.log_with_clock(logging.INFO, msg2)
+        msg = (f"avg_sell_mult :: {avg_sell_mult:.8f} , avg_buy_mult :: {avg_buy_mult:.8f}")
+        self.log_with_clock(logging.INFO, msg)
         msg3 = (f"Sell Breakeven Mult(s * this = where buy level should be at) :: {sell_breakeven_mult:.8f} , Buy Breakeven Mult(s * this = where sell level should be above) :: {buy_breakeven_mult:.8f}")
         self.log_with_clock(logging.INFO, msg3)
 
-        msg = (f"avg_sell_mult :: {avg_sell_mult:.8f} , avg_buy_mult :: {avg_buy_mult:.8f}")
-        self.log_with_clock(logging.INFO, msg)
+
         return buy_breakeven_mult, sell_breakeven_mult
         
     def geometric_entry_levels(self):
