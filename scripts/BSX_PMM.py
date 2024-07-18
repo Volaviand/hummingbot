@@ -314,24 +314,24 @@ class SimplePMM(ScriptStrategyBase):
         sell_counter_adjusted = self.sell_counter - 1
 
         
-        #Average the trade distance percentages
+        #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
         if buy_counter_adjusted > 0:
             for i in range(1, buy_counter_adjusted):
                 additive_buy += bp**i
-                avg_buy = additive_buy / buy_counter_adjusted
+                avg_buy_mult = additive_buy / buy_counter_adjusted
         else:
             additive_buy = 0
-            avg_buy = self._last_trade_price
+            avg_buy_mult = self._last_trade_price
 
         if sell_counter_adjusted > 0:
             for i in range(1, sell_counter_adjusted):
                 additive_sell += sp**i
-                avg_sell = additive_sell/sell_counter_adjusted
+                avg_sell_mult = additive_sell/sell_counter_adjusted
         else:
             additive_sell = 0
-            avg_sell = self._last_trade_price
+            avg_sell_mult = self._last_trade_price
 
-        return avg_buy, avg_sell
+        return avg_buy_mult, avg_sell_mult
         
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
