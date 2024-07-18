@@ -313,6 +313,8 @@ class SimplePMM(ScriptStrategyBase):
         buy_counter_adjusted = self.buy_counter - 1
         sell_counter_adjusted = self.sell_counter - 1
 
+        additive_buy = 0
+        additive_sell = 0
         
         #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
         if buy_counter_adjusted > 0:
