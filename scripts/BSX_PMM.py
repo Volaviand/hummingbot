@@ -306,6 +306,8 @@ class SimplePMM(ScriptStrategyBase):
         sd = 3
         sp = max(1 + self.min_profitability, (sd**(1/n)) )
 
+        msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
+        self.log_with_clock(logging.INFO, msg)
         return bp, sp
 
     def determine_log_breakeven_levels(self):
