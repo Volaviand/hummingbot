@@ -291,7 +291,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def determine_log_multipliers(self):
         """Determine the best placement of percentages based on the percentage/log values 
-        log(p)/log(d) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n)"""
+        log(d)/log(p) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n)"""
         n = math.floor(self.maximum_orders/2)
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
