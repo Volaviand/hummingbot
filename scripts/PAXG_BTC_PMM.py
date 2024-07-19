@@ -302,7 +302,7 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
-        sd = 3
+        sd = 4
         sp = max(1 + self.min_profitability, (sd**(1/n)) )
 
         msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
