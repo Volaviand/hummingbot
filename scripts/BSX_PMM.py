@@ -773,8 +773,13 @@ class SimplePMM(ScriptStrategyBase):
         geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
         
         bid_starting_price, ask_starting_price = self.get_starting_prices()
-        
-        msg_7 = (f"geom_bid_percent {geom_bid_percent:.8f} ::: geom_ask_percent {geom_ask_percent:.8f}")
+        bp, sp = self.determine_log_multipliers()
+        bp = Decimal(bp)
+        sp = Decimal(sp)
+        bp_inprice = Decimal(1) - bp
+        sp_inprice = sp - Decimal(1)
+
+        msg_7 = (f"bp {bp:.8f} ::: sp {sp:.8f}")
         self.log_with_clock(logging.INFO, msg_7)
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
@@ -783,11 +788,11 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Calculate kappa k (similar to market depth for a percent, can perhaps modify it to represent 50th percentile etc, look into it)
         #e_value = math.e
-        bid_maximum_spread_in_price = (TWO * Decimal(geom_bid_percent) * bid_reservation_price)
+        bid_maximum_spread_in_price = (TWO * Decimal(bp_inprice) * bid_reservation_price)
         bid_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, bid_maximum_spread_in_price)
 
 
-        ask_maximum_spread_in_price = (TWO * Decimal(geom_ask_percent) * ask_reservation_price)
+        ask_maximum_spread_in_price = (TWO * Decimal(sp_inprice) * ask_reservation_price)
         ask_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_maximum_spread_in_price)
 
 
@@ -842,9 +847,7 @@ class SimplePMM(ScriptStrategyBase):
         geom_spread_ask = 1 + Decimal(geom_ask_percent)
 
 
-        bp, sp = self.determine_log_multipliers()
-        bp = Decimal(bp)
-        sp = Decimal(sp)
+
 
         geom_limit_bid = bid_starting_price * bp ##geom_spread_bid 
         geom_limit_ask = ask_starting_price * sp ##geom_spread_ask 
