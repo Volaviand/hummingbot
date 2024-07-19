@@ -292,19 +292,21 @@ class SimplePMM(ScriptStrategyBase):
     #def trade_completion_counter(self, event: OrderFilledEvent):
     def determine_log_multipliers(self):
         """Determine the best placement of percentages based on the percentage/log values 
-        log(d)/log(p) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n)"""
+        (log(d)) / (log(p)) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n).  Or closer p = e^(ln(d) / n)"""
+
         n = math.floor(self.maximum_orders/2)
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
         bd = 0.01
         ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
         #p = (1 - 0.05)
-        bp = min( 1 - self.min_profitability, bd**(1/n) )
-
+        #bp = min( 1 - self.min_profitability, bd**(1/n) )
+        bp = math.exp(math.log(bd)/n)
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
-        sd = 3
-        sp = max(1 + self.min_profitability, (sd**(1/n)) )
+        sd = 4
+        #sp = max(1 + self.min_profitability, (sd**(1/n)) )
+        sp = math.exp(math.log(sd)/n)
 
         msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         self.log_with_clock(logging.INFO, msg)
