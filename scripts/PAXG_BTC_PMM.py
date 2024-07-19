@@ -73,7 +73,6 @@ class SimplePMM(ScriptStrategyBase):
     #Custom 
     _last_trade_price = None
     _vwap_midprice = None
-
     #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
@@ -103,7 +102,6 @@ class SimplePMM(ScriptStrategyBase):
     total_sold = 0
     break_even_price = None  # Store the break-even price
 
-
     
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
@@ -131,11 +129,13 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = True
         self._vwap_midprice = None
         self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
+
+
         self.initialize_startprice_flag = True
-
-
         self.buy_counter = 2
         self.sell_counter = 1
+
+
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -161,7 +161,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
-            top_bid_price, top_ask_price, vwap_bid, vwap_ask = self.get_top_bid_ask()
+            vwap_bid, vwap_ask = self.get_vwap_bid_ask()
             # if spread diff is more than the tolerance or order quantities are different, return false.
             current = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
             if self._order_refresh_tolerance_pct > 0:
@@ -217,6 +217,7 @@ class SimplePMM(ScriptStrategyBase):
 
         msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
         self.log_with_clock(logging.INFO, msgce)
+
         return [buy_order , sell_order]
 
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
@@ -287,8 +288,73 @@ class SimplePMM(ScriptStrategyBase):
 
         time.sleep(10)
 
-    
 
+    def determine_log_multipliers(self):
+        """Determine the best placement of percentages based on the percentage/log values 
+        log(p)/log(d) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n)"""
+        n = math.floor(self.maximum_orders/2)
+        ## Buys
+        #Minimum Distance in percent. 0.01 = a drop of 99% from original value
+        bd = 0.01
+        ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
+        #p = (1 - 0.05)
+        bp = min( 1 - self.min_profitability, bd**(1/n) )
+
+        ## Sells
+        ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
+        sd = 3
+        sp = max(1 + self.min_profitability, (sd**(1/n)) )
+
+        msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
+        self.log_with_clock(logging.INFO, msg)
+        return bp, sp
+
+    def determine_log_breakeven_levels(self):
+        bp,sp = self.determine_log_multipliers()
+        buy_counter_adjusted = self.buy_counter - 1
+        sell_counter_adjusted = self.sell_counter - 1
+
+        additive_buy = 0
+        additive_sell = 0
+        
+        avg_buy_mult = 1
+        avg_sell_mult = 1
+
+        buy_breakeven_mult = 1
+        sell_breakeven_mult = 1
+
+        #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
+        if buy_counter_adjusted > 0:
+            for i in range(1, buy_counter_adjusted+1):
+                additive_buy += bp**i
+                avg_buy_mult = additive_buy / buy_counter_adjusted
+                buy_breakeven_mult = 1 + (avg_buy_mult - (bp**buy_counter_adjusted)) 
+        else:
+            additive_buy = 0
+            avg_buy_mult = 1
+            buy_breakeven_mult = 1
+
+        if sell_counter_adjusted > 0:
+            for i in range(1, sell_counter_adjusted+1):
+                additive_sell += sp**i
+                avg_sell_mult = additive_sell/sell_counter_adjusted
+                sell_breakeven_mult = 1 - ((sp**sell_counter_adjusted) - avg_sell_mult) 
+
+        else:
+            additive_sell = 0
+            avg_sell_mult = 1
+            sell_breakeven_mult = 1
+
+        msg2 = (f"additive_sell :: {additive_sell:.8f} , additive_buy :: {additive_buy:.8f}")
+        self.log_with_clock(logging.INFO, msg2)
+        msg = (f"avg_sell_mult :: {avg_sell_mult:.8f} , avg_buy_mult :: {avg_buy_mult:.8f}")
+        self.log_with_clock(logging.INFO, msg)
+        msg3 = (f"Sell Breakeven Mult(s * this = where buy level should be at) :: {sell_breakeven_mult:.8f} , Buy Breakeven Mult(s * this = where sell level should be above) :: {buy_breakeven_mult:.8f}")
+        self.log_with_clock(logging.INFO, msg3)
+
+
+        return buy_breakeven_mult, sell_breakeven_mult
+        
     def geometric_entry_levels(self):
         num_trades = math.floor(self.maximum_orders/2)
         max_ask_percent = 2  # Maximum Rise planned for, Numbers are addative so 2 = 200% rise, example: (1 + max_ask_percent)*current ask price  = ask order price
@@ -311,14 +377,15 @@ class SimplePMM(ScriptStrategyBase):
             ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
             bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
 
-
-        msg_lastrade = (f"Ask Entry Multiplier (1+) {ask_entry_percents}, Bid Entry Multiplier (1-) {bid_entry_percents}")
-        self.log_with_clock(logging.INFO, msg_lastrade)
+        #msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
+        #self.log_with_clock(logging.INFO, msg_lastrade)
         return ask_entry_percents, bid_entry_percents
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        
+
+
+
         #if q > 0:
         geom_bid_percent = self.bid_entry_percents.get(bid_num , None)
         geom_ask_percent = self.ask_entry_percents.get(ask_num , None)##self.min_profitability #
@@ -403,7 +470,7 @@ class SimplePMM(ScriptStrategyBase):
         sell_trades_instance = SellTrades('PAXGXBT')
         # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
         # Data points are in trades collected
-        target_percentile = 75
+        target_percentile = 25
         window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
@@ -424,7 +491,6 @@ class SimplePMM(ScriptStrategyBase):
         else:
             bid_depth = bid_volume_cdf_value
             ask_depth = ask_volume_cdf_value
-
 
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
@@ -529,11 +595,9 @@ class SimplePMM(ScriptStrategyBase):
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
-
+    
         else:
                 self._last_trade_price = Decimal(self._last_trade_price)
-
-
 
         msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)
@@ -555,7 +619,7 @@ class SimplePMM(ScriptStrategyBase):
         self._vwap_midprice = (price_vwap_bid + price_vwap_ask) / 2
 
         
-       
+  
           
         self._vwap_midprice = self._last_trade_price
 
@@ -567,7 +631,7 @@ class SimplePMM(ScriptStrategyBase):
         
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
        
-
+        buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
 
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
@@ -597,6 +661,7 @@ class SimplePMM(ScriptStrategyBase):
 
         volatility_bid_rank = (df["volatility_bid"].iloc[-1] - df["volatility_bid_min"].iloc[-1]) / (volatility_bid_denominator)
         volatility_ask_rank = (df["volatility_ask"].iloc[-1] - df["volatility_ask_min"].iloc[-1]) / (volatility_ask_denominator)
+
 
 
 
@@ -662,8 +727,8 @@ class SimplePMM(ScriptStrategyBase):
         bid_reservation_adjustment = bid_risk_rate * bid_volatility_in_base * t
         ask_reservation_adjustment = ask_risk_rate * ask_volatility_in_base * t
 
-        bid_reservation_price = s - (bid_reservation_adjustment) 
-        ask_reservation_price = s - (ask_reservation_adjustment)
+        bid_reservation_price = (s*Decimal(sell_breakeven_mult)) - (bid_reservation_adjustment) 
+        ask_reservation_price = (s*Decimal(buy_breakeven_mult)) - (ask_reservation_adjustment)
 
         #msg_6 = (f" q {q} , bid_risk_rate {bid_risk_rate},ask_risk_rate {ask_risk_rate}  bid_reservation_adjustment {bid_reservation_adjustment}, ask_reservation_adjustment {ask_reservation_adjustment}")
         #self.log_with_clock(logging.INFO, msg_6)
@@ -707,9 +772,13 @@ class SimplePMM(ScriptStrategyBase):
         geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
         
         bid_starting_price, ask_starting_price = self.get_starting_prices()
+        bp, sp = self.determine_log_multipliers()
+        bp = Decimal(bp)
+        sp = Decimal(sp)
+        bp_inprice = Decimal(1) - bp
+        sp_inprice = sp - Decimal(1)
 
-        
-        msg_7 = (f"geom_bid_percent {geom_bid_percent:.8f} ::: geom_ask_percent {geom_ask_percent:.8f}")
+        msg_7 = (f"bp {bp:.8f} ::: sp {sp:.8f}")
         self.log_with_clock(logging.INFO, msg_7)
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
@@ -718,11 +787,11 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Calculate kappa k (similar to market depth for a percent, can perhaps modify it to represent 50th percentile etc, look into it)
         #e_value = math.e
-        bid_maximum_spread_in_price = (TWO * Decimal(geom_bid_percent) * bid_reservation_price)
+        bid_maximum_spread_in_price = (TWO * Decimal(bp_inprice) * bid_reservation_price)
         bid_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, bid_maximum_spread_in_price)
 
 
-        ask_maximum_spread_in_price = (TWO * Decimal(geom_ask_percent) * ask_reservation_price)
+        ask_maximum_spread_in_price = (TWO * Decimal(sp_inprice) * ask_reservation_price)
         ask_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_maximum_spread_in_price)
 
 
@@ -776,9 +845,11 @@ class SimplePMM(ScriptStrategyBase):
         geom_spread_bid = 1 - Decimal(geom_bid_percent)
         geom_spread_ask = 1 + Decimal(geom_ask_percent)
 
-        geom_limit_bid = bid_starting_price * geom_spread_bid 
-        geom_limit_ask = ask_starting_price * geom_spread_ask         
 
+
+
+        geom_limit_bid = bid_starting_price * bp ##geom_spread_bid 
+        geom_limit_ask = ask_starting_price * sp ##geom_spread_ask 
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
