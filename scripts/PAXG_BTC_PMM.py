@@ -299,7 +299,7 @@ class SimplePMM(ScriptStrategyBase):
         ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
         #p = (1 - 0.05)
         #bp = min( 1 - self.min_profitability, bd**(1/n) )
-        bp = math.exp(Decimal.ln(bd/n))
+        bp = math.exp(math.log(bd/n))
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
         sd = 4
