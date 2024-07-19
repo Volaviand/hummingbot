@@ -300,6 +300,7 @@ class SimplePMM(ScriptStrategyBase):
         ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
         #p = (1 - 0.05)
         bp = min( 1 - self.min_profitability, bd**(1/n) )
+        bp = Decimal(bp)
         bp = (1 - bp) * order_shape_factor
         bp = 1 - bp
 
@@ -307,6 +308,7 @@ class SimplePMM(ScriptStrategyBase):
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
         sd = 3
         sp = max(1 + self.min_profitability, (sd**(1/n)) )
+        sp = Decimal(sp)
         sp = (sp - 1 ) * order_shape_factor
         sp = sp + 1
 
