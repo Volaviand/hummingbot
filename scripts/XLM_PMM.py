@@ -49,7 +49,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     #order_refresh_time = 30
-    order_amount = Decimal(40000)
+    order_amount = Decimal(40)
     create_timestamp = 0
     trading_pair = "XLM-EUR"
     exchange = "kraken"
@@ -470,8 +470,8 @@ class SimplePMM(ScriptStrategyBase):
         q, _, _, _,_, _, _ = self.get_current_positions()
 
         # Create an instance of Trades (Market Trades, don't confuse with Limit)
-        buy_trades_instance = BuyTrades('XXLMZEUR')
-        sell_trades_instance = SellTrades('XXLMZEUR')
+        buy_trades_instance = BuyTrades('XLMEUR')
+        sell_trades_instance = SellTrades('XLMEUR')
         # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
         # Data points are in trades collected
         target_percentile = 25
