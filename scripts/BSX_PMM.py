@@ -59,7 +59,7 @@ class SimplePMM(ScriptStrategyBase):
     #Maximum amount of orders  Bid + Ask
     maximum_orders = 100
 
-    inv_target_percent = Decimal(0.33)   
+    inv_target_percent = Decimal(0.0)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
     order_shape_factor = Decimal(1.25) 
@@ -132,7 +132,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         self.initialize_startprice_flag = True
-        self.buy_counter = 15
+        self.buy_counter = 17
         self.sell_counter = 1
 
 
@@ -594,7 +594,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.00003950 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = 0.0000350 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
