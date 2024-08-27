@@ -549,6 +549,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
+        
         # Adjust base and quote balancing volumes based on shape factor and entry size by percentage
         # This method reduces the size of the orders which are overbalanced
         #if I have too much base, more base purchases are made small
@@ -566,7 +567,7 @@ class SimplePMM(ScriptStrategyBase):
         elif q < 0 :
             base_balancing_volume = abs(minimum_size) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
             quote_balancing_volume = abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
-               
+
             # Ensure base balancing volume does not exceed the amount needed to balance
             if base_balancing_volume > total_imbalance:
                 base_balancing_volume = total_imbalance
