@@ -186,9 +186,9 @@ class SimplePMM(ScriptStrategyBase):
         buy_price3 = optimal_bid_price3 ##ref_price * Decimal(1 - self.bid_spread)
         sell_price3 = optimal_ask_price3 ##ref_price * Decimal(1 + self.ask_spread)
 
-        if buy_price < self._last_trade_price:
-            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+#        if buy_price < self._last_trade_price:
+#            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+#                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
             #buy_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
             #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price2)
@@ -305,7 +305,7 @@ class SimplePMM(ScriptStrategyBase):
         bp = math.exp(math.log(bd)/n)
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
-        sd = 3
+        sd = 1
         #sp = max(1 + self.min_profitability, (sd**(1/n)) )
         sp = math.exp(math.log(sd)/n)
 
