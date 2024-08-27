@@ -57,9 +57,9 @@ class SimplePMM(ScriptStrategyBase):
     quote_asset = "EUR"
 
     #Maximum amount of orders  Bid + Ask
-    maximum_orders = 100
+    maximum_orders = 150
 
-    inv_target_percent = Decimal(0.33)   
+    inv_target_percent = Decimal(0.50)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
     order_shape_factor = Decimal(1.25) 
@@ -298,14 +298,14 @@ class SimplePMM(ScriptStrategyBase):
         n = math.floor(self.maximum_orders/2)
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
-        bd = 0.05
+        bd = 0.4
         ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
         #p = (1 - 0.05)
         #bp = min( 1 - self.min_profitability, bd**(1/n) )
         bp = math.exp(math.log(bd)/n)
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
-        sd = 3
+        sd = 3.75
         #sp = max(1 + self.min_profitability, (sd**(1/n)) )
         sp = math.exp(math.log(sd)/n)
 
