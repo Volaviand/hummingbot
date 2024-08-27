@@ -186,9 +186,9 @@ class SimplePMM(ScriptStrategyBase):
         buy_price3 = optimal_bid_price3 ##ref_price * Decimal(1 - self.bid_spread)
         sell_price3 = optimal_ask_price3 ##ref_price * Decimal(1 + self.ask_spread)
 
-#        if buy_price < self._last_trade_price:
-#            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-#                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+        if buy_price < self._last_trade_price:
+            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
             #buy_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
             #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price2)
@@ -218,7 +218,7 @@ class SimplePMM(ScriptStrategyBase):
         msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
         self.log_with_clock(logging.INFO, msgce)
 
-        return [buy_order , sell_order]
+        return [ sell_order] # buy_order,
 
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
