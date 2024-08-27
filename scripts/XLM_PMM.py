@@ -62,7 +62,7 @@ class SimplePMM(ScriptStrategyBase):
     inv_target_percent = Decimal(0.50)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
-    order_shape_factor = Decimal(1.25) 
+    order_shape_factor = Decimal(2.0) 
     # Here you can use for example the LastTrade price to use in your strategy
     #MidPrice 
     #BestBid 
