@@ -57,7 +57,7 @@ class SimplePMM(ScriptStrategyBase):
     quote_asset = "EUR"
 
     #Maximum amount of orders  Bid + Ask
-    maximum_orders = 150
+    maximum_orders = 170
 
     inv_target_percent = Decimal(0.50)   
 
