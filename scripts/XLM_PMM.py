@@ -666,6 +666,8 @@ class SimplePMM(ScriptStrategyBase):
 
     def call_garch_model(self, log_returns):
         # Retrieve the log returns from the DataFrame
+        self.log_with_clock(logging.INFO, (f"Close {self.close_history[-1]}, last close {self.close_history[-2]}))
+        self.log_with_clock(logging.INFO, self.log_returns[-1])
 
         # Fit GARCH model to log returns
         model = arch_model(log_returns, vol='GARCH', p=3, q=3, power=2.0)
