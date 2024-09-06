@@ -649,7 +649,7 @@ class SimplePMM(ScriptStrategyBase):
         df = volatility_metrics_df
         close = df["close"]
 
-        returns = np.to_numeric(df["close"] - df["close"].shift(1))
+        returns = 100 * df['close'].pct_change().dropna() ##np.to_numeric(df["close"] - df["close"].shift(1))
 
         #for i in range(1, 300):
         #    current_price = df["close"].iloc[i]
