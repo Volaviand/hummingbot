@@ -138,6 +138,9 @@ class SimplePMM(ScriptStrategyBase):
         self.sell_counter = 1
 
 
+        #history_values
+        self.close_history = []
+        self.log_returns = []
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -431,8 +434,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def get_market_analysis(self):
         market_metrics = {}
-        close_history = []  # Array to store close prices
-        log_returns = []    # Array to store log returns
+
         for trading_pair_interval, candle in self.candles.items():
             df = candle.candles_df
             df["trading_pair"] = trading_pair_interval.split("_")[0]
@@ -463,20 +465,22 @@ class SimplePMM(ScriptStrategyBase):
             # Append the current close price to close_history
             close_history.append(df["close"].iloc[-1])
 
+            # Append the current close price to self.close_history
+            self.close_history.append(df["close"].iloc[-1])
+
             # Ensure that there are at least 2 close values to compute the log return
-            if len(close_history) > 1:
+            if len(self.close_history) > 1:
                 # Calculate the log return between the last two close prices
-                current_close = close_history[-1]
-                previous_close = close_history[-2]
+                current_close = self.close_history[-1]
+                previous_close = self.close_history[-2]
                 log_return = math.log(current_close / previous_close)
-                log_returns.append(log_return)
-
-
-
+                self.log_returns.append(log_return)
 
         volatility_metrics_df = pd.DataFrame(market_metrics).T
+        
         self.target_profitability = max(self.min_profitability, volatility_metrics_df["volatility"].iloc[-1])
-        return volatility_metrics_df, self.target_profitability, log_returns
+
+        return volatility_metrics_df, self.target_profitability, self.log_returns
 
 
 ##########
