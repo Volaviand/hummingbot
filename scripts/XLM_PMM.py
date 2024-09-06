@@ -20,7 +20,7 @@ from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
 
-from arch import arch_model
+from arch import arch_model, GARCH
 
 
 ### attempt to add your own code from earlier
@@ -447,6 +447,25 @@ class SimplePMM(ScriptStrategyBase):
 
             df["volatility_pct"] = df["volatility"] / df["close"]
             df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
+
+
+
+            # Add Log Returns
+            df["log_returns"] = np.log(df["close"] / df["close"].shift(1))   
+            # Drop rows with NaN values resulting from shift operation
+            df.dropna(inplace=True)
+
+            # Fit GARCH model to log returns
+            model = arch_model(df["log_returns"], vol='Garch', p=3, q=3)
+            model_fit = model.fit(disp="off")  # Fit the model without display
+            
+            # Retrieve the latest (current) GARCH volatility
+            current_variance = model_fit.conditional_volatility[-1]**2  # Latest variance
+            current_volatility = np.sqrt(current_variance)  # Convert to volatility
+            
+            # Add GARCH metrics to DataFrame
+            df["garch_volatility"] = np.nan
+            df.loc[df.index[-1], "garch_volatility"] = current_volatility
 
             # adding bbands metrics
             df.ta.bbands(length=self.volatility_interval, append=True)
