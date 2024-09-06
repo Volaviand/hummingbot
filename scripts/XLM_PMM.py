@@ -458,13 +458,16 @@ class SimplePMM(ScriptStrategyBase):
             df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
-            ## Create arrays to hold log values
-            close_history = []
-            close_history.append(df["close"])
+            # Append the current close price to close_history
+            close_history.append(df["close"].iloc[-1])
 
-            log_returns = []
-            if candle > 2:
-                log_returns.append(math.log(close_history[candle]) - math.log(close_history[candle - 1]))
+            # Ensure that there are at least 2 close values to compute the log return
+            if len(close_history) > 1:
+                # Calculate the log return between the last two close prices
+                current_close = close_history[-1]
+                previous_close = close_history[-2]
+                log_return = math.log(current_close / previous_close)
+                log_returns.append(log_return)
 
 
 
