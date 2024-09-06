@@ -413,7 +413,7 @@ class SimplePMM(ScriptStrategyBase):
             candle.stop()
 
     def get_formatted_market_analysis(self):
-        volatility_metrics_df, self.target_profitability= self.get_market_analysis()
+        volatility_metrics_df, self.target_profitability, log_returns= self.get_market_analysis()
         volatility_metrics_pct_str = format_df_for_printout(
             volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
             table_format="psql")
@@ -448,6 +448,7 @@ class SimplePMM(ScriptStrategyBase):
             df["volatility_pct"] = df["volatility"] / df["close"]
             df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
 
+            
 
             # adding bbands metrics
             df.ta.bbands(length=self.volatility_interval, append=True)
@@ -456,9 +457,21 @@ class SimplePMM(ScriptStrategyBase):
             df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
             df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
+
+            ## Create arrays to hold log values
+            close_history = []
+            close_history.append(df["close"])
+
+            log_returns = []
+            if candle > 2:
+                log_returns.append(math.log(close_history[candle]) - math.log(close_history[candle - 1]))
+
+
+
+
         volatility_metrics_df = pd.DataFrame(market_metrics).T
         self.target_profitability = max(self.min_profitability, volatility_metrics_df["volatility"].iloc[-1])
-        return volatility_metrics_df, self.target_profitability
+        return volatility_metrics_df, self.target_profitability, log_returns
 
 
 ##########
@@ -644,39 +657,11 @@ class SimplePMM(ScriptStrategyBase):
 
         return self._last_trade_price, self._vwap_midprice
 
-    def call_garch_model(self, volatility_metrics_df):
+    def call_garch_model(self, log_returns):
         # Retrieve the log returns from the DataFrame
-        df = volatility_metrics_df
-        close = df["close"]
-        close_len = len(close)
-        self.log_with_clock(logging.INFO, f"(Close Length{close_len}")
-
-        returns = 100 * df["close"].pct_change().dropna() ##np.to_numeric(df["close"] - df["close"].shift(1))
-
-        #for i in range(1, 300):
-        #    current_price = df["close"].iloc[i]
-        #    previous_price = df["close"].iloc[i-1]
-        #    log_return = math.log(current_price / previous_price)
-        #    returns.append(log_return)
-        #    self.log_with_clock(logging.INFO, f"(Returns: {returns}, current_price: {current_price}, current_price: {current_price},previous_price: {previous_price}, log_return : {log_return}")
-
-        # Convert returns to a DataFrame
-        #returns = pd.Series(returns, dtype=np.float64)
-
-        # Drop NaN and Inf values
-        #returns = returns
-
-        # Logging for debugging
-        ##self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close}")
-
-        # Ensure log_returns is not empty
-       # if returns.empty:
-        #    self.log_with_clock(logging.INFO, f"(Returns array is empty")
-
-        #    raise ValueError("Log returns data is empty.")
 
         # Fit GARCH model to log returns
-        model = arch_model(close.iloc[-1], vol='GARCH', p=3, q=3, power=2.0)
+        model = arch_model(log_returns, vol='GARCH', p=3, q=3, power=2.0)
         model_fit = model.fit(disp="off")  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
@@ -686,7 +671,7 @@ class SimplePMM(ScriptStrategyBase):
         return current_volatility
 
     def reservation_price(self):
-        volatility_metrics_df, self.target_profitability = self.get_market_analysis()
+        volatility_metrics_df, self.target_profitability, log_returns = self.get_market_analysis()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
@@ -708,7 +693,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         ### Call Garch Test
-        garch_volatility = self.call_garch_model(volatility_metrics_df)
+        garch_volatility = self.call_garch_model(log_returns)
         msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
         self.log_with_clock(logging.INFO, msg_gv)
 
