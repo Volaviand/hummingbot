@@ -674,7 +674,7 @@ class SimplePMM(ScriptStrategyBase):
         #    raise ValueError("Log returns data is empty.")
 
         # Fit GARCH model to log returns
-        model = arch_model(returns, vol='GARCH', p=3, q=3, power=2.0)
+        model = arch_model(close.iloc[-1], vol='GARCH', p=3, q=3, power=2.0)
         model_fit = model.fit(disp="off")  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
