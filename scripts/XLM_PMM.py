@@ -668,10 +668,10 @@ class SimplePMM(ScriptStrategyBase):
         ##self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close}")
 
         # Ensure log_returns is not empty
-        if returns.empty:
-            self.log_with_clock(logging.INFO, f"(Returns array is empty")
+       # if returns.empty:
+        #    self.log_with_clock(logging.INFO, f"(Returns array is empty")
 
-            raise ValueError("Log returns data is empty.")
+        #    raise ValueError("Log returns data is empty.")
 
         # Fit GARCH model to log returns
         model = arch_model(returns, vol='GARCH', p=3, q=3, power=2.0)
