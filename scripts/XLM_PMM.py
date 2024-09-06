@@ -655,7 +655,7 @@ class SimplePMM(ScriptStrategyBase):
     def call_garch_model(self, volatility_metrics_df):
         # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
-        returns = pd.to_numeric(df["returns"] , errors = 'coerce')
+        returns = df["returns"] 
 
         # Convert log_returns to numeric, forcing errors to NaN
 
