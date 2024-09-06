@@ -695,8 +695,8 @@ class SimplePMM(ScriptStrategyBase):
 
         ### Call Garch Test
         garch_volatility = self.call_garch_model()
-        msg_4 = (f"GARCH Volatility {garch_volatility:.8f}")
-        self.log_with_clock(logging.INFO, msg_4)
+        msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+        self.log_with_clock(logging.INFO, msg_gv)
 
 
 
