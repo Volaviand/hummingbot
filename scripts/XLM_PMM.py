@@ -451,7 +451,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
             # Add Log Returns
-            df["percent_returns"] = 100 * df['close'].pct_change().dropna() ##np.log(df["close"] / df["close"].shift(1).dropna())   
+            df["returns"] = np.log(df["close"] / df["close"].shift(1)).dropna()   
 
 
 
@@ -654,17 +654,17 @@ class SimplePMM(ScriptStrategyBase):
     def call_garch_model(self, volatility_metrics_df):
         # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
-        percent_returns = df["percent_returns"]
-
+        returns = df["returns"]
+        numeric_returns = pd.to_numeric(returns.iloc[-1])
         # Convert log_returns to numeric, forcing errors to NaN
-        percent_returns = pd.to_numeric(percent_returns, errors='coerce')
-        self.log_with_clock(logging.INFO, (f"{percent_returns.iloc[-1]}"))
+        returns = returns, errors='coerce' ## pd.to_numeric() ? 
+        self.log_with_clock(logging.INFO, (f"Returns: {numeric_returns}"))
         # Ensure log_returns is not empty
-        if percent_returns.empty:
+        if returns.empty:
             raise ValueError("Log returns data is empty.")
 
         # Fit GARCH model to log returns
-        model = arch_model(percent_returns, vol='GARCH', p=3, q=3)
+        model = arch_model(returns, vol='GARCH', p=3, q=3, power=2.0)
         model_fit = model.fit(disp="off")  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
