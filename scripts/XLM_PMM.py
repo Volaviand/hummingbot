@@ -647,10 +647,10 @@ class SimplePMM(ScriptStrategyBase):
     def call_garch_model(self, volatility_metrics_df):
         # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
-        close = df["close"].astype(float)
+        close = df["close"]
 
         returns = []
-        if len(df) > 2:
+        if len(close) > 2:
             for i in range(1, len(close)):
                 current_price = df["close"].iloc[i]
                 previous_price = df["close"].iloc[i-1]
