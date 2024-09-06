@@ -450,9 +450,13 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-            # Add Log Returns
-            df["returns"] = np.log(df["close"]) - np.log(df["close"].shift(1))
-            df.dropna(subset=["returns"], inplace = True)
+            # Calculate percentage change and then log returns
+            df["pct_change"] = df["close"].pct_change()
+            df["returns"] = np.log(1 + df["pct_change"])
+
+            # Drop NaN values which occur due to the shift operation
+            df.dropna(subset=["returns"], inplace=True)
+
 
 
 
