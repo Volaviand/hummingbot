@@ -656,10 +656,14 @@ class SimplePMM(ScriptStrategyBase):
 
         return self._last_trade_price, self._vwap_midprice
 
-    def call_garch_model(self, log_returns):
+    def call_garch_model(self):
         # Retrieve the log returns from the DataFrame
        # self.log_with_clock(logging.INFO, (f"Close {self.close_history[-1]}, last close {self.close_history[-2]}"))
-        self.log_with_clock(logging.INFO, (self.log_returns[-1]))
+    # Ensure log_returns is a one-dimensional pd.Series
+        if isinstance(log_returns, list):
+            log_returns = pd.Series(log_returns)
+
+        self.log_with_clock(logging.INFO, (log_returns))
 
         # Fit GARCH model to log returns
         model = arch_model(log_returns, vol='GARCH', p=3, q=3, power=2.0)
@@ -694,7 +698,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         ### Call Garch Test
-        garch_volatility = self.call_garch_model(self.log_returns)
+        garch_volatility = self.call_garch_model()
         msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
         self.log_with_clock(logging.INFO, msg_gv)
 
