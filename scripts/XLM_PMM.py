@@ -696,7 +696,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Fit GARCH model to log returns
         model = arch_model(log_returns_clean, vol='GARCH', p=3, q=3, power=2.0)
-        model_fit = model.fit(disp="off")  # Fit the model without display
+        model_fit = model.fit(disp="off", update_freq=5)  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
         current_variance = model_fit.conditional_volatility[-1]**2  # Latest variance
