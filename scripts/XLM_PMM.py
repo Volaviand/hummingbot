@@ -20,7 +20,6 @@ from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
 
-from arch.univariate import GARCH
 
 
 
