@@ -654,11 +654,11 @@ class SimplePMM(ScriptStrategyBase):
     def call_garch_model(self, volatility_metrics_df):
         # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
-        returns = pd.to_numeric(df["returns"])
-        numeric_returns = pd.to_numeric(returns.iloc[-1])
+        returns = df["returns"]
+
         # Convert log_returns to numeric, forcing errors to NaN
-        returns = returns, errors='coerce' ## pd.to_numeric() ? 
-        self.log_with_clock(logging.INFO, (f"Returns: {numeric_returns}"))
+        
+        self.log_with_clock(logging.INFO, (f"Returns{returns.iloc[-1]}"))
         # Ensure log_returns is not empty
         if returns.empty:
             raise ValueError("Log returns data is empty.")
