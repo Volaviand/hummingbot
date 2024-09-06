@@ -663,7 +663,7 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
 
         # Drop NaN and Inf values
-        returns = returns.dropna()
+        returns = returns
         self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
 
         # Logging for debugging
