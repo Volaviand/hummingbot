@@ -656,8 +656,7 @@ class SimplePMM(ScriptStrategyBase):
                 previous_price = df["close"].iloc[i-1]
                 log_return = math.log(current_price / previous_price)
                 returns.append(log_return)
-                self.log_with_clock(logging.INFO, f"Returns: {returns}, current_price: {current_price}, current_price: {current_price},
-                    previous_price: {previous_price}, log_return : {log_return}")
+                self.log_with_clock(logging.INFO, f"Returns: {returns}, current_price: {current_price}, current_price: {current_price},previous_price: {previous_price}, log_return : {log_return}")
 
         # Convert returns to a DataFrame
         returns = pd.Series(returns, dtype=np.float64)
