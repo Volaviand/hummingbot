@@ -656,13 +656,16 @@ class SimplePMM(ScriptStrategyBase):
                 previous_price = df["close"].iloc[i-1]
                 log_return = math.log(current_price / previous_price)
                 returns.append(log_return)
+        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
 
         # Convert returns to a DataFrame
         returns = pd.Series(returns, dtype=np.float64)
+        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
 
         # Drop NaN and Inf values
-        returns = pd.to_numeric(returns, errors='coerce').dropna()
-        
+        returns = returns.dropna()
+        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
+
         # Logging for debugging
         self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
 
@@ -703,9 +706,9 @@ class SimplePMM(ScriptStrategyBase):
 
 
         ### Call Garch Test
-        #garch_volatility = self.call_garch_model(volatility_metrics_df)
-        #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-        #self.log_with_clock(logging.INFO, msg_gv)
+        garch_volatility = self.call_garch_model(volatility_metrics_df)
+        msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+        self.log_with_clock(logging.INFO, msg_gv)
 
 
 
