@@ -649,20 +649,20 @@ class SimplePMM(ScriptStrategyBase):
         df = volatility_metrics_df
         close = df["close"]
 
-        returns = []
+        returns = df["close"] - df["close"].shift(1)
 
-        for i in range(1, 300):
-            current_price = df["close"].iloc[i]
-            previous_price = df["close"].iloc[i-1]
-            log_return = math.log(current_price / previous_price)
-            returns.append(log_return)
-            self.log_with_clock(logging.INFO, f"(Returns: {returns}, current_price: {current_price}, current_price: {current_price},previous_price: {previous_price}, log_return : {log_return}")
+        #for i in range(1, 300):
+        #    current_price = df["close"].iloc[i]
+        #    previous_price = df["close"].iloc[i-1]
+        #    log_return = math.log(current_price / previous_price)
+        #    returns.append(log_return)
+        #    self.log_with_clock(logging.INFO, f"(Returns: {returns}, current_price: {current_price}, current_price: {current_price},previous_price: {previous_price}, log_return : {log_return}")
 
         # Convert returns to a DataFrame
-        returns = pd.Series(returns, dtype=np.float64)
+        #returns = pd.Series(returns, dtype=np.float64)
 
         # Drop NaN and Inf values
-        returns = returns
+        #returns = returns
 
         # Logging for debugging
         ##self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close}")
