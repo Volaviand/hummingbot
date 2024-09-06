@@ -431,6 +431,8 @@ class SimplePMM(ScriptStrategyBase):
 
     def get_market_analysis(self):
         market_metrics = {}
+        close_history = []  # Array to store close prices
+        log_returns = []    # Array to store log returns
         for trading_pair_interval, candle in self.candles.items():
             df = candle.candles_df
             df["trading_pair"] = trading_pair_interval.split("_")[0]
