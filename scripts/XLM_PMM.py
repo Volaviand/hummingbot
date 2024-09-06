@@ -664,10 +664,15 @@ class SimplePMM(ScriptStrategyBase):
         if isinstance(log_returns, list):
             log_returns = pd.Series(log_returns)
 
-        self.log_with_clock(logging.INFO, (log_returns))
+        # Convert to numeric, forcing any errors to NaN
+        log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
+
+        # Remove any NaN or infinite values from log_returns
+        log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
+
 
         # Fit GARCH model to log returns
-        model = arch_model(log_returns, vol='GARCH', p=3, q=3, power=2.0)
+        model = arch_model(log_returns_clean, vol='GARCH', p=3, q=3, power=2.0)
         model_fit = model.fit(disp="off")  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
