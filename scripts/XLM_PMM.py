@@ -658,15 +658,15 @@ class SimplePMM(ScriptStrategyBase):
         df = volatility_metrics_df
         close = df["close"].astype(float)
 
-        returns = []
+        returns = np.array([] , dtype=float64)
         for i in range(1, len(df)):
             current_price = df.iloc[i]["close"]
             previous_price = df.iloc[i-1]["close"]
-            log_return = math.log(current_price / previous_price)
+            log_return = np.log(current_price / previous_price)
             returns.append(log_return)
 
         # Convert returns to a DataFrame
-        returns = pd.Series(returns, dtype=np.float64)
+        returns = returns
 
         # Drop NaN and Inf values
         returns = pd.to_numeric(returns, errors='coerce').dropna()
