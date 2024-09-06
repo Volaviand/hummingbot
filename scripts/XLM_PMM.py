@@ -386,8 +386,8 @@ class SimplePMM(ScriptStrategyBase):
             ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
             bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
 
-        msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
-        self.log_with_clock(logging.INFO, msg_lastrade)
+        #msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
+        #self.log_with_clock(logging.INFO, msg_lastrade)
         return ask_entry_percents, bid_entry_percents
 
     def get_geometric_entry_levels(self, bid_num, ask_num):
