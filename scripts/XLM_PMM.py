@@ -672,10 +672,10 @@ class SimplePMM(ScriptStrategyBase):
             returns.append(log_return)
 
         # Convert returns to a DataFrame
-        ##returns = pd.Series(returns)
+        #returns = pd.Series(returns)
 
         # Drop NaN and Inf values
-        ##returns = pd.to_numeric(returns, errors='coerce').dropna()
+        returns = returns.dropna()
         
         # Logging for debugging
         self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
