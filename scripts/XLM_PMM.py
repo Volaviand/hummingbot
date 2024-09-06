@@ -657,7 +657,7 @@ class SimplePMM(ScriptStrategyBase):
         percent_returns = df["percent_returns"]
 
         # Convert log_returns to numeric, forcing errors to NaN
-        log_returns = pd.to_numeric(percent_returns, errors='coerce')
+        percent_returns = pd.to_numeric(percent_returns, errors='coerce')
         self.log_with_clock(logging.INFO, (f"{percent_returns.iloc[-1]}"))
         # Ensure log_returns is not empty
         if percent_returns.empty:
