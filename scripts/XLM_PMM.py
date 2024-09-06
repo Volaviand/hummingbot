@@ -648,6 +648,8 @@ class SimplePMM(ScriptStrategyBase):
         # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
         close = df["close"]
+        close_len = len(close)
+        self.log_with_clock(logging.INFO, f"(Close Length{close_len}")
 
         returns = 100 * df["close"].pct_change().dropna() ##np.to_numeric(df["close"] - df["close"].shift(1))
 
