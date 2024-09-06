@@ -698,7 +698,7 @@ class SimplePMM(ScriptStrategyBase):
         try:
             model = arch_model(log_returns_clean, vol='Garch', p=1, q=1)  # Default model is GARCH(1,1)
             model_fit = model.fit(update_freq=5, disp="off")  # Fit the model without display
-            msg_gv = (f"GARCH  { model_fit.summary():.8f}")
+            msg_gv = (f"GARCH  { model_fit.summary()}")
             self.log_with_clock(logging.INFO, msg_gv)
            
             # Check if `conditional_volatility` is available
