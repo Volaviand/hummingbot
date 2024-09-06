@@ -660,7 +660,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Convert log_returns to numeric, forcing errors to NaN
 
-        self.log_with_clock(logging.INFO, (f"Returns{returns.head} , close: {close}"))
+        self.log_with_clock(logging.INFO, (f"Returns{returns.head()} , close: {close.head()}"))
         # Ensure log_returns is not empty
         if returns.empty:
             raise ValueError("Log returns data is empty.")
