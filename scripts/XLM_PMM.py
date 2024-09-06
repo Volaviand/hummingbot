@@ -451,7 +451,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
             # Add Log Returns
-            df["returns"] = np.log(df["close"] / df["close"].shift(1) + 1e-10).dropna()   
+            df["returns"] = np.log(df["close"]) - np.log(df["close"].shift(1))
+            df.dropna(subset=["returns"], inplace = True)
 
 
 
