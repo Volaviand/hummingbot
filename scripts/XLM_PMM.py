@@ -462,8 +462,6 @@ class SimplePMM(ScriptStrategyBase):
             df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
-            # Append the current close price to close_history
-            close_history.append(df["close"].iloc[-1])
 
             # Append the current close price to self.close_history
             self.close_history.append(df["close"].iloc[-1])
