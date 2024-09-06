@@ -696,7 +696,7 @@ class SimplePMM(ScriptStrategyBase):
         # Fit GARCH model to log returns
         try:
             model = arch_model(log_returns_clean, vol='Garch',mean="AR", p=1, q=1, power=2.0)  # Default model is GARCH(1,1)
-            model_fit = model.fit(update_freq=15, disp="off")  # Fit the model without display
+            model_fit = model.fit(disp="off")  # Fit the model without display // update_freq = 20
             msg_gv = (f"GARCH  { model_fit.summary()}")
             self.log_with_clock(logging.INFO, msg_gv)
            
