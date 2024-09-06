@@ -656,18 +656,18 @@ class SimplePMM(ScriptStrategyBase):
                 previous_price = df["close"].iloc[i-1]
                 log_return = math.log(current_price / previous_price)
                 returns.append(log_return)
-        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
+        self.log_with_clock(logging.INFO, f"Returns: {returns()}, Close: {close()}")
 
         # Convert returns to a DataFrame
         returns = pd.Series(returns, dtype=np.float64)
-        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
+        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close()}")
 
         # Drop NaN and Inf values
         returns = returns
-        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
+        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close()}")
 
         # Logging for debugging
-        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
+        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close()}")
 
         # Ensure log_returns is not empty
         if returns.empty:
