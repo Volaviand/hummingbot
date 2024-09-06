@@ -455,17 +455,7 @@ class SimplePMM(ScriptStrategyBase):
             # Drop rows with NaN values resulting from shift operation
             df.dropna(inplace=True)
 
-            # Fit GARCH model to log returns
-            model = arch_model(df["log_returns"], vol='Garch', p=3, q=3)
-            model_fit = model.fit(disp="off")  # Fit the model without display
-            
-            # Retrieve the latest (current) GARCH volatility
-            current_variance = model_fit.conditional_volatility[-1]**2  # Latest variance
-            current_volatility = np.sqrt(current_variance)  # Convert to volatility
-            
-            # Add GARCH metrics to DataFrame
-            df["garch_volatility"] = np.nan
-            df.loc[df.index[-1], "garch_volatility"] = current_volatility
+
 
             # adding bbands metrics
             df.ta.bbands(length=self.volatility_interval, append=True)
@@ -662,6 +652,25 @@ class SimplePMM(ScriptStrategyBase):
 
         return self._last_trade_price, self._vwap_midprice
 
+    def call_garch_model(self, volatility_metrics_df):
+        # Retrieve the log returns from the DataFrame
+        df = volatility_metrics_df
+        log_returns = df["log_returns"]
+
+        # Ensure log_returns is not empty
+        if log_returns.empty:
+            raise ValueError("Log returns data is empty.")
+
+        # Fit GARCH model to log returns
+        model = arch_model(log_returns, vol='Garch', p=3, q=3)
+        model_fit = model.fit(disp="off")  # Fit the model without display
+
+        # Retrieve the latest (current) GARCH volatility
+        current_variance = model_fit.conditional_volatility[-1]**2  # Latest variance
+        current_volatility = np.sqrt(current_variance)  # Convert to volatility
+        
+        return current_volatility
+
     def reservation_price(self):
         volatility_metrics_df, self.target_profitability = self.get_market_analysis()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
@@ -682,6 +691,15 @@ class SimplePMM(ScriptStrategyBase):
             # gamma / risk_factor gains a meaning of a fraction (percentage) of the volatility (standard deviation between ticks) to be subtraced from the
             # current mid price
             # This leads to normalization of the risk_factor and will guaranetee consistent behavior on all price ranges of the asset, and across assets
+
+
+        ### Call Garch Test
+        garch_volatility = self.call_garch_model()
+        msg_4 = (f"GARCH Volatility {garch_volatility:.8f}")
+        self.log_with_clock(logging.INFO, msg_4)
+
+
+
         df = volatility_metrics_df
         volatility = df["volatility"].iloc[-1]
         volatility_bid = df["volatility_bid"].iloc[-1]
