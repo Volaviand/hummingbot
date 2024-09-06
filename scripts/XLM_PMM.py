@@ -464,7 +464,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-            self.log_returns.append(np.log(df["close"] / df["close"].shift(1)) )
+            self.log_returns.append(np.log(df["close"] / df["close"].shift(1)).dropna() )
 
         volatility_metrics_df = pd.DataFrame(market_metrics).T
         
@@ -660,6 +660,7 @@ class SimplePMM(ScriptStrategyBase):
         # Retrieve the log returns from the DataFrame
        # self.log_with_clock(logging.INFO, (f"Close {self.close_history[-1]}, last close {self.close_history[-2]}"))
     # Ensure log_returns is a one-dimensional pd.Series
+        log_returns = self.log_returns
         if isinstance(log_returns, list):
             log_returns = pd.Series(log_returns)
 
