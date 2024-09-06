@@ -666,7 +666,7 @@ class SimplePMM(ScriptStrategyBase):
             returns.append(log_return)
 
         # Convert returns to a DataFrame
-        returns = pd.Series(returns)
+        returns = pd.Series(returns, dtype=np.float64)
 
         # Drop NaN and Inf values
         returns = pd.to_numeric(returns, errors='coerce').dropna()
