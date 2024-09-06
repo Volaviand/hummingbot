@@ -676,46 +676,46 @@ class SimplePMM(ScriptStrategyBase):
 
         return self._last_trade_price, self._vwap_midprice
 
-def call_garch_model(self):
-    # Retrieve the log returns from the DataFrame
-    log_returns = self.log_returns
+    def call_garch_model(self):
+        # Retrieve the log returns from the DataFrame
+        log_returns = self.log_returns
 
-    # Ensure log_returns is a one-dimensional pd.Series
-    if isinstance(log_returns, list):
-        log_returns = pd.Series(log_returns)
+        # Ensure log_returns is a one-dimensional pd.Series
+        if isinstance(log_returns, list):
+            log_returns = pd.Series(log_returns)
 
-    # Convert to numeric, forcing any errors to NaN
-    log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
+        # Convert to numeric, forcing any errors to NaN
+        log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
 
-    # Remove any NaN or infinite values from log_returns
-    log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
+        # Remove any NaN or infinite values from log_returns
+        log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
 
-    # Scale small factors for easy use
-    scale_factor = 1000
-    log_returns_clean *= scale_factor
+        # Scale small factors for easy use
+        scale_factor = 1000
+        log_returns_clean *= scale_factor
 
-    # Fit GARCH model to log returns
-    try:
-        model = arch_model(log_returns_clean, vol='Garch', p=1, q=1)  # Default model is GARCH(1,1)
-        model_fit = model.fit(update_freq=5, disp="off")  # Fit the model without display
+        # Fit GARCH model to log returns
+        try:
+            model = arch_model(log_returns_clean, vol='Garch', p=1, q=1)  # Default model is GARCH(1,1)
+            model_fit = model.fit(update_freq=5, disp="off")  # Fit the model without display
 
-        # Check if `conditional_volatility` is available
-        if hasattr(model_fit, 'conditional_volatility'):
-            # Retrieve the latest (current) GARCH volatility
-            current_variance = model_fit.conditional_volatility.iloc[-1]**2  # Latest variance
-            current_volatility = np.sqrt(current_variance)  # Convert to volatility
-            current_volatility /= np.sqrt(scale_factor)  # De-scale volatility
-        else:
-            # Alternative way to get volatility if `conditional_volatility` is not available
-            forecast = model_fit.forecast(start=None)
-            current_volatility = np.sqrt(forecast.variance.iloc[-1]) / np.sqrt(scale_factor)
+            # Check if `conditional_volatility` is available
+            if hasattr(model_fit, 'conditional_volatility'):
+                # Retrieve the latest (current) GARCH volatility
+                current_variance = model_fit.conditional_volatility.iloc[-1]**2  # Latest variance
+                current_volatility = np.sqrt(current_variance)  # Convert to volatility
+                current_volatility /= np.sqrt(scale_factor)  # De-scale volatility
+            else:
+                # Alternative way to get volatility if `conditional_volatility` is not available
+                forecast = model_fit.forecast(start=None)
+                current_volatility = np.sqrt(forecast.variance.iloc[-1]) / np.sqrt(scale_factor)
 
-        return current_volatility
+            return current_volatility
 
-    except Exception as e:
-        # Handle any exceptions that occur during model fitting or volatility retrieval
-        print(f"An error occurred while fitting the GARCH model: {e}")
-        return None
+        except Exception as e:
+            # Handle any exceptions that occur during model fitting or volatility retrieval
+            print(f"An error occurred while fitting the GARCH model: {e}")
+            return None
 
     def reservation_price(self):
         volatility_metrics_df, self.target_profitability, log_returns = self.get_market_analysis()
