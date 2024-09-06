@@ -665,7 +665,7 @@ class SimplePMM(ScriptStrategyBase):
         returns = returns
 
         # Logging for debugging
-        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close}")
+        ##self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close}")
 
         # Ensure log_returns is not empty
         if returns.empty:
