@@ -451,9 +451,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
             # Add Log Returns
-            df["log_returns"] = np.log(df["close"] / df["close"].shift(1))   
-            # Drop rows with NaN values resulting from shift operation
-            df.dropna(inplace=True)
+            df["log_returns"] = np.log(df["close"] / df["close"].shift(1).dropna())   
+
 
 
 
@@ -662,7 +661,7 @@ class SimplePMM(ScriptStrategyBase):
             raise ValueError("Log returns data is empty.")
 
         # Fit GARCH model to log returns
-        model = arch_model(log_returns, vol='Garch', p=3, q=3)
+        model = arch_model(log_returns, vol='GARCH', p=3, q=3)
         model_fit = model.fit(disp="off")  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
