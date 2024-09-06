@@ -450,15 +450,9 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-            # Calculate percentage change and then log returns
-            #df["pct_change"] = df["close"].pct_change()
-            #df["returns"] = np.log(1 + df["pct_change"])
-
-            # Replace Inf and -Inf values with NaN
-            #df.replace([np.inf, -np.inf], np.nan, inplace=True)
-            # Drop NaN values which occur due to the shift operation
-            #df.dropna(subset=["returns"], inplace=True)
-
+            # Add Log Returns
+            df["returns"] = math.log(df["close"]) - math.log(df["close"].shift(1))
+            df.dropna(subset=["returns"], inplace = True)
 
 
 
@@ -659,33 +653,19 @@ class SimplePMM(ScriptStrategyBase):
         return self._last_trade_price, self._vwap_midprice
 
     def call_garch_model(self, volatility_metrics_df):
-        # Retrieve the close prices from the DataFrame
+        # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
-        close = df["close"]
+        returns = df["returns"] 
 
-        # Calculate log returns manually
-        returns = []
-        for i in range(1, len(df)):
-            current_price = df.iloc[i]["close"]
-            previous_price = df.iloc[i-1]["close"]
-            log_return = np.log(current_price / previous_price)
-            returns.append(log_return)
+        # Convert log_returns to numeric, forcing errors to NaN
 
-        # Convert returns to a DataFrame
-        returns = pd.Series(returns)
-
-        # Drop NaN and Inf values
-        returns = pd.to_numeric(returns.dropna(), errors='coerce')
-        
-        # Logging for debugging
-        self.log_with_clock(logging.INFO, f"Returns: {returns.head()}, Close: {close.head()}")
-
-        # Ensure returns is not empty
+        self.log_with_clock(logging.INFO, (f"Returns{returns.iloc[-1]}"))
+        # Ensure log_returns is not empty
         if returns.empty:
             raise ValueError("Log returns data is empty.")
-        
+
         # Fit GARCH model to log returns
-        model = arch_model(returns, vol='Garch', p=3, q=3, power=2.0)
+        model = arch_model(returns, vol='GARCH', p=3, q=3, power=2.0)
         model_fit = model.fit(disp="off")  # Fit the model without display
 
         # Retrieve the latest (current) GARCH volatility
