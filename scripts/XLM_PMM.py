@@ -658,6 +658,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Convert log_returns to numeric, forcing errors to NaN
         log_returns = pd.to_numeric(log_returns, errors='coerce')
+        self.log_with_clock(logging.INFO, (f"{log_returns}")
         # Ensure log_returns is not empty
         if log_returns.empty:
             raise ValueError("Log returns data is empty.")
