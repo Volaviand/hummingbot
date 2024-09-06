@@ -690,6 +690,9 @@ class SimplePMM(ScriptStrategyBase):
         # Remove any NaN or infinite values from log_returns
         log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
 
+        # scale small factors for easy use
+        scale_factor = 1000
+        log_returns_clean *= scale_factor
 
         # Fit GARCH model to log returns
         model = arch_model(log_returns_clean, vol='GARCH', p=3, q=3, power=2.0)
@@ -698,6 +701,7 @@ class SimplePMM(ScriptStrategyBase):
         # Retrieve the latest (current) GARCH volatility
         current_variance = model_fit.conditional_volatility[-1]**2  # Latest variance
         current_volatility = np.sqrt(current_variance)  # Convert to volatility
+        current_volatility /= np.sqrt(scale_factor)
         
         return current_volatility
 
