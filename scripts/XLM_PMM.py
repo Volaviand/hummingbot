@@ -449,15 +449,6 @@ class SimplePMM(ScriptStrategyBase):
             df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
 
 
-            ##
-            float_src = df["close"].astype(float)
-            # Add Log Returns
-            df["returns"] = np.log(float_src) - np.log(float_src.shift(1))
-            df.dropna(subset=["returns"], inplace = True)
-
-
-
-
             # adding bbands metrics
             df.ta.bbands(length=self.volatility_interval, append=True)
             df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
