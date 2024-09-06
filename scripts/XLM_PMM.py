@@ -462,9 +462,29 @@ class SimplePMM(ScriptStrategyBase):
             df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
+            # Compute rolling window of close prices
+            rolling_close = df["close"].rolling(self.volatility_interval)
+            
+            # Calculate log returns using rolling windows
+            log_returns = []
+            
+            # Iterate through the DataFrame starting from the end of the rolling window
+            for i in range(self.volatility_interval, len(df)):
+                # Extract the window values
+                window_values = df["close"].iloc[i - self.volatility_interval:i]
+                
+                # Calculate log returns for each value in the rolling window
+                for j in range(1, len(window_values)):
+                    log_return = np.log(window_values.iloc[j] / window_values.iloc[j - 1])
+                    log_returns.append(log_return)
+            
+            # Convert log_returns to a DataFrame or Series
+            log_returns_df = pd.Series(log_returns)
+            
+            # Store log returns
+            self.log_returns = log_returns_df.tolist()
 
-
-            self.log_returns.append(np.log(df["close"] / df["close"].shift(1)).dropna() )
+            ##self.log_returns.append(df["close"].pct_change().rolling(self.volatility_interval).dropna() )
 
         volatility_metrics_df = pd.DataFrame(market_metrics).T
         
