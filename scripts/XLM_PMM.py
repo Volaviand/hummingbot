@@ -416,7 +416,7 @@ class SimplePMM(ScriptStrategyBase):
             candle.stop()
 
     def get_formatted_market_analysis(self):
-        volatility_metrics_df, self.target_profitability, log_returns= self.get_market_analysis()
+        volatility_metrics_df, log_returns= self.get_market_analysis()
         volatility_metrics_pct_str = format_df_for_printout(
             volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
             table_format="psql")
@@ -488,9 +488,8 @@ class SimplePMM(ScriptStrategyBase):
 
         volatility_metrics_df = pd.DataFrame(market_metrics).T
         
-        self.target_profitability = max(self.min_profitability, volatility_metrics_df["volatility"].iloc[-1])
 
-        return volatility_metrics_df, self.target_profitability, self.log_returns
+        return volatility_metrics_df, self.log_returns
 
 
 ##########
@@ -720,7 +719,7 @@ class SimplePMM(ScriptStrategyBase):
             return None
 
     def reservation_price(self):
-        volatility_metrics_df, self.target_profitability, log_returns = self.get_market_analysis()
+        volatility_metrics_df, log_returns = self.get_market_analysis()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
@@ -745,6 +744,7 @@ class SimplePMM(ScriptStrategyBase):
         garch_volatility = self.call_garch_model()
         msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
         self.log_with_clock(logging.INFO, msg_gv)
+        self.target_profitability = max(self.min_profitability, garch_volatility)
 
 
 
