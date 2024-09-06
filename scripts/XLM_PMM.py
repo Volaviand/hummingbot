@@ -662,7 +662,7 @@ class SimplePMM(ScriptStrategyBase):
         for i in range(1, len(df)):
             current_price = df.iloc[i]["close"]
             previous_price = df.iloc[i-1]["close"]
-            log_return = np.log(current_price / previous_price)
+            log_return = math.log(current_price / previous_price)
             returns.append(log_return)
 
         # Convert returns to a DataFrame
