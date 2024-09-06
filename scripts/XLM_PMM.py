@@ -659,11 +659,12 @@ class SimplePMM(ScriptStrategyBase):
         close = df["close"].astype(float)
 
         returns = []
-        for i in range(1, len(df)):
-            current_price = df["close"].iloc[i]
-            previous_price = df["close"].iloc[i-1]
-            log_return = math.log(current_price / previous_price)
-            returns.append(log_return)
+        if len(df) > 2:
+            for i in range(1, len(df)):
+                current_price = df["close"].iloc[i]
+                previous_price = df["close"].iloc[i-1]
+                log_return = math.log(current_price / previous_price)
+                returns.append(log_return)
 
         # Convert returns to a DataFrame
         returns = pd.Series(returns, dtype=np.float64)
