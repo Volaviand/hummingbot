@@ -332,7 +332,7 @@ class SimplePMM(ScriptStrategyBase):
             for i in range(1, buy_counter_adjusted+1):
                 additive_buy += bp**i
                 avg_buy_mult = additive_buy / buy_counter_adjusted
-                buy_breakeven_mult = 1 + (avg_buy_mult - (bp**buy_counter_adjusted)) 
+                buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
         else:
             additive_buy = 0
             avg_buy_mult = 1
@@ -342,7 +342,7 @@ class SimplePMM(ScriptStrategyBase):
             for i in range(1, sell_counter_adjusted+1):
                 additive_sell += sp**i
                 avg_sell_mult = additive_sell/sell_counter_adjusted
-                sell_breakeven_mult = 1 - ((sp**sell_counter_adjusted) - avg_sell_mult) 
+                sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
 
         else:
             additive_sell = 0
