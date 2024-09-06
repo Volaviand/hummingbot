@@ -454,6 +454,8 @@ class SimplePMM(ScriptStrategyBase):
             df["pct_change"] = df["close"].pct_change()
             df["returns"] = np.log(1 + df["pct_change"])
 
+            # Replace Inf and -Inf values with NaN
+            df.replace([np.inf, -np.inf], np.nan, inplace=True)
             # Drop NaN values which occur due to the shift operation
             df.dropna(subset=["returns"], inplace=True)
 
