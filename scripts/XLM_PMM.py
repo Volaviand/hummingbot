@@ -656,6 +656,8 @@ class SimplePMM(ScriptStrategyBase):
         df = volatility_metrics_df
         log_returns = df["log_returns"]
 
+        # Convert log_returns to numeric, forcing errors to NaN
+        log_returns = pd.to_numeric(log_returns, errors='coerce')
         # Ensure log_returns is not empty
         if log_returns.empty:
             raise ValueError("Log returns data is empty.")
