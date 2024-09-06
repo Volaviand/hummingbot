@@ -449,9 +449,10 @@ class SimplePMM(ScriptStrategyBase):
             df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
 
 
-
+            ##
+            float_src = df["close"].astype(float)
             # Add Log Returns
-            df["returns"] = math.log(df["close"]) - math.log(df["close"].shift(1))
+            df["returns"] = np.log(float_src) - np.log(float_src.shift(1))
             df.dropna(subset=["returns"], inplace = True)
 
 
@@ -655,7 +656,7 @@ class SimplePMM(ScriptStrategyBase):
     def call_garch_model(self, volatility_metrics_df):
         # Retrieve the log returns from the DataFrame
         df = volatility_metrics_df
-        returns = pd.to_numeric(df["returns"], errors='coerce')
+        returns = df["returns"] 
 
         # Convert log_returns to numeric, forcing errors to NaN
 
