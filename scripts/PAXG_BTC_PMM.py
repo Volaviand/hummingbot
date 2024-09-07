@@ -88,8 +88,8 @@ class SimplePMM(ScriptStrategyBase):
     max_records = 720
 
     volatility_interval = 480
-    columns_to_show = ["trading_pair", "interval", "volatility", "volatility_bid", "volatility_ask"]
-    sort_values_by = ["interval", "volatility"]
+    columns_to_show = ["trading_pair"]
+    sort_values_by = ["interval"]
     top_n = 20
     report_interval = 60 * 60 * 6  # 6 hours
 
