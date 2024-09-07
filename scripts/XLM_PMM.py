@@ -440,26 +440,26 @@ class SimplePMM(ScriptStrategyBase):
             df["trading_pair"] = trading_pair_interval.split("_")[0]
             df["interval"] = trading_pair_interval.split("_")[1]
             # adding volatility metrics
-            #df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
-            #df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
-            #df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
-            #df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
+            df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
+            df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
+            df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
+            df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
             
-            #df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
-            #df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
-            #df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
+            df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
+            df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
+            df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
 
-            #df["volatility_pct"] = df["volatility"] / df["close"]
-            #df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
+            df["volatility_pct"] = df["volatility"] / df["close"]
+            df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
 
             
 
             # adding bbands metrics
-            #df.ta.bbands(length=self.volatility_interval, append=True)
-            #df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
-            #df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
-            #df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
-            #df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
+            df.ta.bbands(length=self.volatility_interval, append=True)
+            df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
+            df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
+            df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
+            df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
             # Compute rolling window of close prices
