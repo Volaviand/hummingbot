@@ -88,8 +88,8 @@ class SimplePMM(ScriptStrategyBase):
     max_records = 720
 
     volatility_interval = 480
-    columns_to_show = ["trading_pair", "interval", "volatility", "volatility_bid", "volatility_ask"]
-    sort_values_by = ["interval", "volatility"]
+    columns_to_show = ["trading_pair", "interval", "mean"]
+    sort_values_by = ["interval", "mean"]
     top_n = 20
     report_interval = 60 * 60 * 6  # 6 hours
 
@@ -440,31 +440,31 @@ class SimplePMM(ScriptStrategyBase):
             df["trading_pair"] = trading_pair_interval.split("_")[0]
             df["interval"] = trading_pair_interval.split("_")[1]
             # adding volatility metrics
-            df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
-            df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
-            df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
-            df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
+            #df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
+            #df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
+            #df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
+            #df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
             
-            df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
-            df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
-            df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
+            #df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
+            #df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
+            #df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
 
-            df["volatility_pct"] = df["volatility"] / df["close"]
-            df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
+            #df["volatility_pct"] = df["volatility"] / df["close"]
+            #df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
 
             
 
             # adding bbands metrics
-            df.ta.bbands(length=self.volatility_interval, append=True)
-            df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
-            df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
-            df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
-            df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
+            #df.ta.bbands(length=self.volatility_interval, append=True)
+            #df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
+            #df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
+            #df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
+            #df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
             # Compute rolling window of close prices
             rolling_close = df["close"].rolling(self.volatility_interval)
-            
+            df["mean"] = rolling_close[-1]
             # Calculate log returns using rolling windows
             log_returns = []
             
@@ -746,66 +746,15 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg_gv)
         self.target_profitability = max(self.min_profitability, garch_volatility)
 
-
-
-        df = volatility_metrics_df
-        volatility = df["volatility"].iloc[-1]
-        volatility_bid = df["volatility_bid"].iloc[-1]
-        volatility_ask = df["volatility_ask"].iloc[-1]
-
-        volatility_bid_denominator = df["volatility_bid_max"].iloc[-1] - df["volatility_bid_min"].iloc[-1]
-        volatility_ask_denominator = df["volatility_ask_max"].iloc[-1] - df["volatility_ask_min"].iloc[-1]
-
-        if volatility_bid_denominator == 0:
-            volatility_bid_denominator = 0.0000000001
-
-        if volatility_ask_denominator == 0:
-            volatility_ask_denominator = 0.0000000001            
-
-        volatility_bid_rank = (df["volatility_bid"].iloc[-1] - df["volatility_bid_min"].iloc[-1]) / (volatility_bid_denominator)
-        volatility_ask_rank = (df["volatility_ask"].iloc[-1] - df["volatility_ask_min"].iloc[-1]) / (volatility_ask_denominator)
-
-
-
-
-        volatility_bid_rank = Decimal(volatility_bid_rank)
-        volatility_ask_rank = Decimal(volatility_ask_rank)
-
-        if volatility_bid_rank <= 0:
-            volatility_bid_rank = Decimal(0.000000001)
-        elif volatility_bid_rank >= 1:
-            volatility_bid_rank = Decimal(1.0)
-
-        if volatility_ask_rank <= 0:
-            volatility_ask_rank = Decimal(0.000000001)
-        elif volatility_ask_rank >= 1:
-            volatility_ask_rank = Decimal(1.0)
-
-
-        if volatility <=0:
-            volatility = 0 
-        else:
-            volatility = volatility_metrics_df["volatility"].iloc[-1]
-
-        if volatility_bid <=0:
-            volatility_bid = 0 
-        else:
-            volatility_bid = volatility_metrics_df["volatility_bid"].iloc[-1]
-
-        if volatility_ask <=0:
-            volatility_ask = 0 
-        else:
-            volatility_ask = volatility_metrics_df["volatility_ask"].iloc[-1]     
-
         ### Convert Volatility Percents into Absolute Prices
 
 
 
 
-        max_bid_volatility= Decimal(volatility_bid) 
+        max_bid_volatility= Decimal(self.target_profitability) 
         bid_volatility_in_base = (max_bid_volatility) * s 
 
-        max_ask_volatility = Decimal(volatility_ask) 
+        max_ask_volatility = Decimal(self.target_profitability) 
         ask_volatility_in_base = (max_ask_volatility) * s 
 
 
@@ -818,9 +767,16 @@ class SimplePMM(ScriptStrategyBase):
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
         y_difference = y_max - y_min
+        konstant = Decimal(5)
+        y_bid = y_difference * math.exp(konstant * max_ask_volatility) ##y - (volatility_bid_rank * y_difference)
+        y_ask = y_difference * math.exp(konstant * max_ask_volatility) ##y - (volatility_ask_rank * y_difference)
 
-        y_bid = y - (volatility_bid_rank * y_difference)
-        y_ask = y - (volatility_ask_rank * y_difference)
+        y_bid = min(y_bid,y_max)
+        y_bid = max(y_bid,y_min)
+
+        y_ask = min(y_ask,y_max)
+        y_ask = max(y_ask,y_min)
+
         msg_1 = (f"y_bid @ {y_bid:.8f} ::: y_ask @ {y_ask:.8f}")
         self.log_with_clock(logging.INFO, msg_1)
         t = Decimal(1.0)
