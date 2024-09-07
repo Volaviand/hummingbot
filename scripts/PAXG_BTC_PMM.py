@@ -51,6 +51,7 @@ class SimplePMM(ScriptStrategyBase):
     #order_refresh_time = 30
     order_amount = Decimal(0.00301)
     create_timestamp = 0
+    create_garch_timestamp = 0
     trading_pair = "PAXG-BTC"
     exchange = "kraken"
     base_asset = "PAXG"
@@ -113,6 +114,11 @@ class SimplePMM(ScriptStrategyBase):
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
 
         self.last_time_reported = 0
+
+
+        self.garch_refresh_time = 480 ### Same as volatility interval
+        self_last_garch_time_reported = 0
+
         combinations = [(trading_pair, interval) for trading_pair in self.trading_pairs for interval in
                         self.intervals]
 
@@ -136,6 +142,10 @@ class SimplePMM(ScriptStrategyBase):
         self.sell_counter = 5
 
 
+        #history_values
+        self.close_history = []
+        self.log_returns = []
+
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -153,10 +163,24 @@ class SimplePMM(ScriptStrategyBase):
             if not candles.ready:
                 self.logger().info(
                     f"Candles not ready yet for {trading_pair}! Missing {candles._candles.maxlen - len(candles._candles)}")
+
+        #All candles are ready for calculation
         if all(candle.ready for candle in self.candles.values()):
+            #Calculate garch every so many seconds
+            if self.create_garch_timestamp<= self.current_timestamp:
+                    ### Call Garch Test
+                    garch_volatility = self.call_garch_model()
+                    msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                    self.log_with_clock(logging.INFO, msg_gv)
+                    self.target_profitability = max(self.min_profitability, garch_volatility)
+                    self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+            
+            #Update the timestamp model 
             if self.current_timestamp - self.last_time_reported > self.report_interval:
                 self.last_time_reported = self.current_timestamp
                 self.notify_hb_app(self.get_formatted_market_analysis())
+
+        
 
 
 
@@ -428,34 +452,61 @@ class SimplePMM(ScriptStrategyBase):
 
     def get_market_analysis(self):
         market_metrics = {}
+
         for trading_pair_interval, candle in self.candles.items():
             df = candle.candles_df
             df["trading_pair"] = trading_pair_interval.split("_")[0]
             df["interval"] = trading_pair_interval.split("_")[1]
             # adding volatility metrics
-            df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
-            df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
-            df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
-            df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
+            #df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
+            #df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
+            #df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
+            #df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
             
-            df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
-            df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
-            df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
+            #df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
+            #df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
+            #df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
 
-            df["volatility_pct"] = df["volatility"] / df["close"]
-            df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
+            #df["volatility_pct"] = df["volatility"] / df["close"]
+            #df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
+
+            
 
             # adding bbands metrics
-            df.ta.bbands(length=self.volatility_interval, append=True)
-            df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
-            df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
-            df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
-            df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
+            #df.ta.bbands(length=self.volatility_interval, append=True)
+            #df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
+            #df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
+            #df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
+            #df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
             market_metrics[trading_pair_interval] = df.iloc[-1]
-        volatility_metrics_df = pd.DataFrame(market_metrics).T
-        self.target_profitability = max(self.min_profitability, volatility_metrics_df["volatility"].iloc[-1])
-        return volatility_metrics_df, self.target_profitability
 
+            # Compute rolling window of close prices
+            rolling_close = df["close"].rolling(self.volatility_interval)
+            # Calculate log returns using rolling windows
+            log_returns = []
+            
+            # Iterate through the DataFrame starting from the end of the rolling window
+            for i in range(self.volatility_interval, len(df)):
+                # Extract the window values
+                window_values = df["close"].iloc[i - self.volatility_interval:i]
+                
+                # Calculate log returns for each value in the rolling window
+                for j in range(1, len(window_values)):
+                    log_return = np.log(window_values.iloc[j] / window_values.iloc[j - 1])
+                    log_returns.append(log_return)
+            
+            # Convert log_returns to a DataFrame or Series
+            log_returns_df = pd.Series(log_returns)
+            
+            # Store log returns
+            self.log_returns = log_returns_df.tolist()
+
+            ##self.log_returns.append(df["close"].pct_change().rolling(self.volatility_interval).dropna() )
+
+        volatility_metrics_df = pd.DataFrame(market_metrics).T
+        
+
+        return volatility_metrics_df, self.log_returns
 
 ##########
     ### Added calculations
@@ -638,8 +689,51 @@ class SimplePMM(ScriptStrategyBase):
 
         return self._last_trade_price, self._vwap_midprice
 
+    def call_garch_model(self):
+        # Retrieve the log returns from the DataFrame
+        log_returns = self.log_returns
+
+        # Ensure log_returns is a one-dimensional pd.Series
+        if isinstance(log_returns, list):
+            log_returns = pd.Series(log_returns)
+
+        # Convert to numeric, forcing any errors to NaN
+        log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
+
+        # Remove any NaN or infinite values from log_returns
+        log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
+
+        # Scale small factors for easy use
+        scale_factor = 1000
+        log_returns_clean *= scale_factor
+
+        # Fit GARCH model to log returns
+        try:
+            model = arch_model(log_returns_clean, vol='Garch',mean="AR", p=1, q=1, power=2.0)  # Default model is GARCH(1,1)
+            model_fit = model.fit(disp="off")  # Fit the model without display // update_freq = 20
+            msg_gv = (f"GARCH  { model_fit.summary()}")
+            self.log_with_clock(logging.INFO, msg_gv)
+           
+            # Check if `conditional_volatility` is available
+            if hasattr(model_fit, 'conditional_volatility'):
+                # Retrieve the latest (current) GARCH volatility
+                current_variance = model_fit.conditional_volatility.iloc[-1]**2  # Latest variance
+                current_volatility = np.sqrt(current_variance)  # Convert to volatility
+                current_volatility /= np.sqrt(scale_factor)  # De-scale volatility
+            else:
+                # Alternative way to get volatility if `conditional_volatility` is not available
+                forecast = model_fit.forecast(start=None)
+                current_volatility = np.sqrt(forecast.variance.iloc[-1]) / np.sqrt(scale_factor)
+
+            return current_volatility
+
+        except Exception as e:
+            # Handle any exceptions that occur during model fitting or volatility retrieval
+            print(f"An error occurred while fitting the GARCH model: {e}")
+            return None
+
     def reservation_price(self):
-        volatility_metrics_df, self.target_profitability = self.get_market_analysis()
+        volatility_metrics_df, log_returns = self.get_market_analysis()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
@@ -658,64 +752,19 @@ class SimplePMM(ScriptStrategyBase):
             # gamma / risk_factor gains a meaning of a fraction (percentage) of the volatility (standard deviation between ticks) to be subtraced from the
             # current mid price
             # This leads to normalization of the risk_factor and will guaranetee consistent behavior on all price ranges of the asset, and across assets
-        df = volatility_metrics_df
-        volatility = df["volatility"].iloc[-1]
-        volatility_bid = df["volatility_bid"].iloc[-1]
-        volatility_ask = df["volatility_ask"].iloc[-1]
-
-        volatility_bid_denominator = df["volatility_bid_max"].iloc[-1] - df["volatility_bid_min"].iloc[-1]
-        volatility_ask_denominator = df["volatility_ask_max"].iloc[-1] - df["volatility_ask_min"].iloc[-1]
-
-        if volatility_bid_denominator == 0:
-            volatility_bid_denominator = 0.0000000001
-
-        if volatility_ask_denominator == 0:
-            volatility_ask_denominator = 0.0000000001            
-
-        volatility_bid_rank = (df["volatility_bid"].iloc[-1] - df["volatility_bid_min"].iloc[-1]) / (volatility_bid_denominator)
-        volatility_ask_rank = (df["volatility_ask"].iloc[-1] - df["volatility_ask_min"].iloc[-1]) / (volatility_ask_denominator)
 
 
 
-
-        volatility_bid_rank = Decimal(volatility_bid_rank)
-        volatility_ask_rank = Decimal(volatility_ask_rank)
-
-        if volatility_bid_rank <= 0:
-            volatility_bid_rank = Decimal(0.000000001)
-        elif volatility_bid_rank >= 1:
-            volatility_bid_rank = Decimal(1.0)
-
-        if volatility_ask_rank <= 0:
-            volatility_ask_rank = Decimal(0.000000001)
-        elif volatility_ask_rank >= 1:
-            volatility_ask_rank = Decimal(1.0)
-
-
-        if volatility <=0:
-            volatility = 0 
-        else:
-            volatility = volatility_metrics_df["volatility"].iloc[-1]
-
-        if volatility_bid <=0:
-            volatility_bid = 0 
-        else:
-            volatility_bid = volatility_metrics_df["volatility_bid"].iloc[-1]
-
-        if volatility_ask <=0:
-            volatility_ask = 0 
-        else:
-            volatility_ask = volatility_metrics_df["volatility_ask"].iloc[-1]     
 
         ### Convert Volatility Percents into Absolute Prices
 
 
 
 
-        max_bid_volatility= Decimal(volatility_bid) 
+        max_bid_volatility= Decimal(self.target_profitability) 
         bid_volatility_in_base = (max_bid_volatility) * s 
 
-        max_ask_volatility = Decimal(volatility_ask) 
+        max_ask_volatility = Decimal(self.target_profitability) 
         ask_volatility_in_base = (max_ask_volatility) * s 
 
 
@@ -727,10 +776,17 @@ class SimplePMM(ScriptStrategyBase):
         y = Decimal(1.0)
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
-        y_difference = y_max - y_min
+        y_difference = Decimal(y_max - y_min)
+        konstant = Decimal(5)
+        y_bid = y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
+        y_ask = y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
 
-        y_bid = y - (volatility_bid_rank * y_difference)
-        y_ask = y - (volatility_ask_rank * y_difference)
+        y_bid = min(y_bid,y_max)
+        y_bid = max(y_bid,y_min)
+
+        y_ask = min(y_ask,y_max)
+        y_ask = max(y_ask,y_min)
+
         msg_1 = (f"y_bid @ {y_bid:.8f} ::: y_ask @ {y_ask:.8f}")
         self.log_with_clock(logging.INFO, msg_1)
         t = Decimal(1.0)
@@ -755,6 +811,7 @@ class SimplePMM(ScriptStrategyBase):
 
         
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
+
 
     def get_starting_prices(self):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
