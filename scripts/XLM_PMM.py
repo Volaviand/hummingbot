@@ -765,7 +765,7 @@ class SimplePMM(ScriptStrategyBase):
         y = Decimal(1.0)
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
-        y_difference = y_max - y_min
+        y_difference = Decimal(y_max - y_min)
         konstant = Decimal(5)
         y_bid = y_difference * math.exp(konstant * max_ask_volatility) ##y - (volatility_bid_rank * y_difference)
         y_ask = y_difference * math.exp(konstant * max_ask_volatility) ##y - (volatility_ask_rank * y_difference)
