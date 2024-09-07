@@ -53,6 +53,7 @@ class SimplePMM(ScriptStrategyBase):
     #order_refresh_time = 30
     order_amount = Decimal(40)
     create_timestamp = 0
+    create_garch_timestamp = 0
     trading_pair = "XLM-EUR"
     exchange = "kraken"
     base_asset = "XLM"
@@ -115,6 +116,11 @@ class SimplePMM(ScriptStrategyBase):
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
 
         self.last_time_reported = 0
+
+
+        self.garch_refresh_time = 120
+        self_last_garch_time_reported = 0
+
         combinations = [(trading_pair, interval) for trading_pair in self.trading_pairs for interval in
                         self.intervals]
 
@@ -158,11 +164,24 @@ class SimplePMM(ScriptStrategyBase):
             if not candles.ready:
                 self.logger().info(
                     f"Candles not ready yet for {trading_pair}! Missing {candles._candles.maxlen - len(candles._candles)}")
+
+        #All candles are ready for calculation
         if all(candle.ready for candle in self.candles.values()):
+            #Calculate garch every so many seconds
+            if self.create_garch_timestamp<= self.current_timestamp:
+                    ### Call Garch Test
+                    garch_volatility = self.call_garch_model()
+                    msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                    self.log_with_clock(logging.INFO, msg_gv)
+                    self.target_profitability = max(self.min_profitability, garch_volatility)
+                    self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+            
+            #Update the timestamp model 
             if self.current_timestamp - self.last_time_reported > self.report_interval:
                 self.last_time_reported = self.current_timestamp
                 self.notify_hb_app(self.get_formatted_market_analysis())
 
+        
 
 
     def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
@@ -739,11 +758,7 @@ class SimplePMM(ScriptStrategyBase):
             # This leads to normalization of the risk_factor and will guaranetee consistent behavior on all price ranges of the asset, and across assets
 
 
-        ### Call Garch Test
-        garch_volatility = self.call_garch_model()
-        msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-        self.log_with_clock(logging.INFO, msg_gv)
-        self.target_profitability = max(self.min_profitability, garch_volatility)
+
 
         ### Convert Volatility Percents into Absolute Prices
 
@@ -766,7 +781,7 @@ class SimplePMM(ScriptStrategyBase):
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
-        konstant = Decimal(3)
+        konstant = Decimal(5)
         y_bid = y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
         y_ask = y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
 
