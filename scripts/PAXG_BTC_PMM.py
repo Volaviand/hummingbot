@@ -435,7 +435,7 @@ class SimplePMM(ScriptStrategyBase):
             candle.stop()
 
     def get_formatted_market_analysis(self):
-        volatility_metrics_df, self.target_profitability= self.get_market_analysis()
+        volatility_metrics_df, log_returns= self.get_market_analysis()
         volatility_metrics_pct_str = format_df_for_printout(
             volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
             table_format="psql")
