@@ -118,7 +118,7 @@ class SimplePMM(ScriptStrategyBase):
         self.last_time_reported = 0
 
 
-        self.garch_refresh_time = 120
+        self.garch_refresh_time = volatility_interval
         self_last_garch_time_reported = 0
 
         combinations = [(trading_pair, interval) for trading_pair in self.trading_pairs for interval in
