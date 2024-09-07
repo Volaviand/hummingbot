@@ -760,15 +760,15 @@ class SimplePMM(ScriptStrategyBase):
         msg_4 = (f"max_bid_volatility @ {bid_volatility_in_base:.8f} ::: max_ask_volatility @ {ask_volatility_in_base:.8f}")
         self.log_with_clock(logging.INFO, msg_4)
 
-        #INVENTORY RISK parameter, 0 to 1, higher = more risk averse, as y <-- 0, it behaves more like usual (( Erm may be reversed))
+        #INVENTORY RISK parameter, 0 to 1, higher = more risk averse, as y <-- 0, it behaves more like usual
         # Adjust the width of the y parameter based on volatility, the more volatile , the wider the spread becomes, y goes higher
         y = Decimal(1.0)
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
-        konstant = Decimal(5)
-        y_bid = y_difference * Decimal(math.log(konstant + max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
-        y_ask = y_difference * Decimal(math.log(konstant + max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
+        konstant = Decimal(3)
+        y_bid = y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
+        y_ask = y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
 
         y_bid = min(y_bid,y_max)
         y_bid = max(y_bid,y_min)
