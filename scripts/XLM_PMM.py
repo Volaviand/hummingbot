@@ -598,7 +598,7 @@ class SimplePMM(ScriptStrategyBase):
         inventory_difference = maker_base_balance  - target_inventory
         q = (inventory_difference) / total_balance_in_base
         q = Decimal(q)
-        msg_q = (f"Inventory Balance :: {q}% :: Token :: {inventory_difference}.  + = too much base - = too much quote")
+        msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
         self.log_with_clock(logging.INFO, msg_q)
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
