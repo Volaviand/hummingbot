@@ -599,7 +599,7 @@ class SimplePMM(ScriptStrategyBase):
         q = (inventory_difference) / total_balance_in_base
         q = Decimal(q)
         msg_q = (f"Inventory Balance :: {q}. + = too much base - = too much quote")
-        self.log_with_clock(logging.INFO, msgce)
+        self.log_with_clock(logging.INFO, msg_q)
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
         
