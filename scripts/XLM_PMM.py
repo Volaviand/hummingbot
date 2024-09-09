@@ -611,14 +611,15 @@ class SimplePMM(ScriptStrategyBase):
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
         if q > 0 :
-            base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume =  abs(minimum_size) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
+            #If base is overbought, I want to sell more Quote to balance it
+            base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
+            quote_balancing_volume =  abs(minimum_size) * Decimal.exp(-self.order_shape_factor * q) 
             # Ensure base balancing volume does not exceed the amount needed to balance
             if quote_balancing_volume > total_imbalance:
                 quote_balancing_volume = total_imbalance
 
         elif q < 0 :
-            base_balancing_volume = abs(minimum_size) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
+            base_balancing_volume = abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
             quote_balancing_volume = total_imbalance ##abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
 
             # Ensure base balancing volume does not exceed the amount needed to balance
@@ -644,8 +645,8 @@ class SimplePMM(ScriptStrategyBase):
 
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
-        order_size_bid = max(minimum_size, quote_balancing_volume)
-        order_size_ask = max(minimum_size, base_balancing_volume)
+        order_size_bid = quote_balancing_volume 
+        order_size_ask = base_balancing_volume 
 
         order_size_bid = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid))
         order_size_ask = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask))
