@@ -64,7 +64,7 @@ class SimplePMM(ScriptStrategyBase):
     inv_target_percent = Decimal(0.50)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
-    order_shape_factor = Decimal(1.25) 
+    order_shape_factor = Decimal(3.0) 
     # Here you can use for example the LastTrade price to use in your strategy
     #MidPrice 
     #BestBid 
@@ -611,13 +611,13 @@ class SimplePMM(ScriptStrategyBase):
         #to market overcorrection
         if q > 0 :
             base_balancing_volume =  abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume = total_imbalance ##abs(minimum_size) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
+            quote_balancing_volume = abs(minimum_size) * ( 1 + ( 1 - Decimal.exp(-self.order_shape_factor * q))) 
             # Ensure base balancing volume does not exceed the amount needed to balance
             if quote_balancing_volume > total_imbalance:
                 quote_balancing_volume = total_imbalance
 
         elif q < 0 :
-            base_balancing_volume =  total_imbalance ##abs(minimum_size) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
+            base_balancing_volume =  abs(minimum_size) *  ( 1 + ( 1 - Decimal.exp(self.order_shape_factor * q)))
             quote_balancing_volume = abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
                
             # Ensure base balancing volume does not exceed the amount needed to balance
