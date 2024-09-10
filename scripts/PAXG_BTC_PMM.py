@@ -269,13 +269,29 @@ class SimplePMM(ScriptStrategyBase):
     def did_fill_order(self, event: OrderFilledEvent):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
+        ### Counter Method for Constant Trading without using breakeven levels
+        # if event.price < self._last_trade_price or event.price <= bid_reservation_price:
+        #     self.sell_counter -= 1
+        #     self.buy_counter += 1
+            
+        # if event.price > self._last_trade_price or event.price >= ask_reservation_price:
+        #     self.sell_counter += 1
+        #     self.buy_counter -= 1
+
+        # if self.sell_counter <= 0:
+        #     self.sell_counter = 1
+
+        # if self.buy_counter<= 0:
+        #     self.buy_counter = 1
+
+        ### Counter method that resets the buy or sells if a breakeven trade is made. 
         if event.price < self._last_trade_price or event.price <= bid_reservation_price:
-            self.sell_counter -= 1
+            self.sell_counter = 1
             self.buy_counter += 1
             
         if event.price > self._last_trade_price or event.price >= ask_reservation_price:
             self.sell_counter += 1
-            self.buy_counter -= 1
+            self.buy_counter = 1
 
         if self.sell_counter <= 0:
             self.sell_counter = 1
