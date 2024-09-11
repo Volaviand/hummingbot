@@ -345,7 +345,12 @@ class SimplePMM(ScriptStrategyBase):
         """Determine the best placement of percentages based on the percentage/log values 
         (log(d)) / (log(p)) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n).  Or closer p = e^(ln(d) / n)"""
 
-        n = math.floor(self.maximum_orders/2)
+        ## If doing a 50/50 it would be /2 since each side is trading equally
+        ## If I am doing a single side (QFL), then the maximum orders should account for only the buy side entry. 
+        # n = math.floor(self.maximum_orders/2)
+        
+        n == self.maximum_orders
+        
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
         bd = 0.25
