@@ -242,9 +242,11 @@ class SimplePMM(ScriptStrategyBase):
             order_counter = [buy_order, sell_order]
         else:
             order_counter = []
-            
+
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
-        self.log_with_clock(logging.INFO, msg2)
+        self.log_with_clock(logging.INFO, msg2)           
+        msg3 = (f"Min Order % : {minimum_size:.8f} , Ask Order : {order_size_ask:.8f}, Bid Order {order_size_bid:.8f}")
+        self.log_with_clock(logging.INFO, msg3)
 
         #msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
         #self.log_with_clock(logging.INFO, msgbe)
