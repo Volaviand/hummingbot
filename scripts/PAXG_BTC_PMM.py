@@ -370,9 +370,14 @@ class SimplePMM(ScriptStrategyBase):
         #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
         if buy_counter_adjusted > 0:
             for i in range(1, buy_counter_adjusted + 1):
-                additive_buy += bp**i + self.fee_percent
-                avg_buy_mult = additive_buy / buy_counter_adjusted
-                buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
+                if i == 1 : # First trade has no initial price drop
+                    additive_buy = 1 + self.fee_percent
+                elif i > 1 :   # Next trades decay log wise
+                    additive_buy += bp**(i-1) + self.fee_percent
+            # Find the avg percent of all trades        
+            avg_buy_mult = (additive_buy) / (buy_counter_adjusted)
+            # Divide the average price by the lowest price to get your multiplier for breakeven
+            buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
         else:
             additive_buy = 0
             avg_buy_mult = 1
@@ -380,9 +385,14 @@ class SimplePMM(ScriptStrategyBase):
 
         if sell_counter_adjusted > 0:
             for i in range(1, sell_counter_adjusted + 1):
-                additive_sell += sp**i - self.fee_percent
-                avg_sell_mult = additive_sell/sell_counter_adjusted
-                sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
+                if i == 1: # First trade has no initial price drop
+                    additive_sell = 1 - self.fee_percent
+                elif i > 1:  # Next trades decay log wise
+                    additive_sell += sp**(i-1) - self.fee_percent
+            # Find the avg percent of all trades        
+            avg_sell_mult = additive_sell / sell_counter_adjusted
+            # Divide the average price by the highest price to get your multiplier for breakeven
+            sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
 
         else:
             additive_sell = 0
