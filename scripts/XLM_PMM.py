@@ -668,6 +668,7 @@ class SimplePMM(ScriptStrategyBase):
                 base_balancing_volume = total_imbalance
          
         else :
+            ## Adjust this logic just for one sided entries :: if you are completely sold out, then you should not have the capability to sell in the first place. 
             base_balancing_volume = 0.0 #minimum_size
             quote_balancing_volume = minimum_size
 
