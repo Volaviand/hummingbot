@@ -96,8 +96,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
     ## Breakeven Initialization
-    ## Trading Fee for one side Limit
-    fee_percent = 0.25 / 100  # Convert percentage to a decimal
+    ## Trading Fee for Round Trip side Limit
+    fee_percent = 1 / 2 / 100  # Convert percentage to a decimal
     total_spent = 0
     total_bought = 0
     total_earned = 0
@@ -369,8 +369,8 @@ class SimplePMM(ScriptStrategyBase):
 
         #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
         if buy_counter_adjusted > 0:
-            for i in range(1, buy_counter_adjusted+1):
-                additive_buy += bp**i
+            for i in range(1, buy_counter_adjusted + 1):
+                additive_buy += bp**i + self.fee_percent
                 avg_buy_mult = additive_buy / buy_counter_adjusted
                 buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
         else:
@@ -379,8 +379,8 @@ class SimplePMM(ScriptStrategyBase):
             buy_breakeven_mult = 1
 
         if sell_counter_adjusted > 0:
-            for i in range(1, sell_counter_adjusted+1):
-                additive_sell += sp**i
+            for i in range(1, sell_counter_adjusted + 1):
+                additive_sell += sp**i - self.fee_percent
                 avg_sell_mult = additive_sell/sell_counter_adjusted
                 sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
 
