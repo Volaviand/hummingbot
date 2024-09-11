@@ -348,8 +348,8 @@ class SimplePMM(ScriptStrategyBase):
         ## If doing a 50/50 it would be /2 since each side is trading equally
         ## If I am doing a single side (QFL), then the maximum orders should account for only the buy side entry. 
         # n = math.floor(self.maximum_orders/2)
-        
-        n == self.maximum_orders
+
+        n = self.maximum_orders
         
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
