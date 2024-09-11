@@ -231,12 +231,14 @@ class SimplePMM(ScriptStrategyBase):
         
         #msg1 = (f" Trades Placed ::  Bid Price : {buy_price:.8f} , Ask Price : {sell_price:.8f}")
         #self.log_with_clock(logging.INFO, msg1)
+        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
+
         order_counter = []
-        if order_size_bid >= self.order_amount:
+        if order_size_bid >= minimum_size:
             order_counter = [buy_order]
-        elif order_size_ask >= self.order_amount:
+        elif order_size_ask >= minimum_size:
             order_counter = [sell_order]
-        elif order_size_bid >= self.order_amount and order_size_ask >= self.order_amount:
+        elif order_size_bid >= minimum_size and order_size_ask >= minimum_size:
             order_counter = [buy_order, sell_order]
         else:
             order_counter = []
