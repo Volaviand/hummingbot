@@ -235,18 +235,15 @@ class SimplePMM(ScriptStrategyBase):
 
         order_counter = []
         if order_size_bid >= minimum_size:
-            order_counter = [buy_order]
-        elif order_size_ask >= minimum_size:
-            order_counter = [sell_order]
-        elif order_size_bid >= minimum_size and order_size_ask >= minimum_size:
-            order_counter = [buy_order, sell_order]
-        else:
-            order_counter = []
+            order_counter.append(buy_order)
+
+        if order_size_ask >= minimum_size:
+            order_counter.append(sell_order)
 
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)           
-        msg3 = (f"Min Order % : {minimum_size:.8f} , Ask Order : {order_size_ask:.8f}, Bid Order {order_size_bid:.8f}")
-        self.log_with_clock(logging.INFO, msg3)
+        # msg3 = (f"Min Order  : {minimum_size:.8f} , Ask Order : {order_size_ask:.8f}, Bid Order {order_size_bid:.8f}")
+        # self.log_with_clock(logging.INFO, msg3)
 
         #msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
         #self.log_with_clock(logging.INFO, msgbe)
