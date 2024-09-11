@@ -668,7 +668,7 @@ class SimplePMM(ScriptStrategyBase):
                 base_balancing_volume = total_imbalance
          
         else :
-            base_balancing_volume = minimum_size
+            base_balancing_volume = 0.0 #minimum_size
             quote_balancing_volume = minimum_size
 
 
@@ -689,8 +689,8 @@ class SimplePMM(ScriptStrategyBase):
         order_size_bid = quote_balancing_volume 
         order_size_ask = base_balancing_volume 
 
-        order_size_bid = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid))
-        order_size_ask = max(minimum_size, self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask))
+        order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid)
+        order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask)
 
 
         return order_size_bid, order_size_ask
