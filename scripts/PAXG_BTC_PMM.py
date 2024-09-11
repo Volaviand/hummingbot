@@ -627,18 +627,16 @@ class SimplePMM(ScriptStrategyBase):
         #to market overcorrection
         if q > 0 :
             #If base is overbought, I want to sell more Quote to balance it
-            #Size to balance base
-            base_balancing_volume =  abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
-            quote_balancing_volume = abs(minimum_size) * Decimal.exp(-self.order_shape_factor * q) 
+            base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
+            quote_balancing_volume =  abs(minimum_size) * Decimal.exp(-self.order_shape_factor * q) 
             # Ensure base balancing volume does not exceed the amount needed to balance
             if quote_balancing_volume > total_imbalance:
                 quote_balancing_volume = total_imbalance
 
         elif q < 0 :
-            #If quote is overbought, I want to buy more Base to balance it. 
-            base_balancing_volume =  abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
-            quote_balancing_volume = abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
-               
+            base_balancing_volume = abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
+            quote_balancing_volume = total_imbalance ##abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
+ 
             # Ensure base balancing volume does not exceed the amount needed to balance
             if base_balancing_volume > total_imbalance:
                 base_balancing_volume = total_imbalance
