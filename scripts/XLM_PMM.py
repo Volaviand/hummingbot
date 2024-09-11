@@ -231,7 +231,16 @@ class SimplePMM(ScriptStrategyBase):
         
         #msg1 = (f" Trades Placed ::  Bid Price : {buy_price:.8f} , Ask Price : {sell_price:.8f}")
         #self.log_with_clock(logging.INFO, msg1)
-        
+        order_counter = []
+        if order_size_bid >= self.order_amount:
+            order_counter = [buy_order]
+        elif order_size_ask >= self.order_amount:
+            order_counter = [sell_order]
+        elif order_size_bid >= self.order_amount and order_size_ask >= self.order_amount:
+            order_counter = [buy_order, sell_order]
+        else:
+            order_counter = []
+            
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)
 
@@ -242,7 +251,7 @@ class SimplePMM(ScriptStrategyBase):
         msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
         self.log_with_clock(logging.INFO, msgce)
 
-        return [buy_order , sell_order]
+        return order_counter #[buy_order , sell_order]
 
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
