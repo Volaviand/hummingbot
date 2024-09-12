@@ -92,7 +92,7 @@ class KrakenAPI:
         return self.data
 
 # Calculate the timestamp for 1 day ago
-since_input = datetime.datetime.now() - datetime.timedelta(days=28)
+since_input = datetime.datetime.now() - datetime.timedelta(days=1)
 since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
 
 # Calculate the timestamp for now
