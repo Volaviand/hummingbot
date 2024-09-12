@@ -147,6 +147,10 @@ class SimplePMM(ScriptStrategyBase):
         self.close_history = []
         self.log_returns = []
 
+        # Volatility 
+        self.max_vola = 0.0
+        self.current_vola = 0.0
+        self.volatility_rank = 0.0
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -170,10 +174,10 @@ class SimplePMM(ScriptStrategyBase):
             #Calculate garch every so many seconds
             if self.create_garch_timestamp<= self.current_timestamp:
                     ### Call Garch Test
-                    garch_volatility, volatility_rank = self.call_garch_model()
-                    msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                    self.call_garch_model()
+                    # msg_gv = (f"GARCH Volatility {self.current_vola:.8f}")
                     self.log_with_clock(logging.INFO, msg_gv)
-                    self.target_profitability = max(self.min_profitability, garch_volatility)
+                    self.target_profitability = max(self.min_profitability, self.current_vola)
                     self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
             
             #Update the timestamp model 
@@ -788,19 +792,19 @@ class SimplePMM(ScriptStrategyBase):
                 length = len(forecast.variance)
         
             ### Rank the Volatility for use. 
-            max_vola = max(current_volatility)
+            self.max_vola = max(current_volatility)
             min_vola = min(current_volatility)
-            current_vola = current_volatility[-1] 
+            self.current_vola = current_volatility[-1] 
 
             # Prevent division by zero in case max_vola equals min_vola
-            if max_vola != min_vola:
-                rank = (current_vola - min_vola) / (max_vola - min_vola)
+            if self.max_vola != min_vola:
+                self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
             else:
-                rank = 0  # Or any other handling of the case where volatility is constant
+                self.volatility_rank = 0  # Or any other handling of the case where volatility is constant
 
-            msg = (f"Volatility :: Rank:{rank}, Max:{max_vola}, Min:{min_vola}, Current:{current_vola}, Length = {length}")
+            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}, Length = {length}")
             self.log_with_clock(logging.INFO, msg)            
-            return current_vola, rank
+            # return current_vola, max_vola, min_vola
 
         except Exception as e:
             # Handle any exceptions that occur during model fitting or volatility retrieval
@@ -852,9 +856,9 @@ class SimplePMM(ScriptStrategyBase):
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
-        konstant = Decimal(5)
-        y_bid = y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
-        y_ask = y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
+        # konstant = Decimal(5)
+        y_bid = y_min + (y_difference * self.volatility_rank)  #y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
+        y_ask = y_min + (y_difference * self.volatility_rank)  #y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
 
         y_bid = min(y_bid,y_max)
         y_bid = max(y_bid,y_min)
