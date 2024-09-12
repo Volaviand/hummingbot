@@ -938,6 +938,7 @@ class SimplePMM(ScriptStrategyBase):
                     current_volatility.append(volatility)
                 length = len(model_fit.conditional_volatility)
             else:
+                print(" USING FORECAST VOLATILTY")
                 # Alternative way to get volatility if `conditional_volatility` is not available
                 forecast = model_fit.forecast(start=None)
                 for i in range(len(forecast.variance)):
