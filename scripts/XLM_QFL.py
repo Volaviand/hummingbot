@@ -532,7 +532,7 @@ class SimplePMM(ScriptStrategyBase):
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
             # Compute rolling window of close prices
-            self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
+            self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()[-1]
             # Calculate log returns using rolling windows
             log_returns = []
             
