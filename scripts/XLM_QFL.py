@@ -114,6 +114,16 @@ def call_kraken_data(hist_days = 1, market = 'XXLMZEUR'):
     kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce')
 
 
+    # Calculate log returns
+    kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
+
+    # Drop any NaN values created due to shifting
+    kdf.dropna(subset=['Log_Returns'], inplace=True)
+
+    # Save log returns to a list
+    log_returns_list = kdf['Log_Returns'].tolist()
+
+
     # Create separate lists for buys and sells
     buy_trades = []
     sell_trades = []
@@ -163,7 +173,7 @@ def call_kraken_data(hist_days = 1, market = 'XXLMZEUR'):
     kdf['Price_Smoothed'] = kdf['Price']#.rolling(window=2).mean().dropna()  # Adjust window size as needed
     kdf['Volume_Smoothed'] = kdf['Volume']#.rolling(window=2).mean().dropna()
 
-    return sold_baseline, bought_baseline
+    return sold_baseline, bought_baseline, log_returns_list
 
 class SimplePMM(ScriptStrategyBase):
     """
@@ -840,7 +850,7 @@ class SimplePMM(ScriptStrategyBase):
         return order_size_bid, order_size_ask
     
     def get_midprice(self):
-        sold_baseline, bought_baseline = call_kraken_data()
+        sold_baseline, bought_baseline, log_returns_list = call_kraken_data()
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
@@ -881,8 +891,10 @@ class SimplePMM(ScriptStrategyBase):
         return self._last_trade_price, self._vwap_midprice
 
     def call_garch_model(self):
+        sold_baseline, bought_baseline, log_returns_list = call_kraken_data()
+
         # Retrieve the log returns from the DataFrame
-        log_returns = self.log_returns
+        log_returns = log_returns_list##self.log_returns
 
         # Ensure log_returns is a one-dimensional pd.Series
         if isinstance(log_returns, list):
