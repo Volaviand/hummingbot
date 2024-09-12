@@ -813,7 +813,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.max_vola != min_vola:
                 self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
             else:
-                self.volatility_rank = 0  # Or any other handling of the case where volatility is constant
+                self.volatility_rank = 1  # Or any other handling of the case where volatility is constant
 
             msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}, Length = {length}")
             self.log_with_clock(logging.INFO, msg)            
