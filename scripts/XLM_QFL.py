@@ -154,10 +154,11 @@ def call_kraken_data(hist_days = 1, market = 'XXLMZEUR'):
     sold_volume_percentile = np.percentile(sell_trades_df['Volume'], percentile)
 
     # Sell into Bid (Lower Base) IQR
-    sold_baseline = np.percentile(sell_trades_df['Price'], 25)
-    # Buy into Ask( Upper Base) IQR
-    bought_baseline = np.percentile(buy_trades_df['Price'], 75)
-
+        # Bypass sold baseline for now for median price :: 
+    sold_baseline = np.percentile(sell_trades_df['Price'], 50)
+    # # Buy into Ask( Upper Base) IQR
+        # Bypass sold baseline for now for median price :: 
+    bought_baseline = np.percentile(buy_trades_df['Price'], 50)
 
 
     # Drop the 'Blank' column
