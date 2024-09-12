@@ -147,6 +147,7 @@ class SimplePMM(ScriptStrategyBase):
         #history_values
         self.close_history = []
         self.log_returns = []
+        self.rolling_mean
 
         # Volatility 
         self.max_vola = 0.0
@@ -531,7 +532,7 @@ class SimplePMM(ScriptStrategyBase):
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
             # Compute rolling window of close prices
-            rolling_close = df["close"].rolling(self.volatility_interval)
+            self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
             # Calculate log returns using rolling windows
             log_returns = []
             
@@ -710,7 +711,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = 0.08506 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = self.rolling_mean ##0.08506 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
