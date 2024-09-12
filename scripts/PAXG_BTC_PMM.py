@@ -175,8 +175,7 @@ class SimplePMM(ScriptStrategyBase):
             if self.create_garch_timestamp<= self.current_timestamp:
                     ### Call Garch Test
                     self.call_garch_model()
-                    # msg_gv = (f"GARCH Volatility {self.current_vola:.8f}")
-                    self.log_with_clock(logging.INFO, msg_gv)
+
                     self.target_profitability = max(self.min_profitability, self.current_vola)
                     self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
             
@@ -840,10 +839,10 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        max_bid_volatility= Decimal(self.target_profitability) 
+        max_bid_volatility= Decimal(self.max_vola) 
         bid_volatility_in_base = (max_bid_volatility) * s 
 
-        max_ask_volatility = Decimal(self.target_profitability) 
+        max_ask_volatility = Decimal(self.max_vola) 
         ask_volatility_in_base = (max_ask_volatility) * s 
 
 
