@@ -952,24 +952,27 @@ class SimplePMM(ScriptStrategyBase):
                     current_volatility.append(volatility)
                 length = len(forecast.variance)
         
-            ## Roll the volatility to get a better avg price for use 
-            window = int(np.round(np.sqrt(length))) # 28 #np.round(np.log(len(df['Volatility']))) # Define your rolling window size
+                # Convert current_volatility to a pandas Series to apply rolling
+                current_volatility_series = pd.Series(current_volatility)
 
-            rolling_volatility = current_volatility.rolling(window=window).mean()
+                # Define the rolling window size (square root of length)
+                window = int(np.round(np.sqrt(len(current_volatility_series))))
 
+                # Apply the rolling window to smooth volatility
+                rolling_volatility = current_volatility_series.rolling(window=window).mean()
 
-            ### Rank the Volatility for use. 
-            self.max_vola = max(rolling_volatility)
-            min_vola = min(rolling_volatility)
-            self.current_vola = rolling_volatility[-1] 
+                # Rank the Volatility
+                self.max_vola = rolling_volatility.max()
+                min_vola = rolling_volatility.min()
+                self.current_vola = current_volatility_series.iloc[-1]
 
-            # Prevent division by zero in case max_vola equals min_vola
-            if self.max_vola != min_vola:
-                self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
-            else:
-                self.volatility_rank = 1  # Or any other handling of the case where volatility is constant
+                # Prevent division by zero
+                if self.max_vola != min_vola:
+                    self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+                else:
+                    self.volatility_rank = 1  # Handle constant volatility case
 
-            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}, Length = {length}")
+            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
             self.log_with_clock(logging.INFO, msg)            
             # return current_vola, max_vola, min_vola
 
