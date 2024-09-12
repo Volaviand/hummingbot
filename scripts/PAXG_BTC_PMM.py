@@ -753,18 +753,45 @@ class SimplePMM(ScriptStrategyBase):
             msg_gv = (f"GARCH  { model_fit.summary()}")
             self.log_with_clock(logging.INFO, msg_gv)
            
+            current_variance = []
+            current_volatility = []
             # Check if `conditional_volatility` is available
             if hasattr(model_fit, 'conditional_volatility'):
                 # Retrieve the latest (current) GARCH volatility
-                current_variance = model_fit.conditional_volatility.iloc[-1]**2  # Latest variance
-                current_volatility = np.sqrt(current_variance)  # Convert to volatility
-                current_volatility /= np.sqrt(scale_factor)  # De-scale volatility
+                for i in range(len(model_fit.conditional_volatility)):
+                    # Calculate variance
+                    variance = model_fit.conditional_volatility.iloc[i]**2
+                    # Calculate volatility from variance
+                    volatility = np.sqrt(variance)
+                    
+                    # De-scale the variance and volatility (if needed)
+                    variance /= scale_factor
+                    volatility /= np.sqrt(scale_factor)
+                    
+                    # Append to the lists
+                    current_variance.append(variance)
+                    current_volatility.append(volatility)
             else:
                 # Alternative way to get volatility if `conditional_volatility` is not available
                 forecast = model_fit.forecast(start=None)
-                current_volatility = np.sqrt(forecast.variance.iloc[-1]) / np.sqrt(scale_factor)
+                for i in range(len(forecast.variance)):
+                    variance = forecast.variance[i]
+                    volatility = np.sqrt(variance) / np.sqrt(scale_factor) # de scale
 
-            return current_volatility
+                    variance /= scale_factor # de scale
+
+                    # Append to the lists
+                    current_variance.append(variance)
+                    current_volatility.append(volatility)
+        
+            ### Rank the Volatility for use. 
+            max_vola = max(current_volatility)
+            min_vola = min(current_volatility)
+            current_vola = current_volatility[-1]
+
+            rank = (current_vola - min_vola) / (max_vola - min_vola)
+            print(f"Volatility Rank :: {rank}")
+            return current_vola, rank
 
         except Exception as e:
             # Handle any exceptions that occur during model fitting or volatility retrieval
