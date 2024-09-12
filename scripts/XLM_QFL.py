@@ -5,6 +5,7 @@ import math
 from math import floor, ceil
 import pandas as pd
 import pandas_ta as ta  # noqa: F401
+import requests
 
 import numpy as np
 import random
@@ -30,6 +31,132 @@ sys.path.append('/home/tyler/quant/API_call_tests/')
 from Kraken_Calculations import BuyTrades, SellTrades
 
 
+class KrakenAPI:
+    def __init__(self, symbol, start_timestamp, end_timestamp=None):
+        self.symbol = symbol
+        self.base_url = 'https://api.kraken.com/0/public/Trades'
+        self.data = []
+        self.start_timestamp = start_timestamp
+        self.last_timestamp = start_timestamp
+        self.end_timestamp = end_timestamp
+
+    def fetch_trades(self, since):
+        try:
+            url = f'{self.base_url}?pair={self.symbol}&since={since}'
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+            if "result" in data and self.symbol in data["result"]:
+                trades = data["result"][self.symbol]
+                last_timestamp = int(data["result"].get("last", self.last_timestamp))
+                print(f"Data Saved. Last Timestamp: {last_timestamp}")
+            
+                return True, trades, last_timestamp
+            else:
+                print(f"No data found or error in response for symbol: {self.symbol}")
+                return False, [], self.last_timestamp
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            return False, [], self.last_timestamp
+
+    def get_trades_since(self):
+        initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
+        while True:
+            success, trades, last_timestamp = self.fetch_trades(self.last_timestamp)
+            print(len(trades))
+            if not success or not trades:
+                print("No more data to fetch.")
+                break
+
+            self.data.extend(trades)
+            self.last_timestamp = last_timestamp
+
+            # Stop if last timestamp exceeds end timestamp or if no new data is returned
+            if  self.last_timestamp >= self.end_timestamp:
+                print("Reached the end timestamp.")
+                break
+
+            if len(trades) == 1:
+                print("No more trades.")
+                break
+
+            # Limit the loop to avoid excessive requests
+            if len(self.data) > 100000:  # Example limit
+                print("Data limit reached.")
+                break
+
+            # Rate limit to avoid hitting API too hard
+            time.sleep(1)
+
+        return self.data
+
+# Calculate the timestamp for 1 day ago
+since_input = datetime.datetime.now() - datetime.timedelta(days=28)
+since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
+
+# Calculate the timestamp for now
+now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
+#print(now_timestamp)
+market = 'XXLMZEUR'
+
+# Initialize Kraken API object with your symbol and start timestamp
+api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
+trades = api.get_trades_since()
+
+# Convert to DataFrame
+kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
+
+#Convert values to numerics
+kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
+kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce')
+
+
+# Create separate lists for buys and sells
+buy_trades = []
+sell_trades = []
+
+
+# Iterate over each trade and separate buys and sells
+for index, row in kdf.iterrows():
+    if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
+        buy_trades.append(row)  # Add buy trade to the buy list
+    elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
+        sell_trades.append(row)  # Add sell trade to the sell list
+        
+# Convert buy_trades and sell_trades to DataFrames for further analysis
+buy_trades_df = pd.DataFrame(buy_trades)
+sell_trades_df = pd.DataFrame(sell_trades)
+
+total_buy_volume = buy_trades_df['Volume'].sum()
+total_sell_volume = sell_trades_df['Volume'].sum()
+
+# Print the totals
+#print(f"Total Buy Volume : {total_buy_volume}")
+#print(f"Total Sell Volume : {total_sell_volume}")
+
+# Find the 75th percentile of buy and sell volumes
+percentile = 25
+buy_percentile =np.percentile(buy_trades_df['Volume'], percentile)
+sell_percentile = np.percentile(sell_trades_df['Volume'], percentile)
+
+#print(f"{percentile} Percentile of Buy Volumes: {buy_percentile}")
+#print(f"{percentile} Percentile of Sell Volumes: {sell_percentile}")
+
+
+
+# Drop the 'Blank' column
+kdf.drop('Blank', axis=1, inplace=True)
+
+# Convert Timestamp to readable format (from seconds)
+kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
+#print(f"Start of Data :: {kdf['Timestamp'][0]}")
+# Check for any missing values and fill or drop them if necessary
+kdf.dropna(inplace=True)
+
+# Apply a rolling average (optional for smoothing)
+kdf['Price_Smoothed'] = kdf['Price']#.rolling(window=2).mean().dropna()  # Adjust window size as needed
+kdf['Volume_Smoothed'] = kdf['Volume']#.rolling(window=2).mean().dropna()
 
 class SimplePMM(ScriptStrategyBase):
     """
