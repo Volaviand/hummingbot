@@ -354,6 +354,9 @@ class SimplePMM(ScriptStrategyBase):
         ## If I am doing a single side (QFL), then the maximum orders should account for only the buy side entry. 
         # n = math.floor(self.maximum_orders/2)
 
+        ### Trades into the more volatile markets should be deeper to account for this
+        ## for example, buying XLM(more volatile than FIAT) should be harder to do than selling/ (profiting) from the trade. 
+
         n = self.maximum_orders
         
         ## Buys
