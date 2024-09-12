@@ -755,6 +755,7 @@ class SimplePMM(ScriptStrategyBase):
            
             current_variance = []
             current_volatility = []
+            length = 0
             # Check if `conditional_volatility` is available
             if hasattr(model_fit, 'conditional_volatility'):
                 # Retrieve the latest (current) GARCH volatility
@@ -771,6 +772,7 @@ class SimplePMM(ScriptStrategyBase):
                     # Append to the lists
                     current_variance.append(variance)
                     current_volatility.append(volatility)
+                length = len(model_fit.conditional_volatility)
             else:
                 # Alternative way to get volatility if `conditional_volatility` is not available
                 forecast = model_fit.forecast(start=None)
@@ -783,6 +785,7 @@ class SimplePMM(ScriptStrategyBase):
                     # Append to the lists
                     current_variance.append(variance)
                     current_volatility.append(volatility)
+                length = len(forecast.variance)
         
             ### Rank the Volatility for use. 
             max_vola = max(current_volatility)
@@ -790,7 +793,8 @@ class SimplePMM(ScriptStrategyBase):
             current_vola = current_volatility[-1]
 
             rank = (current_vola - min_vola) / (max_vola - min_vola)
-            print(f"Volatility Rank :: {rank}")
+            msg = (f"Volatility :: Max:{max_vola}, Min:{min_vola}, Current:{current_vola}, Length = {length}")
+            self.log_with_clock(logging.INFO, msg)            
             return current_vola, rank
 
         except Exception as e:
