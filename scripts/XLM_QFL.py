@@ -336,7 +336,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
-        self._last_trade_price, self._vwap_midprice = self.get_midprice()
+        # self._last_trade_price, self._vwap_midprice = self.get_midprice()
         optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
         bid_starting_price, ask_starting_price = self.get_starting_prices()
 
