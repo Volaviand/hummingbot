@@ -170,7 +170,7 @@ class SimplePMM(ScriptStrategyBase):
             #Calculate garch every so many seconds
             if self.create_garch_timestamp<= self.current_timestamp:
                     ### Call Garch Test
-                    garch_volatility = self.call_garch_model()
+                    garch_volatility, volatility_rank = self.call_garch_model()
                     msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
                     self.log_with_clock(logging.INFO, msg_gv)
                     self.target_profitability = max(self.min_profitability, garch_volatility)
