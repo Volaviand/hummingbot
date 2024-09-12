@@ -790,10 +790,15 @@ class SimplePMM(ScriptStrategyBase):
             ### Rank the Volatility for use. 
             max_vola = max(current_volatility)
             min_vola = min(current_volatility)
-            current_vola = current_volatility[-1]
+            current_vola = current_volatility[-1] 
 
-            rank = (current_vola - min_vola) / (max_vola - min_vola)
-            msg = (f"Volatility :: Max:{max_vola}, Min:{min_vola}, Current:{current_vola}, Length = {length}")
+            # Prevent division by zero in case max_vola equals min_vola
+            if max_vola != min_vola:
+                rank = (current_vola - min_vola) / (max_vola - min_vola)
+            else:
+                rank = 0  # Or any other handling of the case where volatility is constant
+
+            msg = (f"Volatility :: Rank:{rank}, Max:{max_vola}, Min:{min_vola}, Current:{current_vola}, Length = {length}")
             self.log_with_clock(logging.INFO, msg)            
             return current_vola, rank
 
