@@ -51,7 +51,7 @@ class KrakenAPI:
             if "result" in data and self.symbol in data["result"]:
                 trades = data["result"][self.symbol]
                 last_timestamp = int(data["result"].get("last", self.last_timestamp))
-                print(f"Data Saved. Last Timestamp: {last_timestamp}")
+                # print(f"Data Saved. Last Timestamp: {last_timestamp}")
             
                 return True, trades, last_timestamp
             else:
@@ -67,7 +67,7 @@ class KrakenAPI:
             success, trades, last_timestamp = self.fetch_trades(self.last_timestamp)
             print(len(trades))
             if not success or not trades:
-                print("No more data to fetch.")
+                # print("No more data to fetch.")
                 break
 
             self.data.extend(trades)
@@ -75,11 +75,11 @@ class KrakenAPI:
 
             # Stop if last timestamp exceeds end timestamp or if no new data is returned
             if  self.last_timestamp >= self.end_timestamp:
-                print("Reached the end timestamp.")
+                # print("Reached the end timestamp.")
                 break
 
             if len(trades) == 1:
-                print("No more trades.")
+                # print("No more trades.")
                 break
 
             # Limit the loop to avoid excessive requests
