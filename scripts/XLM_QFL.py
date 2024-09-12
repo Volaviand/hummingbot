@@ -864,7 +864,7 @@ class SimplePMM(ScriptStrategyBase):
         elif self.buy_counter == 1 and self.sell_counter == 1:
             self._last_trade_price =  sold_baseline
         else:
-                self._last_trade_price = Decimal(self._last_trade_price)
+            self._last_trade_price = Decimal(self._last_trade_price)
 
         msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
         self.log_with_clock(logging.INFO, msg_lastrade)
@@ -1168,8 +1168,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        geom_limit_bid = bid_starting_price * bp ##geom_spread_bid 
-        geom_limit_ask = ask_starting_price * sp ##geom_spread_ask 
+        geom_limit_bid = Decimal(bid_starting_price) * bp ##geom_spread_bid 
+        geom_limit_ask = Decimal(ask_starting_price) * sp ##geom_spread_ask 
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
