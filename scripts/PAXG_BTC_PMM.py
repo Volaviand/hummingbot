@@ -887,8 +887,10 @@ class SimplePMM(ScriptStrategyBase):
         return self._last_trade_price, self._vwap_midprice
 
     def call_garch_model(self):
+        sold_baseline, bought_baseline, log_returns_list = call_kraken_data()
+
         # Retrieve the log returns from the DataFrame
-        log_returns = self.log_returns
+        log_returns = log_returns_list##self.log_returns
 
         # Ensure log_returns is a one-dimensional pd.Series
         if isinstance(log_returns, list):
@@ -932,6 +934,7 @@ class SimplePMM(ScriptStrategyBase):
                     current_volatility.append(volatility)
                 length = len(model_fit.conditional_volatility)
             else:
+                print(" USING FORECAST VOLATILTY")
                 # Alternative way to get volatility if `conditional_volatility` is not available
                 forecast = model_fit.forecast(start=None)
                 for i in range(len(forecast.variance)):
@@ -945,18 +948,27 @@ class SimplePMM(ScriptStrategyBase):
                     current_volatility.append(volatility)
                 length = len(forecast.variance)
         
-            ### Rank the Volatility for use. 
-            self.max_vola = max(current_volatility)
-            min_vola = min(current_volatility)
-            self.current_vola = current_volatility[-1] 
+            # Convert current_volatility to a pandas Series to apply rolling
+            current_volatility_series = pd.Series(current_volatility)
 
-            # Prevent division by zero in case max_vola equals min_vola
+            # Define the rolling window size (square root of length)
+            window = int(np.round(np.sqrt(len(current_volatility_series))))
+
+            # Apply the rolling window to smooth volatility
+            rolling_volatility = current_volatility_series.rolling(window=window).mean()
+
+            # Rank the Volatility
+            self.max_vola = rolling_volatility.max()
+            min_vola = rolling_volatility.min()
+            self.current_vola = current_volatility_series.iloc[-1]
+
+            # Prevent division by zero
             if self.max_vola != min_vola:
                 self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
             else:
-                self.volatility_rank = 1  # Or any other handling of the case where volatility is constant
+                self.volatility_rank = 1  # Handle constant volatility case
 
-            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}, Length = {length}")
+            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
             self.log_with_clock(logging.INFO, msg)            
             # return current_vola, max_vola, min_vola
 
