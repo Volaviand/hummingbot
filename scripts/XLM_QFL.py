@@ -861,7 +861,8 @@ class SimplePMM(ScriptStrategyBase):
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
-    
+        elif self.buy_counter == 1 and self.sell_counter == 1:
+            self._last_trade_price =  sold_baseline
         else:
                 self._last_trade_price = Decimal(self._last_trade_price)
 
