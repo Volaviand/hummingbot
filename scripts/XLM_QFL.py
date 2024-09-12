@@ -607,11 +607,11 @@ class SimplePMM(ScriptStrategyBase):
     def get_current_positions(self):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
-
-        amount_base_to_hold = Decimal(0.10)
+        # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
+        amount_base_to_hold = Decimal(0.005)
         amount_base_rate = Decimal(1.0) - amount_base_to_hold
         
-        amount_quote_to_hold = Decimal(0.10)
+        amount_quote_to_hold = Decimal(0)
         amount_quote_rate = Decimal(1.0) - amount_base_to_hold
         
 
