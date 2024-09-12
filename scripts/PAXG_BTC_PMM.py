@@ -1007,7 +1007,7 @@ class SimplePMM(ScriptStrategyBase):
         #INVENTORY RISK parameter, 0 to 1, higher = more risk averse, as y <-- 0, it behaves more like usual
         # Adjust the width of the y parameter based on volatility, the more volatile , the wider the spread becomes, y goes higher
         y = Decimal(1.0)
-        y_min = Decimal(0.5)
+        y_min = Decimal(0.0)
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
         # konstant = Decimal(5)
