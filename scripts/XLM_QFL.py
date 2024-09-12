@@ -147,7 +147,7 @@ class SimplePMM(ScriptStrategyBase):
         #history_values
         self.close_history = []
         self.log_returns = []
-        self.rolling_mean = 0.0
+        self.rolling_mean = 0.08
 
         # Volatility 
         self.max_vola = 0.0
