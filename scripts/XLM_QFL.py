@@ -324,7 +324,7 @@ class SimplePMM(ScriptStrategyBase):
                     self.call_garch_model()
                     #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
                     #self.log_with_clock(logging.INFO, msg_gv)
-                    self.target_profitability = max(self.min_profitability, self.max_vola)
+                    self.target_profitability = max(self.min_profitability, self.current_vola)
                     self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
             
             #Update the timestamp model 

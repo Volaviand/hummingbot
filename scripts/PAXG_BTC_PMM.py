@@ -321,7 +321,7 @@ class SimplePMM(ScriptStrategyBase):
                     ### Call Garch Test
                     self.call_garch_model()
 
-                    self.target_profitability = max(self.min_profitability, self.max_vola)
+                    self.target_profitability = max(self.min_profitability, self.current_vola)
                     self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
             
             #Update the timestamp model 
