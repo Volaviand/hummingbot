@@ -148,6 +148,11 @@ class SimplePMM(ScriptStrategyBase):
         self.close_history = []
         self.log_returns = []
 
+        # Volatility 
+        self.max_vola = 0.0
+        self.current_vola = 0.0
+        self.volatility_rank = 0.0
+
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
@@ -170,7 +175,7 @@ class SimplePMM(ScriptStrategyBase):
             #Calculate garch every so many seconds
             if self.create_garch_timestamp<= self.current_timestamp:
                     ### Call Garch Test
-                    garch_volatility = self.call_garch_model()
+                    self.call_garch_model()
                     msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
                     self.log_with_clock(logging.INFO, msg_gv)
                     self.target_profitability = max(self.min_profitability, garch_volatility)
@@ -762,23 +767,59 @@ class SimplePMM(ScriptStrategyBase):
             msg_gv = (f"GARCH  { model_fit.summary()}")
             self.log_with_clock(logging.INFO, msg_gv)
            
+            current_variance = []
+            current_volatility = []
+            length = 0
             # Check if `conditional_volatility` is available
             if hasattr(model_fit, 'conditional_volatility'):
                 # Retrieve the latest (current) GARCH volatility
-                current_variance = model_fit.conditional_volatility.iloc[-1]**2  # Latest variance
-                current_volatility = np.sqrt(current_variance)  # Convert to volatility
-                current_volatility /= np.sqrt(scale_factor)  # De-scale volatility
+                for i in range(len(model_fit.conditional_volatility)):
+                    # Calculate variance
+                    variance = model_fit.conditional_volatility.iloc[i]**2
+                    # Calculate volatility from variance
+                    volatility = np.sqrt(variance)
+                    
+                    # De-scale the variance and volatility (if needed)
+                    variance /= scale_factor
+                    volatility /= np.sqrt(scale_factor)
+                    
+                    # Append to the lists
+                    current_variance.append(variance)
+                    current_volatility.append(volatility)
+                length = len(model_fit.conditional_volatility)
             else:
                 # Alternative way to get volatility if `conditional_volatility` is not available
                 forecast = model_fit.forecast(start=None)
-                current_volatility = np.sqrt(forecast.variance.iloc[-1]) / np.sqrt(scale_factor)
+                for i in range(len(forecast.variance)):
+                    variance = forecast.variance[i]
+                    volatility = np.sqrt(variance) / np.sqrt(scale_factor) # de scale
 
-            return current_volatility
+                    variance /= scale_factor # de scale
+
+                    # Append to the lists
+                    current_variance.append(variance)
+                    current_volatility.append(volatility)
+                length = len(forecast.variance)
+        
+            ### Rank the Volatility for use. 
+            self.max_vola = max(current_volatility)
+            min_vola = min(current_volatility)
+            self.current_vola = current_volatility[-1] 
+
+            # Prevent division by zero in case max_vola equals min_vola
+            if self.max_vola != min_vola:
+                self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+            else:
+                self.volatility_rank = 0  # Or any other handling of the case where volatility is constant
+
+            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}, Length = {length}")
+            self.log_with_clock(logging.INFO, msg)            
+            # return current_vola, max_vola, min_vola
 
         except Exception as e:
             # Handle any exceptions that occur during model fitting or volatility retrieval
             print(f"An error occurred while fitting the GARCH model: {e}")
-            return None
+            #return None
 
     def reservation_price(self):
         volatility_metrics_df, log_returns = self.get_market_analysis()
@@ -809,10 +850,10 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        max_bid_volatility= Decimal(self.target_profitability) 
+        max_bid_volatility= Decimal(self.max_vola) 
         bid_volatility_in_base = (max_bid_volatility) * s 
 
-        max_ask_volatility = Decimal(self.target_profitability) 
+        max_ask_volatility = Decimal(self.max_vola) 
         ask_volatility_in_base = (max_ask_volatility) * s 
 
 
@@ -825,9 +866,9 @@ class SimplePMM(ScriptStrategyBase):
         y_min = Decimal(0.5)
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
-        konstant = Decimal(5)
-        y_bid = y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
-        y_ask = y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
+        # konstant = Decimal(5)
+        y_bid = y_min + (y_difference * Decimal(self.volatility_rank))  #y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
+        y_ask = y_min + (y_difference * Decimal(self.volatility_rank))  #y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
 
         y_bid = min(y_bid,y_max)
         y_bid = max(y_bid,y_min)
