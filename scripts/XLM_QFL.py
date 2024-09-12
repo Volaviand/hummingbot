@@ -92,72 +92,78 @@ class KrakenAPI:
 
         return self.data
 
-# Calculate the timestamp for 1 day ago
-since_input = datetime.datetime.now() - datetime.timedelta(days=1)
-since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
+def call_kraken_data(hist_days = 1, market = 'XXLMZEUR'):
+    # Calculate the timestamp for 1 day ago
+    since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
+    since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
 
-# Calculate the timestamp for now
-now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
-#print(now_timestamp)
-market = 'XXLMZEUR'
+    # Calculate the timestamp for now
+    now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
+    #print(now_timestamp)
+    market = market
 
-# Initialize Kraken API object with your symbol and start timestamp
-api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
-trades = api.get_trades_since()
+    # Initialize Kraken API object with your symbol and start timestamp
+    api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
+    trades = api.get_trades_since()
 
-# Convert to DataFrame
-kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
+    # Convert to DataFrame
+    kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
 
-#Convert values to numerics
-kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
-kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce')
-
-
-# Create separate lists for buys and sells
-buy_trades = []
-sell_trades = []
+    #Convert values to numerics
+    kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
+    kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce')
 
 
-# Iterate over each trade and separate buys and sells
-for index, row in kdf.iterrows():
-    if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
-        buy_trades.append(row)  # Add buy trade to the buy list
-    elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
-        sell_trades.append(row)  # Add sell trade to the sell list
-        
-# Convert buy_trades and sell_trades to DataFrames for further analysis
-buy_trades_df = pd.DataFrame(buy_trades)
-sell_trades_df = pd.DataFrame(sell_trades)
+    # Create separate lists for buys and sells
+    buy_trades = []
+    sell_trades = []
 
-total_buy_volume = buy_trades_df['Volume'].sum()
-total_sell_volume = sell_trades_df['Volume'].sum()
 
-# Print the totals
-#print(f"Total Buy Volume : {total_buy_volume}")
-#print(f"Total Sell Volume : {total_sell_volume}")
-
-# Find the 75th percentile of buy and sell volumes
-percentile = 25
-buy_percentile =np.percentile(buy_trades_df['Volume'], percentile)
-sell_percentile = np.percentile(sell_trades_df['Volume'], percentile)
-
-#print(f"{percentile} Percentile of Buy Volumes: {buy_percentile}")
-#print(f"{percentile} Percentile of Sell Volumes: {sell_percentile}")
+    # Iterate over each trade and separate buys and sells
+    for index, row in kdf.iterrows():
+        if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
+            buy_trades.append(row)  # Add buy trade to the buy list
+        elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
+            sell_trades.append(row)  # Add sell trade to the sell list
+            
+    # Convert buy_trades and sell_trades to DataFrames for further analysis
+    buy_trades_df = pd.DataFrame(buy_trades)
+    sell_trades_df = pd.DataFrame(sell_trades)
 
 
 
-# Drop the 'Blank' column
-kdf.drop('Blank', axis=1, inplace=True)
+    total_buy_volume = buy_trades_df['Volume'].sum()
+    total_sell_volume = sell_trades_df['Volume'].sum()
 
-# Convert Timestamp to readable format (from seconds)
-kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
-#print(f"Start of Data :: {kdf['Timestamp'][0]}")
-# Check for any missing values and fill or drop them if necessary
-kdf.dropna(inplace=True)
+    # Print the totals
 
-# Apply a rolling average (optional for smoothing)
-kdf['Price_Smoothed'] = kdf['Price']#.rolling(window=2).mean().dropna()  # Adjust window size as needed
-kdf['Volume_Smoothed'] = kdf['Volume']#.rolling(window=2).mean().dropna()
+
+    # Find the 25th percentile of buy and sell volumes
+    percentile = 25
+    bought_volume_percentile =np.percentile(buy_trades_df['Volume'], percentile)
+    sold_volume_percentile = np.percentile(sell_trades_df['Volume'], percentile)
+
+    # Sell into Bid (Lower Base) IQR
+    sold_baseline = np.percentile(sell_trades_df['Price'], 25)
+    # Buy into Ask( Upper Base) IQR
+    bought_baseline = np.percentile(buy_trades_df['Price'], 75)
+
+
+
+    # Drop the 'Blank' column
+    # kdf.drop('Blank', axis=1, inplace=True)
+
+    # Convert Timestamp to readable format (from seconds)
+    kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
+    #print(f"Start of Data :: {kdf['Timestamp'][0]}")
+    # Check for any missing values and fill or drop them if necessary
+    kdf.dropna(inplace=True)
+
+    # Apply a rolling average (optional for smoothing)
+    kdf['Price_Smoothed'] = kdf['Price']#.rolling(window=2).mean().dropna()  # Adjust window size as needed
+    kdf['Volume_Smoothed'] = kdf['Volume']#.rolling(window=2).mean().dropna()
+
+    return sold_baseline, bought_baseline
 
 class SimplePMM(ScriptStrategyBase):
     """
@@ -275,7 +281,7 @@ class SimplePMM(ScriptStrategyBase):
         #history_values
         self.close_history = []
         self.log_returns = []
-        self.rolling_mean = 0.08
+        # self.rolling_mean = 0.08
 
         # Volatility 
         self.max_vola = 0.0
@@ -660,7 +666,7 @@ class SimplePMM(ScriptStrategyBase):
             market_metrics[trading_pair_interval] = df.iloc[-1]
 
             # Compute rolling window of close prices
-            self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
+            # self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
             # Calculate log returns using rolling windows
             log_returns = []
             
@@ -834,12 +840,12 @@ class SimplePMM(ScriptStrategyBase):
         return order_size_bid, order_size_ask
     
     def get_midprice(self):
-
+        sold_baseline, bought_baseline = call_kraken_data()
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = self.rolling_mean ##0.08506 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+                    midprice = sold_baseline ##0.08506 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
                     # Ensure midprice is not None before converting and assigning
                     if midprice is not None:
                         self._last_trade_price = Decimal(midprice)
