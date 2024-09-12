@@ -952,10 +952,16 @@ class SimplePMM(ScriptStrategyBase):
                     current_volatility.append(volatility)
                 length = len(forecast.variance)
         
+            ## Roll the volatility to get a better avg price for use 
+            window = int(np.round(np.sqrt(length))) # 28 #np.round(np.log(len(df['Volatility']))) # Define your rolling window size
+
+            rolling_volatility = current_volatility.rolling(window=window).mean()
+
+
             ### Rank the Volatility for use. 
-            self.max_vola = max(current_volatility)
-            min_vola = min(current_volatility)
-            self.current_vola = current_volatility[-1] 
+            self.max_vola = max(rolling_volatility)
+            min_vola = min(rolling_volatility)
+            self.current_vola = rolling_volatility[-1] 
 
             # Prevent division by zero in case max_vola equals min_vola
             if self.max_vola != min_vola:
