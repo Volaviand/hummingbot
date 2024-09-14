@@ -155,10 +155,10 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
 
     # Sell into Bid (Lower Base) IQR
         # Bypass sold baseline for now for median price :: 
-    sold_baseline = np.percentile(sell_trades_df['Price'], 50)
+    sold_baseline = np.percentile(sell_trades_df['Price'], 25)
     # # Buy into Ask( Upper Base) IQR
         # Bypass sold baseline for now for median price :: 
-    bought_baseline = np.percentile(buy_trades_df['Price'], 50)
+    bought_baseline = np.percentile(buy_trades_df['Price'], 75)
 
 
     # Drop the 'Blank' column
@@ -511,12 +511,12 @@ class SimplePMM(ScriptStrategyBase):
         ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
         #p = (1 - 0.05)
         #bp = min( 1 - self.min_profitability, bd**(1/n) )
-        bp = math.exp(math.log(bd)/n)
+        bp = 0.985 # math.exp(math.log(bd)/n)
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
         sd = 30
         #sp = max(1 + self.min_profitability, (sd**(1/n)) )
-        sp = math.exp(math.log(sd)/n)
+        sp = 1.015 # math.exp(math.log(sd)/n)
 
         msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         self.log_with_clock(logging.INFO, msg)
