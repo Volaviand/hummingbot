@@ -111,6 +111,15 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
     #Convert values to numerics
     kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
     kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce').fillna(0)
+    
+    # Calculate log returns
+    kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
+
+    # Drop any NaN values created due to shifting
+    kdf.dropna(subset=['Log_Returns'], inplace=True)
+
+    # Save log returns to a list
+    log_returns_list = kdf['Log_Returns'].tolist()
 
 
     # Create separate lists for buys and sells
