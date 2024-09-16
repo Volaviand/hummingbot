@@ -782,6 +782,8 @@ class SimplePMM(ScriptStrategyBase):
             bid_depth = bid_volume_cdf_value
             ask_depth = ask_volume_cdf_value
 
+        msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
+        self.log_with_clock(logging.INFO, msg_q)
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 False,
