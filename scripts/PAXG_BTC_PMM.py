@@ -90,15 +90,14 @@ class KrakenAPI:
 
         return self.data
 
-def call_kraken_data(hist_days = 3, market = 'PAXGXBT'):
+def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
     # Calculate the timestamp for 1 day ago
     since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
     since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
 
     # Calculate the timestamp for now
     now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
-    #print(now_timestamp)
-    market = market
+    # print(now_timestamp)
 
     # Initialize Kraken API object with your symbol and start timestamp
     api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
@@ -109,9 +108,8 @@ def call_kraken_data(hist_days = 3, market = 'PAXGXBT'):
 
     #Convert values to numerics
     kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
-    kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce')
-
-
+    kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce').fillna(0)
+    
     # Calculate log returns
     kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
 
@@ -127,12 +125,28 @@ def call_kraken_data(hist_days = 3, market = 'PAXGXBT'):
     sell_trades = []
 
 
-    # Iterate over each trade and separate buys and sells
+    # Initialize the total volumes
+    total_buy_volume = 0
+    total_sell_volume = 0
+
+    # Separate buys and sells and track volumes
     for index, row in kdf.iterrows():
         if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
-            buy_trades.append(row)  # Add buy trade to the buy list
+            # Add buy trade with actual volume
+            buy_trades.append(row)
+            total_buy_volume += row['Volume']
+            # Add corresponding sell trade with zero volume if needed
+            sell_trade = row.copy()
+            sell_trade['Volume'] = 0
+            sell_trades.append(sell_trade)
         elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
-            sell_trades.append(row)  # Add sell trade to the sell list
+            # Add sell trade with actual volume
+            sell_trades.append(row)
+            total_sell_volume += row['Volume']
+            # Add corresponding buy trade with zero volume if needed
+            buy_trade = row.copy()
+            buy_trade['Volume'] = 0
+            buy_trades.append(buy_trade)
             
     # Convert buy_trades and sell_trades to DataFrames for further analysis
     buy_trades_df = pd.DataFrame(buy_trades)
@@ -140,38 +154,62 @@ def call_kraken_data(hist_days = 3, market = 'PAXGXBT'):
 
 
 
-    total_buy_volume = buy_trades_df['Volume'].sum()
-    total_sell_volume = sell_trades_df['Volume'].sum()
+    kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
 
-    # Print the totals
+    # Ensure the 'Timestamp' column is retained and converted to datetime if needed
+    buy_trades_df['Timestamp'] = pd.to_datetime(buy_trades_df['Timestamp'], unit='s')
+    sell_trades_df['Timestamp'] = pd.to_datetime(sell_trades_df['Timestamp'], unit='s')
+
+    # Sort DataFrames by Timestamp if you want them ordered
+    buy_trades_df = buy_trades_df.sort_values(by='Timestamp')
+    sell_trades_df = sell_trades_df.sort_values(by='Timestamp')
 
 
-    # Find the 25th percentile of buy and sell volumes
+    # Find the 75th percentile of buy and sell volumes
     percentile = 25
-    bought_volume_percentile =np.percentile(buy_trades_df['Volume'], percentile)
-    sold_volume_percentile = np.percentile(sell_trades_df['Volume'], percentile)
 
-    # Sell into Bid (Lower Base) IQR
-        # Bypass sold baseline for now for median price :: 
-    sold_baseline = np.percentile(sell_trades_df['Price'], 50)
-    # # Buy into Ask( Upper Base) IQR
-        # Bypass sold baseline for now for median price :: 
-    bought_baseline = np.percentile(buy_trades_df['Price'], 50)
+    # Calculate percentiles, excluding zeros
+    nonzero_buy_volumes = buy_trades_df[buy_trades_df['Volume'] > 0]['Volume']
+    nonzero_sell_volumes = sell_trades_df[sell_trades_df['Volume'] > 0]['Volume']
+
+    # Find the 75th percentile of buy and sell volumes
+    percentile = 25
+    buy_percentile = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
+    sell_percentile = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
+
+    # Calculate the percentile window
+    percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
+
+    # Function to calculate the baseline percentile for sell trades
+    def calculate_sold_baseline(row, percentile):
+        # Get the relevant prices from sell_trades_df within the window
+        relevant_prices = sell_trades_df['Price'][(sell_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
+        return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
+
+    # Function to calculate the baseline percentile for buy trades
+    def calculate_bought_baseline(row, percentile):
+        # Get the relevant prices from buy_trades_df within the window
+        relevant_prices = buy_trades_df['Price'][(buy_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
+        return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
 
 
+    # Define the desired percentile values
+    sell_percentile = 25  # You can change this to any value
+    buy_percentile =  75  # You can change this to any value
+
+    # Apply the functions to create new columns in kdf with variable percentiles
+    kdf['sold_baseline'] = kdf.apply(lambda row: calculate_sold_baseline(row, sell_percentile), axis=1)
+    kdf['bought_baseline'] = kdf.apply(lambda row: calculate_bought_baseline(row, buy_percentile), axis=1)
+
+    sold_baseline = kdf['sold_baseline'].iloc[-1]
+    bought_baseline = kdf['bought_baseline'].iloc[-1]
 
     # Drop the 'Blank' column
-    # kdf.drop('Blank', axis=1, inplace=True)
+    kdf.drop('Blank', axis=1, inplace=True)
 
-    # Convert Timestamp to readable format (from seconds)
-    kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
-    #print(f"Start of Data :: {kdf['Timestamp'][0]}")
+
     # Check for any missing values and fill or drop them if necessary
     kdf.dropna(inplace=True)
-
-    # Apply a rolling average (optional for smoothing)
-    kdf['Price_Smoothed'] = kdf['Price']#.rolling(window=2).mean().dropna()  # Adjust window size as needed
-    kdf['Volume_Smoothed'] = kdf['Volume']#.rolling(window=2).mean().dropna()
 
     return sold_baseline, bought_baseline, log_returns_list
 
