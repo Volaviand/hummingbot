@@ -386,41 +386,22 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
-        # self._last_trade_price, self._vwap_midprice = self.get_midprice()
-        optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
-        bid_starting_price, ask_starting_price = self.get_starting_prices()
+        self._last_trade_price, self._vwap_midprice = self.get_midprice()
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
-        #ref_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
-        buy_price = optimal_bid_price ##ref_price * Decimal(1 - self.bid_spread)
-        sell_price = optimal_ask_price ##ref_price * Decimal(1 + self.ask_spread)
+        buy_price = optimal_bid_price 
+        sell_price = optimal_ask_price 
 
-        buy_price2 = optimal_bid_price2 ##ref_price * Decimal(1 - self.bid_spread)
-        sell_price2 = optimal_ask_price2 ##ref_price * Decimal(1 + self.ask_spread)
-
-        buy_price3 = optimal_bid_price3 ##ref_price * Decimal(1 - self.bid_spread)
-        sell_price3 = optimal_ask_price3 ##ref_price * Decimal(1 + self.ask_spread)
 
         if buy_price < self._last_trade_price:
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                     order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
-            #buy_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price2)
-            
-            #buy_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price3)
+
         if sell_price > self._last_trade_price:
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-            
-            #sell_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price2)
 
-            #sell_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price3)
-        
-        #msg1 = (f" Trades Placed ::  Bid Price : {buy_price:.8f} , Ask Price : {sell_price:.8f}")
-        #self.log_with_clock(logging.INFO, msg1)
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
         order_counter = []
@@ -432,15 +413,6 @@ class SimplePMM(ScriptStrategyBase):
 
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)           
-        # msg3 = (f"Min Order  : {minimum_size:.8f} , Ask Order : {order_size_ask:.8f}, Bid Order {order_size_bid:.8f}")
-        # self.log_with_clock(logging.INFO, msg3)
-
-        #msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
-        #self.log_with_clock(logging.INFO, msgbe)
-        #self.notify_hb_app_with_timestamp(msg)
-
-        msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
-        self.log_with_clock(logging.INFO, msgce)
 
         return order_counter #[buy_order , sell_order]
 
@@ -617,52 +589,7 @@ class SimplePMM(ScriptStrategyBase):
 
         return buy_breakeven_mult, sell_breakeven_mult
         
-    def geometric_entry_levels(self):
-        num_trades = math.floor(self.maximum_orders/2)
-        max_ask_percent = 2  # Maximum Rise planned for, Numbers are addative so 2 = 200% rise, example: (1 + max_ask_percent)*current ask price  = ask order price
-        max_bid_percent = 1 # Numbers are subtractive so 1 = 100% drop,  example:  (1 - max_bid_percent)*current bid price = bid order price 
-        # Calculate logarithmically spaced entry percents
-        ask_geom_entry_percents = np.geomspace(self.target_profitability, max_ask_percent, num_trades).astype(float)
-        bid_geom_entry_percents = np.geomspace(self.target_profitability, max_bid_percent, num_trades).astype(float)
 
-        # Reverse the order and transform values
-        ask_transformed_percents = abs(max_ask_percent - ask_geom_entry_percents[::-1])
-        bid_transformed_percents = abs(max_bid_percent - bid_geom_entry_percents[::-1])
-        # Create an empty dictionary to store the adjusted entry percentages
-        ask_entry_percents = {}
-        bid_entry_percents = {}
-
-        # Initialize and adjust the values of the dictionary with transformed geometric progression
-        for i in range(1, num_trades + 1):
-            # Ensure each entry percent is at least i * min_profitability
-            min_threshold = self.target_profitability # * i
-            ask_entry_percents[i] =max(ask_transformed_percents[i - 1], min_threshold)
-            bid_entry_percents[i] =max(bid_transformed_percents[i - 1], min_threshold)
-
-        #msg_lastrade = (f"ask_entry_percents {ask_entry_percents}, bid_entry_percents{bid_entry_percents}")
-        #self.log_with_clock(logging.INFO, msg_lastrade)
-        return ask_entry_percents, bid_entry_percents
-
-    def get_geometric_entry_levels(self, bid_num, ask_num):
-        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-
-
-
-        #if q > 0:
-        geom_bid_percent = self.bid_entry_percents.get(bid_num , None)
-        geom_ask_percent = self.ask_entry_percents.get(ask_num , None)##self.min_profitability #
-
-
-        
-        geom_bid_percent = Decimal(geom_bid_percent)
-        geom_ask_percent = Decimal(geom_ask_percent)
-
-        geom_bid_percent2 = Decimal(geom_bid_percent)
-        geom_ask_percent2 = Decimal(geom_ask_percent)
-
-        geom_bid_percent3 = Decimal(geom_bid_percent)
-        geom_ask_percent3 = Decimal(geom_ask_percent)
-        return geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3
 
     def on_stop(self):
         for candle in self.candles.values():
@@ -1038,8 +965,8 @@ class SimplePMM(ScriptStrategyBase):
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
         # konstant = Decimal(5)
-        y_bid = y_min + (y_difference * Decimal(self.volatility_rank))  #y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
-        y_ask = y_min + (y_difference * Decimal(self.volatility_rank))  #y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
+        y_bid = y_min + (y_difference * Decimal(self.volatility_rank))  
+        y_ask = y_min + (y_difference * Decimal(self.volatility_rank))  
 
         y_bid = min(y_bid,y_max)
         y_bid = max(y_bid,y_min)
@@ -1072,42 +999,22 @@ class SimplePMM(ScriptStrategyBase):
         
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
-    def get_starting_prices(self):
-        s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
-        if self.initialize_startprice_flag == True:
-            bid_starting_price = self._last_trade_price#Decimal(0.0000985)
-            ask_starting_price = self._last_trade_price#Decimal(0.0000631)
-            self.initialize_startprice_flag == False
-        else:
-            bid_starting_price = self._last_trade_price#bid_starting_price
-            ask_starting_price = self._last_trade_price#ask_starting_price
-            
-            ####  Use Highest and Lowest trade to determine where you should start your percentage entries. 
-            ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
-            if self.buy_counter == 1:
-                bid_starting_price = self._last_trade_price#bid_reservation_price
-            
-            if self.sell_counter == 1:
-                ask_starting_price = self._last_trade_price#ask_reservation_price
 
-        return bid_starting_price, ask_starting_price
 
     def optimal_bid_ask_spread(self):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
         order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-
-        geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
         
-        bid_starting_price, ask_starting_price = self.get_starting_prices()
-
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 
         maximum_volatility = Decimal(np.maximum(self.max_vola , self.target_profitability))
 
-        ## Calculate kappa k (similar to market depth for a percent, can perhaps modify it to represent 50th percentile etc, look into it)
+        ###################################
+        ## Calculate kappa k (similar to a market depth comparison with k_bid_size,k_ask_size)
+        ######################################
         bid_maximum_spread_in_price = (TWO * Decimal(maximum_volatility) * bid_reservation_price)
         bid_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, bid_maximum_spread_in_price)
 
@@ -1133,7 +1040,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
         ask_inside_exp = ((ask_maximum_spread_in_price * y_ask) - (ask_volatility_in_base**TWO * y_ask**TWO)) / TWO
-        #ask_inside_exp = e_value ** float(ask_inside_exp) 
         ask_inside_exp = Decimal(ask_inside_exp).exp()
 
         k_ask_size = y_ask / (ask_inside_exp - Decimal(1))
@@ -1154,39 +1060,16 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
-     
-
-        #1
-        geom_spread_bid = 1 - Decimal(geom_bid_percent)
-        geom_spread_ask = 1 + Decimal(geom_ask_percent)
-
-
-
-
-        geom_limit_bid = Decimal(bid_starting_price)  
-        geom_limit_ask = Decimal(ask_starting_price) 
-        #2
-        geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
-        geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
-
-        geom_limit_bid2 = bid_reservation_price * geom_spread_bid2 
-        geom_limit_ask2 = ask_reservation_price * geom_spread_ask2 
-        #3
-        geom_spread_bid3 = 1 - Decimal(geom_bid_percent3)
-        geom_spread_ask3 = 1 + Decimal(geom_ask_percent3)
-
-        geom_limit_bid3 = bid_reservation_price * geom_spread_bid3
-        geom_limit_ask3 = ask_reservation_price * geom_spread_ask3
-
-
-        geom_limit_bid = max(geom_limit_bid, 0)
-        
+    
+        ## Optimal Spread in comparison to the min profit wanted
         min_profit_bid =  bid_reservation_price * (Decimal(1) / (Decimal(1) + Decimal(self.min_profitability)))
         min_profit_ask = ask_reservation_price * (Decimal(1) / (Decimal(1) - Decimal(self.min_profitability)))
 
+        # Spread calculation price vs the minimum profit price for entries
         optimal_bid_price = np.minimum(bid_reservation_price -  (optimal_bid_spread  / TWO), min_profit_bid)
         optimal_ask_price = np.maximum(ask_reservation_price +  (optimal_ask_spread / TWO), min_profit_ask)
 
+        ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
         vwap_bid, vwap_ask = self.get_vwap_bid_ask()
 
@@ -1194,7 +1077,7 @@ class SimplePMM(ScriptStrategyBase):
         deepest_ask = max(vwap_ask, top_ask_price)
 
 
-        # Calculate the quantum for both bid and ask prices
+        # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
         bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(
             self.trading_pair,
             top_bid_price
@@ -1204,7 +1087,7 @@ class SimplePMM(ScriptStrategyBase):
             top_ask_price
         )
 
-        # Calculate the price just above the top bid and just below the top ask
+        # Calculate the price just above the top bid and just below the top ask (Allow bot to place at widest possible spread)
         price_above_bid = (ceil(top_bid_price / bid_price_quantum) + 1) * bid_price_quantum
         price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
 
@@ -1220,28 +1103,17 @@ class SimplePMM(ScriptStrategyBase):
 
 
         if optimal_bid_price <= 0 :
-            msg_2 = (f"Optimal Bid Price @ {optimal_bid_price} below 0. Setting at {geom_limit_bid}. Reservation Price = {bid_reservation_price}")
+            msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0.")
             self.log_with_clock(logging.INFO, msg_2)
-            optimal_bid_price = geom_limit_bid
+
             
 
         # Apply quantum adjustments for final prices
         optimal_bid_price = (floor(optimal_bid_price / bid_price_quantum)) * bid_price_quantum
         optimal_ask_price = (ceil(optimal_ask_price / ask_price_quantum)) * ask_price_quantum
 
-        optimal_bid_price = min(optimal_bid_price, geom_limit_bid)
-        optimal_ask_price = max(optimal_ask_price , geom_limit_ask)
-
         optimal_bid_percent = ((bid_reservation_price - optimal_bid_price) / bid_reservation_price) * 100
         optimal_ask_percent = ((optimal_ask_price - ask_reservation_price) / ask_reservation_price) * 100
-        #2
-        optimal_bid_price2 = min( vwap_bid * geom_spread_bid2, geom_limit_bid2)
-        optimal_ask_price2 = max( vwap_ask * geom_spread_ask2, geom_limit_ask2)
-        #3
-        optimal_bid_price3 = min( vwap_bid * geom_spread_bid3, geom_limit_bid3)
-        optimal_ask_price3 = max( vwap_ask * geom_spread_ask3 , geom_limit_ask3)
+
         
-        return optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
-
-
-    
+        return optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent

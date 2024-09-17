@@ -384,11 +384,9 @@ class SimplePMM(ScriptStrategyBase):
     def create_proposal(self) -> List[OrderCandidate]:
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
-        bid_starting_price, ask_starting_price = self.get_starting_prices()
 
-        #ref_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, self.price_source)
-        buy_price = optimal_bid_price ##ref_price * Decimal(1 - self.bid_spread)
-        sell_price = optimal_ask_price ##ref_price * Decimal(1 + self.ask_spread)
+        buy_price = optimal_bid_price 
+        sell_price = optimal_ask_price 
 
 
         if buy_price < self._last_trade_price:
@@ -411,10 +409,6 @@ class SimplePMM(ScriptStrategyBase):
 
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)           
-
-
-        msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
-        self.log_with_clock(logging.INFO, msgce)
 
         return order_counter #[buy_order , sell_order]
 
@@ -965,8 +959,8 @@ class SimplePMM(ScriptStrategyBase):
         y_max = Decimal(1.0)
         y_difference = Decimal(y_max - y_min)
         # konstant = Decimal(5)
-        y_bid = y_min + (y_difference * Decimal(self.volatility_rank))  #y_difference * Decimal(math.exp(konstant * max_bid_volatility)) ##y - (volatility_bid_rank * y_difference)
-        y_ask = y_min + (y_difference * Decimal(self.volatility_rank))  #y_difference * Decimal(math.exp(konstant * max_ask_volatility)) ##y - (volatility_ask_rank * y_difference)
+        y_bid = y_min + (y_difference * Decimal(self.volatility_rank))  
+        y_ask = y_min + (y_difference * Decimal(self.volatility_rank))  
 
         y_bid = min(y_bid,y_max)
         y_bid = max(y_bid,y_min)
@@ -1000,34 +994,13 @@ class SimplePMM(ScriptStrategyBase):
         return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
 
-    def get_starting_prices(self):
-        s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
-        if self.initialize_startprice_flag == True:
-            bid_starting_price = self._last_trade_price#Decimal(0.0000985)
-            ask_starting_price = self._last_trade_price#Decimal(0.0000631)
-            self.initialize_startprice_flag == False
-        else:
-            bid_starting_price = self._last_trade_price#bid_starting_price
-            ask_starting_price = self._last_trade_price#ask_starting_price
-            
-            ####  Use Highest and Lowest trade to determine where you should start your percentage entries. 
-            ## When a new trend is placed, the trader will always start at the top of the trend until it is completely broken. 
-            if self.buy_counter == 1:
-                bid_starting_price = self._last_trade_price#bid_reservation_price
-            
-            if self.sell_counter == 1:
-                ask_starting_price = self._last_trade_price#ask_reservation_price
-
-        return bid_starting_price, ask_starting_price
 
     def optimal_bid_ask_spread(self):
         s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
         order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        bid_starting_price, ask_starting_price = self.get_starting_prices()
-
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 
