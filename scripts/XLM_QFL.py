@@ -1002,7 +1002,7 @@ class SimplePMM(ScriptStrategyBase):
             window = int(np.round(np.sqrt(len(current_volatility_series))))
 
             # Apply the rolling window to smooth volatility
-            rolling_volatility = current_volatility_series.rolling(window=window).mean()
+            rolling_volatility = current_volatility_series#.rolling(window=window).mean()
 
             # Rank the Volatility
             self.max_vola = rolling_volatility.max()
