@@ -955,10 +955,10 @@ class SimplePMM(ScriptStrategyBase):
         current_volatility = []
         length = 0
         # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True)
+        model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
 
         # Fit the model
-        model_fit = model.fit(disp="Off")
+        model_fit = model.fit(disp="off")
         msg_gv = (f"GARCH  { model_fit.summary()}")
         self.log_with_clock(logging.INFO, msg_gv)
         # Extract the scale factor used by the model
