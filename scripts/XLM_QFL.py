@@ -576,7 +576,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Call the method (Market Buy into ask, Sell into bid)
         bid_volume_cdf_value = self.sold_volume_depth #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
-        ask_volume_cdf_value = self.bought_volume_dpeth #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
+        ask_volume_cdf_value = self.bought_volume_depth #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
         bid_depth_difference = abs(bid_volume_cdf_value - self.order_amount)
