@@ -365,9 +365,9 @@ class SimplePMM(ScriptStrategyBase):
                 self.target_profitability = max(self.min_profitability, self.current_vola)
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
         
-        #Update the timestamp model 
-        # if self.current_timestamp - self.last_time_reported > self.report_interval:
-        #     self.last_time_reported = self.current_timestamp
+        #U pdate the timestamp model 
+        if self.current_timestamp - self.last_time_reported > self.report_interval:
+            self.last_time_reported = self.current_timestamp
         #     self.notify_hb_app(self.get_formatted_market_analysis())
 
         
