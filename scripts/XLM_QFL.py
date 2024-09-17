@@ -320,7 +320,6 @@ class SimplePMM(ScriptStrategyBase):
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
         self._vwap_midprice = None
-        self.ask_entry_percents, self.bid_entry_percents = self.geometric_entry_levels()
 
 
         self.initialize_startprice_flag = True
