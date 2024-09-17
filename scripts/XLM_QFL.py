@@ -176,8 +176,8 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
 
     # Find the 75th percentile of buy and sell volumes
     percentile = 25
-    buy_percentile = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
-    sell_percentile = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
+    bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
+    sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
 
     # Calculate the percentile window
     percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
@@ -213,7 +213,7 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
     # Check for any missing values and fill or drop them if necessary
     kdf.dropna(inplace=True)
 
-    return sold_baseline, bought_baseline, log_returns_list
+    return sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth
 
 class SimplePMM(ScriptStrategyBase):
     """
@@ -264,25 +264,13 @@ class SimplePMM(ScriptStrategyBase):
 
     markets = {exchange: {trading_pair}}
 
-
-################ Volatility Initializtions  
-    trading_pairs = ["XLM-EUR"] #"BTC-USD", "ETH-USD", "PAXG-USD", "PAXG-BTC", "XLM-EUR",, "EUR-USD"]
-                    # "LPT-USDT", "SOL-USDT", "LTC-USDT", "DOT-USDT", "LINK-USDT", "UNI-USDT", "AAVE-USDT"]
-
-    intervals = ["1m"]
-    max_records = 720
-
-    volatility_interval = 480
-    columns_to_show = ["trading_pair", "interval"]
-    sort_values_by = ["interval"]
-    top_n = 20
     report_interval = 60 * 60 * 6  # 6 hours
 
 
 
     ## Breakeven Initialization
     ## Trading Fee for Round Trip side Limit
-    fee_percent = 1 / 2 / 100  # Convert percentage to a decimal
+    fee_percent = 1 / 2 / 100  # Convert percentage to a fraction method
     total_spent = 0
     total_bought = 0
     total_earned = 0
@@ -305,17 +293,6 @@ class SimplePMM(ScriptStrategyBase):
         self.garch_refresh_time = 480 ### Same as volatility interval
         self_last_garch_time_reported = 0
 
-        # combinations = [(trading_pair, interval) for trading_pair in self.trading_pairs for interval in
-        #                 self.intervals]
-
-        # self.candles = {f"{combinations[0]}_{combinations[1]}": None for combinations in combinations}
-        # # we need to initialize the candles for each trading pair
-        # for combination in combinations:
-        #     candle = CandlesFactory.get_candle(
-        #         CandlesConfig(connector=self.exchange, trading_pair=combination[0], interval=combination[1],
-        #                       max_records=self.max_records))
-        #     candle.start()
-        #     self.candles[f"{combination[0]}_{combination[1]}"] = candle
 
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
@@ -327,10 +304,9 @@ class SimplePMM(ScriptStrategyBase):
         self.sell_counter = 1
 
 
-        #history_values
-        # self.close_history = []
-        # self.log_returns = []
-        # self.rolling_mean = 0.08
+        # Volume Depth Init
+        self.bought_volume_depth = 0
+        self.sold_volume_depth = 0
 
         # Volatility 
         self.max_vola = 0.0
@@ -348,14 +324,6 @@ class SimplePMM(ScriptStrategyBase):
             self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
             
-
-        # for trading_pair, candles in self.candles.items():
-        #     if not candles.ready:
-        #         self.logger().info(
-        #             f"Candles not ready yet for {trading_pair}! Missing {candles._candles.maxlen - len(candles._candles)}")
-
-        # #All candles are ready for calculation
-        # if all(candle.ready for candle in self.candles.values()):
         #Calculate garch every so many seconds
         if self.create_garch_timestamp<= self.current_timestamp:
                 ### Call Garch Test
@@ -365,10 +333,9 @@ class SimplePMM(ScriptStrategyBase):
                 self.target_profitability = max(self.min_profitability, self.current_vola)
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
         
-        #U pdate the timestamp model 
+        # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
             self.last_time_reported = self.current_timestamp
-        #     self.notify_hb_app(self.get_formatted_market_analysis())
 
         
 
@@ -589,109 +556,27 @@ class SimplePMM(ScriptStrategyBase):
         return buy_breakeven_mult, sell_breakeven_mult
         
 
-
-    def on_stop(self):
-        for candle in self.candles.values():
-            candle.stop()
-
-    # def get_formatted_market_analysis(self):
-    #     volatility_metrics_df, log_returns= self.get_market_analysis()
-    #     volatility_metrics_pct_str = format_df_for_printout(
-    #         volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
-    #         table_format="psql")
-    #     return volatility_metrics_pct_str
-
-    # def format_status(self) -> str:
-    #     if all(candle.ready for candle in self.candles.values()):
-    #         lines = []
-    #         lines.extend(["Configuration:", f"Volatility Interval: {self.volatility_interval}"])
-    #         lines.extend(["", "Volatility Metrics", ""])
-    #         lines.extend([self.get_formatted_market_analysis()])
-    #         return "\n".join(lines)
-    #     else:
-    #         return "Candles not ready yet!"
-
-    # def get_market_analysis(self):
-    #     market_metrics = {}
-
-    #     for trading_pair_interval, candle in self.candles.items():
-    #         df = candle.candles_df
-    #         df["trading_pair"] = trading_pair_interval.split("_")[0]
-    #         df["interval"] = trading_pair_interval.split("_")[1]
-    #         # adding volatility metrics
-    #         #df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
-    #         #df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
-    #         #df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
-    #         #df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
-            
-    #         #df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
-    #         #df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
-    #         #df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
-
-    #         #df["volatility_pct"] = df["volatility"] / df["close"]
-    #         #df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
-
-            
-
-    #         # adding bbands metrics
-    #         #df.ta.bbands(length=self.volatility_interval, append=True)
-    #         #df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
-    #         #df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
-    #         #df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
-    #         #df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
-    #         market_metrics[trading_pair_interval] = df.iloc[-1]
-
-    #         # Compute rolling window of close prices
-    #         # self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
-    #         # Calculate log returns using rolling windows
-    #         log_returns = []
-            
-    #         # Iterate through the DataFrame starting from the end of the rolling window
-    #         for i in range(self.volatility_interval, len(df)):
-    #             # Extract the window values
-    #             window_values = df["close"].iloc[i - self.volatility_interval:i]
-                
-    #             # Calculate log returns for each value in the rolling window
-    #             for j in range(1, len(window_values)):
-    #                 log_return = np.log(window_values.iloc[j] / window_values.iloc[j - 1])
-    #                 log_returns.append(log_return)
-            
-    #         # Convert log_returns to a DataFrame or Series
-    #         log_returns_df = pd.Series(log_returns)
-            
-    #         # Store log returns
-    #         self.log_returns = log_returns_df.tolist()
-
-    #         ##self.log_returns.append(df["close"].pct_change().rolling(self.volatility_interval).dropna() )
-
-    #     volatility_metrics_df = pd.DataFrame(market_metrics).T
-        
-
-    #     return volatility_metrics_df, self.log_returns
-
-
-##########
-    ### Added calculations
-    #################
     def get_current_top_bid_ask(self):
+        ''' Find the current spread bid and ask prices'''
         top_bid_price = self.connectors[self.exchange].get_price(self.trading_pair, False)
         top_ask_price = self.connectors[self.exchange].get_price(self.trading_pair, True) 
         return top_bid_price, top_ask_price
     
     def get_vwap_bid_ask(self):
+        '''Find the bid/ask VWAP of a set price for market depth positioning.'''
         q, _, _, _,_, _, _ = self.get_current_positions()
 
         # Create an instance of Trades (Market Trades, don't confuse with Limit)
-        buy_trades_instance = BuyTrades('XXLMZEUR')
-        sell_trades_instance = SellTrades('XXLMZEUR')
+        # buy_trades_instance = BuyTrades('XXLMZEUR')
+        # sell_trades_instance = SellTrades('XXLMZEUR')
         # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
         # Data points are in trades collected
-        target_percentile = 25
-        window_size = 6000
+        # target_percentile = 25
+        # window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
-        bid_volume_cdf_value = Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
-        ask_volume_cdf_value = Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
+        bid_volume_cdf_value = self.sold_volume_depth #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
+        ask_volume_cdf_value = self.bought_volume_dpeth #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
         bid_depth_difference = abs(bid_volume_cdf_value - self.order_amount)
@@ -818,7 +703,7 @@ class SimplePMM(ScriptStrategyBase):
         return order_size_bid, order_size_ask
     
     def get_midprice(self):
-        sold_baseline, bought_baseline, log_returns_list = call_kraken_data()
+        sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth = call_kraken_data()
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
@@ -860,7 +745,7 @@ class SimplePMM(ScriptStrategyBase):
         return self._last_trade_price, self._vwap_midprice
 
     def call_garch_model(self):
-        sold_baseline, bought_baseline, log_returns_list = call_kraken_data()
+        sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
 
         # Retrieve the log returns from the DataFrame
         log_returns = log_returns_list##self.log_returns
