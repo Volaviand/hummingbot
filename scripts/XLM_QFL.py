@@ -305,17 +305,17 @@ class SimplePMM(ScriptStrategyBase):
         self.garch_refresh_time = 480 ### Same as volatility interval
         self_last_garch_time_reported = 0
 
-        combinations = [(trading_pair, interval) for trading_pair in self.trading_pairs for interval in
-                        self.intervals]
+        # combinations = [(trading_pair, interval) for trading_pair in self.trading_pairs for interval in
+        #                 self.intervals]
 
-        self.candles = {f"{combinations[0]}_{combinations[1]}": None for combinations in combinations}
-        # we need to initialize the candles for each trading pair
-        for combination in combinations:
-            candle = CandlesFactory.get_candle(
-                CandlesConfig(connector=self.exchange, trading_pair=combination[0], interval=combination[1],
-                              max_records=self.max_records))
-            candle.start()
-            self.candles[f"{combination[0]}_{combination[1]}"] = candle
+        # self.candles = {f"{combinations[0]}_{combinations[1]}": None for combinations in combinations}
+        # # we need to initialize the candles for each trading pair
+        # for combination in combinations:
+        #     candle = CandlesFactory.get_candle(
+        #         CandlesConfig(connector=self.exchange, trading_pair=combination[0], interval=combination[1],
+        #                       max_records=self.max_records))
+        #     candle.start()
+        #     self.candles[f"{combination[0]}_{combination[1]}"] = candle
 
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
@@ -328,8 +328,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
         #history_values
-        self.close_history = []
-        self.log_returns = []
+        # self.close_history = []
+        # self.log_returns = []
         # self.rolling_mean = 0.08
 
         # Volatility 
@@ -349,26 +349,26 @@ class SimplePMM(ScriptStrategyBase):
 
             
 
-        for trading_pair, candles in self.candles.items():
-            if not candles.ready:
-                self.logger().info(
-                    f"Candles not ready yet for {trading_pair}! Missing {candles._candles.maxlen - len(candles._candles)}")
+        # for trading_pair, candles in self.candles.items():
+        #     if not candles.ready:
+        #         self.logger().info(
+        #             f"Candles not ready yet for {trading_pair}! Missing {candles._candles.maxlen - len(candles._candles)}")
 
-        #All candles are ready for calculation
-        if all(candle.ready for candle in self.candles.values()):
-            #Calculate garch every so many seconds
-            if self.create_garch_timestamp<= self.current_timestamp:
-                    ### Call Garch Test
-                    self.call_garch_model()
-                    #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-                    #self.log_with_clock(logging.INFO, msg_gv)
-                    self.target_profitability = max(self.min_profitability, self.current_vola)
-                    self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
-            
-            #Update the timestamp model 
-            if self.current_timestamp - self.last_time_reported > self.report_interval:
-                self.last_time_reported = self.current_timestamp
-                self.notify_hb_app(self.get_formatted_market_analysis())
+        # #All candles are ready for calculation
+        # if all(candle.ready for candle in self.candles.values()):
+        #Calculate garch every so many seconds
+        if self.create_garch_timestamp<= self.current_timestamp:
+                ### Call Garch Test
+                self.call_garch_model()
+                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                #self.log_with_clock(logging.INFO, msg_gv)
+                self.target_profitability = max(self.min_profitability, self.current_vola)
+                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+        
+        #Update the timestamp model 
+        # if self.current_timestamp - self.last_time_reported > self.report_interval:
+        #     self.last_time_reported = self.current_timestamp
+        #     self.notify_hb_app(self.get_formatted_market_analysis())
 
         
 
@@ -594,80 +594,80 @@ class SimplePMM(ScriptStrategyBase):
         for candle in self.candles.values():
             candle.stop()
 
-    def get_formatted_market_analysis(self):
-        volatility_metrics_df, log_returns= self.get_market_analysis()
-        volatility_metrics_pct_str = format_df_for_printout(
-            volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
-            table_format="psql")
-        return volatility_metrics_pct_str
+    # def get_formatted_market_analysis(self):
+    #     volatility_metrics_df, log_returns= self.get_market_analysis()
+    #     volatility_metrics_pct_str = format_df_for_printout(
+    #         volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
+    #         table_format="psql")
+    #     return volatility_metrics_pct_str
 
-    def format_status(self) -> str:
-        if all(candle.ready for candle in self.candles.values()):
-            lines = []
-            lines.extend(["Configuration:", f"Volatility Interval: {self.volatility_interval}"])
-            lines.extend(["", "Volatility Metrics", ""])
-            lines.extend([self.get_formatted_market_analysis()])
-            return "\n".join(lines)
-        else:
-            return "Candles not ready yet!"
+    # def format_status(self) -> str:
+    #     if all(candle.ready for candle in self.candles.values()):
+    #         lines = []
+    #         lines.extend(["Configuration:", f"Volatility Interval: {self.volatility_interval}"])
+    #         lines.extend(["", "Volatility Metrics", ""])
+    #         lines.extend([self.get_formatted_market_analysis()])
+    #         return "\n".join(lines)
+    #     else:
+    #         return "Candles not ready yet!"
 
-    def get_market_analysis(self):
-        market_metrics = {}
+    # def get_market_analysis(self):
+    #     market_metrics = {}
 
-        for trading_pair_interval, candle in self.candles.items():
-            df = candle.candles_df
-            df["trading_pair"] = trading_pair_interval.split("_")[0]
-            df["interval"] = trading_pair_interval.split("_")[1]
-            # adding volatility metrics
-            #df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
-            #df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
-            #df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
-            #df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
+    #     for trading_pair_interval, candle in self.candles.items():
+    #         df = candle.candles_df
+    #         df["trading_pair"] = trading_pair_interval.split("_")[0]
+    #         df["interval"] = trading_pair_interval.split("_")[1]
+    #         # adding volatility metrics
+    #         #df["volatility"] = df["close"].pct_change().rolling(self.volatility_interval).std()
+    #         #df["volatility_bid"] = df["low"].pct_change().rolling(self.volatility_interval).std()
+    #         #df["volatility_bid_max"] = df["low"].pct_change().rolling(self.volatility_interval).std().max()
+    #         #df["volatility_bid_min"] = df["low"].pct_change().rolling(self.volatility_interval).std().min()
             
-            #df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
-            #df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
-            #df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
+    #         #df["volatility_ask"] = df["high"].pct_change().rolling(self.volatility_interval).std()
+    #         #df["volatility_ask_max"] = df["high"].pct_change().rolling(self.volatility_interval).std().max()
+    #         #df["volatility_ask_min"] = df["high"].pct_change().rolling(self.volatility_interval).std().min()
 
-            #df["volatility_pct"] = df["volatility"] / df["close"]
-            #df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
+    #         #df["volatility_pct"] = df["volatility"] / df["close"]
+    #         #df["volatility_pct_mean"] = df["volatility_pct"].rolling(self.volatility_interval).mean()
 
             
 
-            # adding bbands metrics
-            #df.ta.bbands(length=self.volatility_interval, append=True)
-            #df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
-            #df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
-            #df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
-            #df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
-            market_metrics[trading_pair_interval] = df.iloc[-1]
+    #         # adding bbands metrics
+    #         #df.ta.bbands(length=self.volatility_interval, append=True)
+    #         #df["bbands_width_pct"] = df[f"BBB_{self.volatility_interval}_2.0"]
+    #         #df["bbands_width_pct_mean"] = df["bbands_width_pct"].rolling(self.volatility_interval).mean()
+    #         #df["bbands_percentage"] = df[f"BBP_{self.volatility_interval}_2.0"]
+    #         #df["natr"] = ta.natr(df["high"], df["low"], df["close"], length=self.volatility_interval)
+    #         market_metrics[trading_pair_interval] = df.iloc[-1]
 
-            # Compute rolling window of close prices
-            # self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
-            # Calculate log returns using rolling windows
-            log_returns = []
+    #         # Compute rolling window of close prices
+    #         # self.rolling_mean = df["close"].rolling(self.volatility_interval).mean()
+    #         # Calculate log returns using rolling windows
+    #         log_returns = []
             
-            # Iterate through the DataFrame starting from the end of the rolling window
-            for i in range(self.volatility_interval, len(df)):
-                # Extract the window values
-                window_values = df["close"].iloc[i - self.volatility_interval:i]
+    #         # Iterate through the DataFrame starting from the end of the rolling window
+    #         for i in range(self.volatility_interval, len(df)):
+    #             # Extract the window values
+    #             window_values = df["close"].iloc[i - self.volatility_interval:i]
                 
-                # Calculate log returns for each value in the rolling window
-                for j in range(1, len(window_values)):
-                    log_return = np.log(window_values.iloc[j] / window_values.iloc[j - 1])
-                    log_returns.append(log_return)
+    #             # Calculate log returns for each value in the rolling window
+    #             for j in range(1, len(window_values)):
+    #                 log_return = np.log(window_values.iloc[j] / window_values.iloc[j - 1])
+    #                 log_returns.append(log_return)
             
-            # Convert log_returns to a DataFrame or Series
-            log_returns_df = pd.Series(log_returns)
+    #         # Convert log_returns to a DataFrame or Series
+    #         log_returns_df = pd.Series(log_returns)
             
-            # Store log returns
-            self.log_returns = log_returns_df.tolist()
+    #         # Store log returns
+    #         self.log_returns = log_returns_df.tolist()
 
-            ##self.log_returns.append(df["close"].pct_change().rolling(self.volatility_interval).dropna() )
+    #         ##self.log_returns.append(df["close"].pct_change().rolling(self.volatility_interval).dropna() )
 
-        volatility_metrics_df = pd.DataFrame(market_metrics).T
+    #     volatility_metrics_df = pd.DataFrame(market_metrics).T
         
 
-        return volatility_metrics_df, self.log_returns
+    #     return volatility_metrics_df, self.log_returns
 
 
 ##########
@@ -925,7 +925,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def reservation_price(self):
-        volatility_metrics_df, log_returns = self.get_market_analysis()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
