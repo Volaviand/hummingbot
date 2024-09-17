@@ -1019,13 +1019,7 @@ class SimplePMM(ScriptStrategyBase):
             # current mid price
             # This leads to normalization of the risk_factor and will guaranetee consistent behavior on all price ranges of the asset, and across assets
 
-
-
-
         ### Convert Volatility Percents into Absolute Prices
-
-
-
 
         max_bid_volatility= Decimal(self.current_vola) 
         bid_volatility_in_base = (max_bid_volatility) * s 
@@ -1107,14 +1101,7 @@ class SimplePMM(ScriptStrategyBase):
         geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
         
         bid_starting_price, ask_starting_price = self.get_starting_prices()
-        # bp, sp = self.determine_log_multipliers()
-        # bp = Decimal(bp)
-        # sp = Decimal(sp)
-        # bp_inprice = Decimal(1) - bp
-        # sp_inprice = sp - Decimal(1)
 
-        # msg_7 = (f"bp {bp:.8f} ::: sp {sp:.8f}")
-        # self.log_with_clock(logging.INFO, msg_7)
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 

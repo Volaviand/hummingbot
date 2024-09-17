@@ -985,7 +985,9 @@ class SimplePMM(ScriptStrategyBase):
             self.volatility_rank = 1  # Handle constant volatility case
 
         msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
-        self.log_with_clock(logging.INFO, msg)      
+        self.log_with_clock(logging.INFO, msg)            
+
+
 
     def reservation_price(self):
         volatility_metrics_df, log_returns = self.get_market_analysis()
@@ -1008,23 +1010,17 @@ class SimplePMM(ScriptStrategyBase):
             # current mid price
             # This leads to normalization of the risk_factor and will guaranetee consistent behavior on all price ranges of the asset, and across assets
 
-
-
-
         ### Convert Volatility Percents into Absolute Prices
 
-
-
-
-        max_bid_volatility= Decimal(self.target_profitability) 
+        max_bid_volatility= Decimal(self.current_vola) 
         bid_volatility_in_base = (max_bid_volatility) * s 
 
-        max_ask_volatility = Decimal(self.target_profitability) 
+        max_ask_volatility = Decimal(self.current_vola) 
         ask_volatility_in_base = (max_ask_volatility) * s 
 
 
-        msg_4 = (f"max_bid_volatility @ {bid_volatility_in_base:.8f} ::: max_ask_volatility @ {ask_volatility_in_base:.8f}")
-        self.log_with_clock(logging.INFO, msg_4)
+        # msg_4 = (f"max_bid_volatility @ {bid_volatility_in_base:.8f} ::: max_ask_volatility @ {ask_volatility_in_base:.8f}")
+        # self.log_with_clock(logging.INFO, msg_4)
 
         #INVENTORY RISK parameter, 0 to 1, higher = more risk averse, as y <-- 0, it behaves more like usual
         # Adjust the width of the y parameter based on volatility, the more volatile , the wider the spread becomes, y goes higher
@@ -1097,31 +1093,22 @@ class SimplePMM(ScriptStrategyBase):
         geom_bid_percent, geom_ask_percent, geom_bid_percent2, geom_ask_percent2, geom_bid_percent3, geom_ask_percent3 = self.get_geometric_entry_levels(self.buy_counter, self.sell_counter)
         
         bid_starting_price, ask_starting_price = self.get_starting_prices()
-        bp, sp = self.determine_log_multipliers()
-        bp = Decimal(bp)
-        sp = Decimal(sp)
-        bp_inprice = Decimal(1) - bp
-        sp_inprice = sp - Decimal(1)
 
-        msg_7 = (f"bp {bp:.8f} ::: sp {sp:.8f}")
-        self.log_with_clock(logging.INFO, msg_7)
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 
-
+        maximum_volatility = Decimal(np.maximum(self.max_vola , self.target_profitability))
 
         ## Calculate kappa k (similar to market depth for a percent, can perhaps modify it to represent 50th percentile etc, look into it)
-        #e_value = math.e
-        bid_maximum_spread_in_price = (TWO * Decimal(bp_inprice) * bid_reservation_price)
+        bid_maximum_spread_in_price = (TWO * Decimal(maximum_volatility) * bid_reservation_price)
         bid_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, bid_maximum_spread_in_price)
 
 
-        ask_maximum_spread_in_price = (TWO * Decimal(sp_inprice) * ask_reservation_price)
+        ask_maximum_spread_in_price = (TWO * Decimal(maximum_volatility) * ask_reservation_price)
         ask_maximum_spread_in_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_maximum_spread_in_price)
 
 
         bid_inside_exp = ((bid_maximum_spread_in_price * y_bid) - (bid_volatility_in_base**TWO * y_bid**TWO)) / TWO
-        #bid_inside_exp = e_value ** float(bid_inside_exp) 
         bid_inside_exp = Decimal(bid_inside_exp).exp()
 
 
@@ -1155,15 +1142,10 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg_1)
 
 
-        if q > 0:
-            optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
-            optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-        if q < 0:
-            optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
-            optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-        else:
-            optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
-            optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
+
+        optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
+        optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
+
      
 
         #1
@@ -1173,8 +1155,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        geom_limit_bid = bid_starting_price * bp ##geom_spread_bid 
-        geom_limit_ask = ask_starting_price * sp ##geom_spread_ask 
+        geom_limit_bid = Decimal(bid_starting_price)  
+        geom_limit_ask = Decimal(ask_starting_price) 
         #2
         geom_spread_bid2 = 1 - Decimal(geom_bid_percent2)
         geom_spread_ask2 = 1 + Decimal(geom_ask_percent2)
@@ -1191,10 +1173,11 @@ class SimplePMM(ScriptStrategyBase):
 
         geom_limit_bid = max(geom_limit_bid, 0)
         
-        
+        min_profit_bid =  bid_reservation_price * (Decimal(1) / (Decimal(1) + Decimal(self.min_profitability)))
+        min_profit_ask = ask_reservation_price * (Decimal(1) / (Decimal(1) - Decimal(self.min_profitability)))
 
-        optimal_bid_price = bid_reservation_price -  (optimal_bid_spread  / TWO)
-        optimal_ask_price = ask_reservation_price +  (optimal_ask_spread / TWO)
+        optimal_bid_price = np.minimum(bid_reservation_price -  (optimal_bid_spread  / TWO), min_profit_bid)
+        optimal_ask_price = np.maximum(ask_reservation_price +  (optimal_ask_spread / TWO), min_profit_ask)
 
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
         vwap_bid, vwap_ask = self.get_vwap_bid_ask()
@@ -1251,6 +1234,3 @@ class SimplePMM(ScriptStrategyBase):
         optimal_ask_price3 = max( vwap_ask * geom_spread_ask3 , geom_limit_ask3)
         
         return optimal_bid_price, optimal_ask_price, optimal_bid_price2, optimal_ask_price2, optimal_bid_price3, optimal_ask_price3, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, k_bid_size, k_ask_size, optimal_bid_percent, optimal_ask_percent
-
-
-    
