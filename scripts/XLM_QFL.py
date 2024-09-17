@@ -949,80 +949,54 @@ class SimplePMM(ScriptStrategyBase):
         # Remove any NaN or infinite values from log_returns
         log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
 
-        # Scale small factors for easy use
-        scale_factor = 1000
-        log_returns_clean *= scale_factor
 
         # Fit GARCH model to log returns
-        try:
-            model = arch_model(log_returns_clean, vol='Garch',mean="AR", p=1, q=1, power=2.0)  # Default model is GARCH(1,1)
-            model_fit = model.fit(disp="off")  # Fit the model without display // update_freq = 20
-            msg_gv = (f"GARCH  { model_fit.summary()}")
-            self.log_with_clock(logging.INFO, msg_gv)
-           
-            current_variance = []
-            current_volatility = []
-            length = 0
-            # Check if `conditional_volatility` is available
-            if hasattr(model_fit, 'conditional_volatility'):
-                # Retrieve the latest (current) GARCH volatility
-                for i in range(len(model_fit.conditional_volatility)):
-                    # Calculate variance
-                    variance = model_fit.conditional_volatility.iloc[i]**2
-                    # Calculate volatility from variance
-                    volatility = np.sqrt(variance)
-                    
-                    # De-scale the variance and volatility (if needed)
-                    variance /= scale_factor
-                    volatility /= np.sqrt(scale_factor)
-                    
-                    # Append to the lists
-                    current_variance.append(variance)
-                    current_volatility.append(volatility)
-                length = len(model_fit.conditional_volatility)
-            else:
-                print(" USING FORECAST VOLATILTY")
-                # Alternative way to get volatility if `conditional_volatility` is not available
-                forecast = model_fit.forecast(start=None)
-                for i in range(len(forecast.variance)):
-                    variance = forecast.variance[i]
-                    volatility = np.sqrt(variance) / np.sqrt(scale_factor) # de scale
+        current_variance = []
+        current_volatility = []
+        length = 0
+        # Define the GARCH model with automatic rescaling
+        model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True)
 
-                    variance /= scale_factor # de scale
+        # Fit the model
+        model_fit = model.fit(disp="Off")
+        msg_gv = (f"GARCH  { model_fit.summary()}")
+        self.log_with_clock(logging.INFO, msg_gv)
+        # Extract the scale factor used by the model
+        scale_factor = model_fit.scale
 
-                    # Append to the lists
-                    current_variance.append(variance)
-                    current_volatility.append(volatility)
-                length = len(forecast.variance)
+        # Extract conditional volatility
+        volatility_rescaled = np.exp(model_fit.conditional_volatility) - 1
         
-            # Convert current_volatility to a pandas Series to apply rolling
-            current_volatility_series = pd.Series(current_volatility)
+        # Apply the scale factor to descaled volatility
+        volatility = volatility_rescaled / scale_factor 
 
-            # Define the rolling window size (square root of length)
-            window = int(np.round(np.sqrt(len(current_volatility_series))))
+        length = len(model_fit.conditional_volatility)
 
-            # Apply the rolling window to smooth volatility
-            rolling_volatility = current_volatility_series#.rolling(window=window).mean()
+    
+        # Convert current_volatility to a pandas Series to apply rolling
+        current_volatility_series = pd.Series(volatility)
 
-            # Rank the Volatility
-            self.max_vola = rolling_volatility.max()
-            min_vola = rolling_volatility.min()
-            self.current_vola = current_volatility_series.iloc[-1]
+        # Define the rolling window size (square root of length)
+        window = int(np.round(np.sqrt(len(current_volatility_series))))
 
-            # Prevent division by zero
-            if self.max_vola != min_vola:
-                self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
-            else:
-                self.volatility_rank = 1  # Handle constant volatility case
+        # Apply the rolling window to smooth volatility
+        rolling_volatility = current_volatility_series#.rolling(window=window).mean()
 
-            msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
-            self.log_with_clock(logging.INFO, msg)            
-            # return current_vola, max_vola, min_vola
+        # Rank the Volatility
+        self.max_vola = rolling_volatility.max()
+        min_vola = rolling_volatility.min()
+        self.current_vola = current_volatility_series.iloc[-1]
 
-        except Exception as e:
-            # Handle any exceptions that occur during model fitting or volatility retrieval
-            print(f"An error occurred while fitting the GARCH model: {e}")
-            #return None
+        # Prevent division by zero
+        if self.max_vola != min_vola:
+            self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+        else:
+            self.volatility_rank = 1  # Handle constant volatility case
+
+        msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
+        self.log_with_clock(logging.INFO, msg)            
+
+
 
     def reservation_price(self):
         volatility_metrics_df, log_returns = self.get_market_analysis()
