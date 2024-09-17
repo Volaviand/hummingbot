@@ -390,33 +390,16 @@ class SimplePMM(ScriptStrategyBase):
         buy_price = optimal_bid_price ##ref_price * Decimal(1 - self.bid_spread)
         sell_price = optimal_ask_price ##ref_price * Decimal(1 + self.ask_spread)
 
-        buy_price2 = optimal_bid_price2 ##ref_price * Decimal(1 - self.bid_spread)
-        sell_price2 = optimal_ask_price2 ##ref_price * Decimal(1 + self.ask_spread)
-
-        buy_price3 = optimal_bid_price3 ##ref_price * Decimal(1 - self.bid_spread)
-        sell_price3 = optimal_ask_price3 ##ref_price * Decimal(1 + self.ask_spread)
 
         if buy_price < self._last_trade_price:
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                     order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
-            #buy_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price2)
-            
-            #buy_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price3)
+
         if sell_price > self._last_trade_price:
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-            
-            #sell_order2 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price2)
 
-            #sell_order3 = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-            #                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price3)
-        
-        #msg1 = (f" Trades Placed ::  Bid Price : {buy_price:.8f} , Ask Price : {sell_price:.8f}")
-        #self.log_with_clock(logging.INFO, msg1)
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
         order_counter = []
@@ -428,12 +411,7 @@ class SimplePMM(ScriptStrategyBase):
 
         msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
         self.log_with_clock(logging.INFO, msg2)           
-        # msg3 = (f"Min Order  : {minimum_size:.8f} , Ask Order : {order_size_ask:.8f}, Bid Order {order_size_bid:.8f}")
-        # self.log_with_clock(logging.INFO, msg3)
 
-        #msgbe = (f"BreakEven : {self.break_even_price} , Total Spent : {self.total_spent}, Total Bought : {self.total_bought}, Total Earned : {self.total_earned},  Total Sold : {self.total_sold}")
-        #self.log_with_clock(logging.INFO, msgbe)
-        #self.notify_hb_app_with_timestamp(msg)
 
         msgce = (f"Bid Starting Price : {bid_starting_price:.8f}, Ask Starting Price : {ask_starting_price:.8f}")
         self.log_with_clock(logging.INFO, msgce)
