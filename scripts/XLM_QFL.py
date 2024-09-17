@@ -1194,8 +1194,8 @@ class SimplePMM(ScriptStrategyBase):
 
         geom_limit_bid = max(geom_limit_bid, 0)
         
-        min_profit_bid =  bid_reservation_price * (Decimal(1) / (Decimal(1) + self.min_profitability))
-        min_profit_ask = ask_reservation_price * (Decimal(1) / (Decimal(1) - self.min_profitability))
+        min_profit_bid =  bid_reservation_price * (Decimal(1) / (Decimal(1) + Decimal(self.min_profitability)))
+        min_profit_ask = ask_reservation_price * (Decimal(1) / (Decimal(1) - Decimal(self.min_profitability)))
 
         optimal_bid_price = np.minimum(bid_reservation_price -  (optimal_bid_spread  / TWO), min_profit_bid)
         optimal_ask_price = np.maximum(ask_reservation_price +  (optimal_ask_spread / TWO), min_profit_ask)
