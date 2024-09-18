@@ -484,6 +484,7 @@ class SimplePMM(ScriptStrategyBase):
 
         #reset S midprice to last traded value
         self._last_trade_price = event.price
+        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
 
         # Update totals and calculate break-even price based on trade type
         fee = event.price * event.amount * self.fee_percent
@@ -809,6 +810,7 @@ class SimplePMM(ScriptStrategyBase):
                     # Ensure midprice is not None before converting and assigning
                     if manual_price is not None:
                         self._last_trade_price = Decimal(manual_price)
+                        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
                         self._bid_baseline = Decimal(self._last_trade_price)
                         self._ask_baseline = Decimal(self._last_trade_price)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
@@ -821,6 +823,7 @@ class SimplePMM(ScriptStrategyBase):
     
         else:
             self._last_trade_price = Decimal(self._last_trade_price)
+            self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
             self._bid_baseline = Decimal(self._last_trade_price)
             self._ask_baseline = Decimal(self._last_trade_price)
 
