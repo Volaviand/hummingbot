@@ -211,7 +211,7 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
     # Check for any missing values and fill or drop them if necessary
     kdf.dropna(inplace=True)
 
-    return sold_baseline, bought_baseline, log_returns_list
+    return sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth
 
 class SimplePMM(ScriptStrategyBase):
     """
