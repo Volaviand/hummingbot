@@ -788,7 +788,6 @@ class SimplePMM(ScriptStrategyBase):
                     # Ensure midprice is not None before converting and assigning
                     if manual_price is not None:
                         self._last_trade_price = (manual_price)
-                        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
                         self._bid_baseline = (self._last_trade_price)
                         self._ask_baseline = (self._last_trade_price)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
@@ -796,21 +795,16 @@ class SimplePMM(ScriptStrategyBase):
         elif self.buy_counter == 1 and self.sell_counter == 1 and self._last_trade_price == None:
 
             self._bid_baseline = (sold_baseline)
-            self._bid_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._bid_baseline)
 
             self._ask_baseline = (bought_baseline)
-            self._ask_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._ask_baseline)
 
     
         else:
             self._last_trade_price = self._last_trade_price
-            self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
 
             self._bid_baseline = self._last_trade_price
-            self._bid_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._bid_baseline)
 
             self._ask_baseline = self._last_trade_price
-            self._ask_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._ask_baseline)
 
 
         return self._last_trade_price, self._ask_baseline, self._bid_baseline
@@ -893,9 +887,12 @@ class SimplePMM(ScriptStrategyBase):
 
         s_bid = self._bid_baseline
         s_bid = Decimal(s_bid)
+        s_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_bid)
+
 
         s_ask = self._ask_baseline
         s_ask = Decimal(s_ask)
+        s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
 
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
             # from the actual mid price of the asset in absolute price units
