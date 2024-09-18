@@ -305,8 +305,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Volume Depth Init
-        self.bought_volume_depth = 0
-        self.sold_volume_depth = 0
+        self.bought_volume_depth = 0.0000000001
+        self.sold_volume_depth =   0.0000000001
 
         # Volatility 
         self.max_vola = 0.0
@@ -341,7 +341,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
-            vwap_bid, vwap_ask = self.get_vwap_bid_ask()
+            #vwap_bid, vwap_ask = self.get_vwap_bid_ask()
             # if spread diff is more than the tolerance or order quantities are different, return false.
             current = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
             if self._order_refresh_tolerance_pct > 0:
