@@ -747,7 +747,7 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
-        breakeven_buy_price,breakeven_sell_price,realized_pnl = self.call_trade_history(trades_XLM, self.trade_history_start_timestamp)
+        breakeven_buy_price,breakeven_sell_price,realized_pnl = self.call_trade_history('trades_XLM', self.trade_history_start_timestamp)
 
         msg_trade_data = (f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
         self.log_with_clock(logging.INFO, msg_trade_data)
