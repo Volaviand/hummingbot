@@ -340,6 +340,8 @@ class SimplePMM(ScriptStrategyBase):
         
 
 
+
+
     def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
             #vwap_bid, vwap_ask = self.get_vwap_bid_ask()
             # if spread diff is more than the tolerance or order quantities are different, return false.
@@ -466,6 +468,53 @@ class SimplePMM(ScriptStrategyBase):
         self.notify_hb_app_with_timestamp(msg)
 
         time.sleep(10)
+
+
+    ##########################
+    ###====== Status Screen
+    ###########################
+
+    def format_status(self) -> str:
+        """Returns status of the current strategy on user balances and current active orders. This function is called
+        when status command is issued. Override this function to create custom status display output.
+        """
+        if not self.ready_to_trade:
+            return "Market connectors are not ready."
+        lines = []
+        warning_lines = []
+        warning_lines.extend(self.network_warning(self.get_market_trading_pair_tuples()))
+
+        balance_df = self.get_balance_df()
+        lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
+
+        try:
+            df = self.active_orders_df()
+            lines.extend(["", "  Orders:"] + ["    " + line for line in df.to_string(index=False).split("\n")])
+        except ValueError:
+            lines.extend(["", "  No active maker orders."])
+
+        warning_lines.extend(self.balance_warning(self.get_market_trading_pair_tuples()))
+        if len(warning_lines) > 0:
+            lines.extend(["", "*** WARNINGS ***"] + warning_lines)
+
+        lines.extend("Volatility Measurements ")
+        lines.extend(f"Current Volatility :: {self.current_vola} | Volatility Rank :: {self.volatility_rank}")
+        return "\n".join(lines)
+
+    # def format_status(self) -> str:
+    #         if not self.ready_to_trade:
+    #             return "Market connectors are not ready."
+    #         mid_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+    #         best_ask = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.BestAsk)
+    #         best_bid = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.BestBid)
+    #         last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastTrade)
+    #         custom_format_status = f"""
+    # | Mid price: {mid_price:.2f}| Last trade price: {last_trade_price:.2f}
+    # | Best ask: {best_ask:.2f} | Best bid: {best_bid:.2f} | 
+    # """
+    #         return custom_format_status
+
+
 
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
