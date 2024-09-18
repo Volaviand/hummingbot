@@ -522,11 +522,9 @@ class SimplePMM(ScriptStrategyBase):
         warning_lines = []
         warning_lines.extend(self.network_warning(self.get_market_trading_pair_tuples()))
 
-        # Convert DataFrame to string and split by newlines
-        balance_lines = balance_df.to_string(index=False).split("\n")
-
-        # Reverse the lines and add them to the output
-        lines.extend(["", "  Balances:"] + ["    " + line for line in reversed(balance_lines)])
+        balance_df = self.get_balance_df()
+        
+        lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
 
         lines.extend(["", "| Inventory Imbalance |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
