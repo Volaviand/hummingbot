@@ -826,7 +826,7 @@ class SimplePMM(ScriptStrategyBase):
 
                     # Ensure midprice is not None before converting and assigning
                     if manual_price is not None:
-                        self._last_trade_price = Decimal(manual_midprice)
+                        self._last_trade_price = Decimal(manual_price)
                         self._bid_baseline = Decimal(self._last_trade_price)
                         self._ask_baseline = Decimal(self._last_trade_price)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
