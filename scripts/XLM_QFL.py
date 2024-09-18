@@ -497,8 +497,8 @@ class SimplePMM(ScriptStrategyBase):
         if len(warning_lines) > 0:
             lines.extend(["", "*** WARNINGS ***"] + warning_lines)
 
-        lines.extend("Volatility Measurements ")
-        lines.extend(f"Current Volatility :: {self.current_vola} | Volatility Rank :: {self.volatility_rank}")
+        lines.extend(["Volatility Measurements "])
+        lines.extend([f"Current Volatility :: {self.current_vola:.2f} | Volatility Rank :: {self.volatility_rank:.2f}"])
         return "\n".join(lines)
 
     # def format_status(self) -> str:
