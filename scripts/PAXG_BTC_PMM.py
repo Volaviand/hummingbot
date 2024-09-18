@@ -825,7 +825,7 @@ class SimplePMM(ScriptStrategyBase):
                     #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
                     # Ensure midprice is not None before converting and assigning
-                    if manual_midprice is not None:
+                    if manual_price is not None:
                         self._last_trade_price = Decimal(manual_midprice)
                         self._bid_baseline = Decimal(self._last_trade_price)
                         self._ask_baseline = Decimal(self._last_trade_price)
@@ -963,7 +963,7 @@ class SimplePMM(ScriptStrategyBase):
         y_ask = max(y_ask,y_min)
 
         t = Decimal(1.0)
-        
+
         #1 is replacement for time (T= 1 - t=0)
         bid_risk_rate = q * y_bid
         ask_risk_rate = q * y_ask
