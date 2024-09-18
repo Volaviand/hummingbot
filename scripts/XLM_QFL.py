@@ -680,7 +680,7 @@ class SimplePMM(ScriptStrategyBase):
         amount_base_rate = Decimal(1.0) - amount_base_to_hold
         
         amount_quote_to_hold = Decimal(0)
-        amount_quote_rate = Decimal(1.0) - amount_base_to_hold
+        amount_quote_rate = Decimal(1.0) - amount_quote_to_hold
         
 
         # Get currently held balances in each asset base
