@@ -583,8 +583,8 @@ class SimplePMM(ScriptStrategyBase):
         #sp = max(1 + self.min_profitability, (sd**(1/n)) )
         sp = math.exp(math.log(sd)/n)
 
-        msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
-        self.log_with_clock(logging.INFO, msg)
+        # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
+        # self.log_with_clock(logging.INFO, msg)
         return bp, sp
 
     def determine_log_breakeven_levels(self):
@@ -748,8 +748,13 @@ class SimplePMM(ScriptStrategyBase):
         inventory_difference = maker_base_balance  - target_inventory
         q = (inventory_difference) / total_balance_in_base
         q = Decimal(q)
-        msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
-        self.log_with_clock(logging.INFO, msg_q)
+        
+        self.q_imbalance = q
+        self.inventory_diff = inventory_difference
+
+
+        # msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
+        # self.log_with_clock(logging.INFO, msg_q)
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
         
