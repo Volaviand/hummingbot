@@ -486,6 +486,8 @@ class SimplePMM(ScriptStrategyBase):
         self._last_trade_price = event.price
         self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
 
+        self.fee_percent = Decimal(self.fee_percent)
+
         # Update totals and calculate break-even price based on trade type
         fee = event.price * event.amount * self.fee_percent
         if event.price < self._bid_baseline:
