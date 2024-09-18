@@ -313,6 +313,17 @@ class SimplePMM(ScriptStrategyBase):
         self.current_vola = 0.0
         self.volatility_rank = 0.0
 
+        # Order Status Variables
+        self.ask_percent = 0
+        self.bid_percent = 0
+        self.b_r_p = 0
+        self.a_r_p = 0
+        self.b_d = 0
+        self.a_d = 0
+        self.q_imbalance = 0
+        self.inventory_diff = 0
+        
+
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
@@ -357,6 +368,12 @@ class SimplePMM(ScriptStrategyBase):
         self._last_trade_price, self._vwap_midprice = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
+        # Save Values for Status use without recalculating them over and over again
+        self.bid_percent = optimal_bid_percent
+        self.ask_percent = optimal_ask_percent
+        self.b_r_p = bid_reservation_price
+        self.a_r_p = ask_reservation_price
+
         buy_price = optimal_bid_price 
         sell_price = optimal_ask_price 
 
@@ -379,8 +396,8 @@ class SimplePMM(ScriptStrategyBase):
         if order_size_ask >= minimum_size:
             order_counter.append(sell_order)
 
-        msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
-        self.log_with_clock(logging.INFO, msg2)           
+        # msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
+        # self.log_with_clock(logging.INFO, msg2)           
 
         return order_counter #[buy_order , sell_order]
 
@@ -487,18 +504,37 @@ class SimplePMM(ScriptStrategyBase):
         balance_df = self.get_balance_df()
         lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
 
+        lines.extend(["", "|Inventory Imbalance|"])
+        lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
+
+        lines.extend(["", "|Reservation Prices|"])
+        lines.extend([f"Ask :: {self.a_r_p:.8f} | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"Last Trade Price :: {self._last_trade_price}"])
+
+        lines.extend(["", "|Market Depth|"])
+        lines.extend([f"Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
+
+        lines.extend(["", "|Profit Target |"])
+        lines.extend([f"Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
+
         try:
             df = self.active_orders_df()
             lines.extend(["", "  Orders:"] + ["    " + line for line in df.to_string(index=False).split("\n")])
         except ValueError:
             lines.extend(["", "  No active maker orders."])
 
+        lines.extend(["", "|Order History|"])
+
+        lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
+
+        lines.extend(["", "|Volatility Measurements|"])
+        lines.extend([f"Current Volatility :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
+
+
         warning_lines.extend(self.balance_warning(self.get_market_trading_pair_tuples()))
         if len(warning_lines) > 0:
             lines.extend(["", "*** WARNINGS ***"] + warning_lines)
 
-        lines.extend(["Volatility Measurements "])
-        lines.extend([f"Current Volatility :: {self.current_vola:.2f} | Volatility Rank :: {self.volatility_rank:.2f}"])
         return "\n".join(lines)
 
     # def format_status(self) -> str:
@@ -544,8 +580,8 @@ class SimplePMM(ScriptStrategyBase):
         #sp = max(1 + self.min_profitability, (sd**(1/n)) )
         sp = 1.015 # math.exp(math.log(sd)/n)
 
-        msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
-        self.log_with_clock(logging.INFO, msg)
+        # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
+        # self.log_with_clock(logging.INFO, msg)
         return bp, sp
 
     def determine_log_breakeven_levels(self):
@@ -594,12 +630,12 @@ class SimplePMM(ScriptStrategyBase):
             avg_sell_mult = 1
             sell_breakeven_mult = 1
 
-        msg2 = (f"additive_sell :: {additive_sell:.8f} , additive_buy :: {additive_buy:.8f}")
-        self.log_with_clock(logging.INFO, msg2)
-        msg = (f"avg_sell_mult :: {avg_sell_mult:.8f} , avg_buy_mult :: {avg_buy_mult:.8f}")
-        self.log_with_clock(logging.INFO, msg)
-        msg3 = (f"Sell Breakeven Mult(s * this = where buy level should be at) :: {sell_breakeven_mult:.8f} , Buy Breakeven Mult(s * this = where sell level should be above) :: {buy_breakeven_mult:.8f}")
-        self.log_with_clock(logging.INFO, msg3)
+        # msg2 = (f"additive_sell :: {additive_sell:.8f} , additive_buy :: {additive_buy:.8f}")
+        # self.log_with_clock(logging.INFO, msg2)
+        # msg = (f"avg_sell_mult :: {avg_sell_mult:.8f} , avg_buy_mult :: {avg_buy_mult:.8f}")
+        # self.log_with_clock(logging.INFO, msg)
+        # msg3 = (f"Sell Breakeven Mult(s * this = where buy level should be at) :: {sell_breakeven_mult:.8f} , Buy Breakeven Mult(s * this = where sell level should be above) :: {buy_breakeven_mult:.8f}")
+        # self.log_with_clock(logging.INFO, msg3)
 
 
         return buy_breakeven_mult, sell_breakeven_mult
@@ -642,8 +678,10 @@ class SimplePMM(ScriptStrategyBase):
             bid_depth = bid_volume_cdf_value
             ask_depth = ask_volume_cdf_value
 
-        msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
-        self.log_with_clock(logging.INFO, msg_q)
+        self.b_d = bid_depth
+        self.a_d = ask_depth
+        # msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
+        # self.log_with_clock(logging.INFO, msg_q)
 
         vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
                                                 False,
@@ -694,8 +732,12 @@ class SimplePMM(ScriptStrategyBase):
         inventory_difference = maker_base_balance  - target_inventory
         q = (inventory_difference) / total_balance_in_base
         q = Decimal(q)
-        msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
-        self.log_with_clock(logging.INFO, msg_q)
+
+        self.q_imbalance = q
+        self.inventory_diff = inventory_difference
+
+        # msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
+        # self.log_with_clock(logging.INFO, msg_q)
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
         
@@ -767,8 +809,8 @@ class SimplePMM(ScriptStrategyBase):
         else:
             self._last_trade_price = Decimal(self._last_trade_price)
 
-        msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
-        self.log_with_clock(logging.INFO, msg_lastrade)
+        # msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
+        # self.log_with_clock(logging.INFO, msg_lastrade)
 
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
 
@@ -853,8 +895,8 @@ class SimplePMM(ScriptStrategyBase):
         else:
             self.volatility_rank = 1  # Handle constant volatility case
 
-        msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
-        self.log_with_clock(logging.INFO, msg)            
+        # msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
+        # self.log_with_clock(logging.INFO, msg)            
 
 
 
@@ -906,8 +948,8 @@ class SimplePMM(ScriptStrategyBase):
         y_ask = min(y_ask,y_max)
         y_ask = max(y_ask,y_min)
 
-        msg_1 = (f"y_bid @ {y_bid:.8f} ::: y_ask @ {y_ask:.8f}")
-        self.log_with_clock(logging.INFO, msg_1)
+        # msg_1 = (f"y_bid @ {y_bid:.8f} ::: y_ask @ {y_ask:.8f}")
+        # self.log_with_clock(logging.INFO, msg_1)
         t = Decimal(1.0)
         #1 is replacement for time (T= 1 - t=0)
         bid_risk_rate = q * y_bid
@@ -922,8 +964,8 @@ class SimplePMM(ScriptStrategyBase):
         #self.log_with_clock(logging.INFO, msg_6)
 
         # Get 3 stdevs from price to use in volatility measurements upcoming. 
-        msg = (f"Ask_RP :: {ask_reservation_price:.8f}  , Last TP :: {self._last_trade_price:.8f} , Bid_RP :: {bid_reservation_price:.8f}")
-        self.log_with_clock(logging.INFO, msg)
+        # msg = (f"Ask_RP :: {ask_reservation_price:.8f}  , Last TP :: {self._last_trade_price:.8f} , Bid_RP :: {bid_reservation_price:.8f}")
+        # self.log_with_clock(logging.INFO, msg)
 
         bid_stdev_price = bid_reservation_price - (Decimal(3) * (max_bid_volatility * s))
         ask_stdev_price = ask_reservation_price + (Decimal(3) * (max_ask_volatility * s))
@@ -984,8 +1026,8 @@ class SimplePMM(ScriptStrategyBase):
         ask_spread_rate = Decimal(ask_spread_rate)
         ask_log_term = Decimal.ln(ask_spread_rate)  
 
-        msg_1 = (f"k_bid Depth Volume @ {k_bid_size:.8f} ::: k_ask Depth Volume @ {k_ask_size:.8f}")
-        self.log_with_clock(logging.INFO, msg_1)
+        # msg_1 = (f"k_bid Depth Volume @ {k_bid_size:.8f} ::: k_ask Depth Volume @ {k_ask_size:.8f}")
+        # self.log_with_clock(logging.INFO, msg_1)
 
 
 
