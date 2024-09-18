@@ -63,7 +63,7 @@ class KrakenAPI:
         initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
         while True:
             success, trades, last_timestamp = self.fetch_trades(self.last_timestamp)
-            print(len(trades))
+            # (len(trades))
             if not success or not trades:
                 # print("No more data to fetch.")
                 break
@@ -174,8 +174,8 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
 
     # Find the 75th percentile of buy and sell volumes
     percentile = 25
-    buy_percentile = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
-    sell_percentile = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
+    bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
+    sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
 
     # Calculate the percentile window
     percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
