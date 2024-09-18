@@ -90,7 +90,7 @@ class KrakenAPI:
 
         return self.data
 
-def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
+def call_kraken_data(hist_days = 3, market = 'PAXGXBT'):
     # Calculate the timestamp for 1 day ago
     since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
     since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
