@@ -369,14 +369,21 @@ class SimplePMM(ScriptStrategyBase):
         # Convert timestamp column to datetime if it's in milliseconds
         start_time = start_timestamp
 
+        # Initialize tracking
+        last_net_value = 0
+
         # Function to save the start timestamp
-        def save_timestamp(start_time, file_path=f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'):
+        def save_timestamp(start_time, last_net_value,  file_path=f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'):
             with open(file_path, 'w') as f:
-                json.dump({'trade_history_start_timestamp': start_time}, f)
-            #print(f"Timestamp saved to {file_path}")
+                json.dump({
+                    'trade_history_start_timestamp': start_time,
+                    'last_net_value': last_net_value
+                }, f)            
+                #print(f"Timestamp saved to {file_path}")
+
 
         # Save the timestamp
-        save_timestamp(start_timestamp)
+        save_timestamp(start_time)
 
         # Filter trades within the specified period
         filtered_df = df[(df['timestamp'] >= start_time)]
@@ -398,15 +405,23 @@ class SimplePMM(ScriptStrategyBase):
         # Amount Comparison
         amount_comparison = abs(sum_of_buy_amount - sum_of_sell_amount)
 
+
+
         # Calculate the total buy cost including fees
         total_buy_cost = sum_of_buy_prices +  sum_of_buy_fees
 
         # Calculate the total sell proceeds after deducting fees
         total_sell_proceeds = sum_of_sell_prices -  sum_of_sell_fees
 
-        # Calculate the estimated breakeven values including an additional fee for balancing the position
-        # total_esimated_breakeven_buy_cost = sum_of_buy_prices + (2 * sum_of_buy_fees)
-        # total_esimated_breakeven_sell_proceeds = sum_of_sell_prices + (2 * sum_of_sell_fees)
+        # Calculate net value in quote
+        net_value = total_buy_cost - total_sell_proceeds
+
+
+        # Save the current state if there's a crossover
+        if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
+            save_timestamp(start_time, net_value)
+        
+        last_net_value = net_value
 
 
         # Calculate the breakeven prices
@@ -541,6 +556,9 @@ class SimplePMM(ScriptStrategyBase):
         ######################################################################
         # if the filled trade triggers a new trade cycle:
         #     self.trade_history_start_timestamp = event.timestamp
+
+        # Update Breakevens and Timestamps after a trade completes
+        breakeven_buy_price,breakeven_sell_price,realized_pnl = self.call_trade_history('trades_XLM', self.trade_history_start_timestamp)
 
 
 
