@@ -534,7 +534,6 @@ class SimplePMM(ScriptStrategyBase):
 
         return "\n".join(lines)
 
-    #def trade_completion_counter(self, event: OrderFilledEvent):
     def determine_log_multipliers(self):
         """Determine the best placement of percentages based on the percentage/log values 
         (log(d)) / (log(p)) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n).  Or closer p = e^(ln(d) / n)"""
