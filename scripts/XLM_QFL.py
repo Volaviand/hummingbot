@@ -366,6 +366,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
+        self.get_balance_df()
         self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
@@ -675,6 +676,7 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
+        self.get_balance_df()
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
