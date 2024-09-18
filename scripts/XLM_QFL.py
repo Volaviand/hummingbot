@@ -296,8 +296,9 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
-        self._vwap_midprice = None
 
+        self._bid_baseline = None
+        self._ask_baseline = None
 
         self.initialize_startprice_flag = True
         self.buy_counter = 1
@@ -365,7 +366,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
-        self._last_trade_price, self._vwap_midprice = self.get_midprice()
+        self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
         # Save Values for Status use without recalculating them over and over again
@@ -378,12 +379,12 @@ class SimplePMM(ScriptStrategyBase):
         sell_price = optimal_ask_price 
 
 
-        if buy_price < self._last_trade_price:
+        if buy_price < self._bid_baseline:
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                     order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
 
-        if sell_price > self._last_trade_price:
+        if sell_price > self._ask_baseline:
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
 
@@ -395,9 +396,7 @@ class SimplePMM(ScriptStrategyBase):
 
         if order_size_ask >= minimum_size:
             order_counter.append(sell_order)
-
-        # msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
-        # self.log_with_clock(logging.INFO, msg2)           
+    
 
         return order_counter #[buy_order , sell_order]
 
@@ -423,14 +422,14 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def did_fill_order(self, event: OrderFilledEvent):
-        s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
+        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
 
         ### Counter Method for Constant Trading without using breakeven levels
-        # if event.price < self._last_trade_price or event.price <= bid_reservation_price:
+        # if event.price < self._bid_baseline or event.price <= bid_reservation_price:
         #     self.sell_counter -= 1
         #     self.buy_counter += 1
             
-        # if event.price > self._last_trade_price or event.price >= ask_reservation_price:
+        # if event.price > self._ask_baseline or event.price >= ask_reservation_price:
         #     self.sell_counter += 1
         #     self.buy_counter -= 1
 
@@ -441,11 +440,11 @@ class SimplePMM(ScriptStrategyBase):
         #     self.buy_counter = 1
 
         ### Counter method that resets the buy or sells if a breakeven trade is made. 
-        if event.price < self._last_trade_price or event.price <= bid_reservation_price:
+        if event.price < self._bid_baseline or event.price <= bid_reservation_price:
             self.sell_counter = 1
             self.buy_counter += 1
             
-        if event.price > self._last_trade_price or event.price >= ask_reservation_price:
+        if event.price > self._ask_baseline or event.price >= ask_reservation_price:
             self.sell_counter += 1
             self.buy_counter = 1
 
@@ -466,12 +465,12 @@ class SimplePMM(ScriptStrategyBase):
 
         # Update totals and calculate break-even price based on trade type
         fee = event.price * event.amount * self.fee_percent
-        if event.price < self._last_trade_price:
+        if event.price < self._bid_baseline:
             self.total_spent += (event.price * event.amount) + fee
             self.total_bought += event.amount
             if self.total_bought > 0:
                 self.break_even_price = self.total_spent / self.total_bought
-        if event.price > self._last_trade_price:
+        if event.price > self._ask_baseline:
             self.total_earned += (event.price * event.amount) - fee
             self.total_sold += event.amount
             if self.total_bought > 0:
@@ -716,8 +715,7 @@ class SimplePMM(ScriptStrategyBase):
         self.q_imbalance = q
         self.inventory_diff = inventory_difference
 
-        # msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
-        # self.log_with_clock(logging.INFO, msg_q)
+
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
         
@@ -775,45 +773,38 @@ class SimplePMM(ScriptStrategyBase):
     
     def get_midprice(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-        if self._last_trade_price == None:
+
+        if self._last_trade_price == None and ( self.buy_counter != 1 or self.sell_counter != 1):
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
-                    midprice = sold_baseline ##0.08506 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+
+                    ## If I have to manually restart the bot mid trade, this is the last traded price. 
+                    manual_price = 0.08519
+                    
+                    #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+
                     # Ensure midprice is not None before converting and assigning
-                    if midprice is not None:
-                        self._last_trade_price = Decimal(midprice)
+                    if manual_price is not None:
+                        self._last_trade_price = Decimal(manual_price)
+                        self._bid_baseline = Decimal(self._last_trade_price)
+                        self._ask_baseline = Decimal(self._last_trade_price)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
-        elif self.buy_counter == 1 and self.sell_counter == 1:
-            self._last_trade_price =  sold_baseline
+
+        elif self.buy_counter == 1 and self.sell_counter == 1 and self._last_trade_price == None:
+
+            self._bid_baseline = Decimal(sold_baseline)
+            self._ask_baseline = Decimal(bought_baseline)
+
+    
         else:
             self._last_trade_price = Decimal(self._last_trade_price)
-
-        # msg_lastrade = (f"_last_trade_price @ {self._last_trade_price}")
-        # self.log_with_clock(logging.INFO, msg_lastrade)
-
-        q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+            self._bid_baseline = Decimal(self._last_trade_price)
+            self._ask_baseline = Decimal(self._last_trade_price)
 
 
 
-        price_vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                False,
-                                                total_balance_in_base).result_price
-
-        price_vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                True,
-                                                total_balance_in_base).result_price
-
-        price_vwap_bid = Decimal(price_vwap_bid)
-        price_vwap_ask = Decimal(price_vwap_ask)
-        self._vwap_midprice = (price_vwap_bid + price_vwap_ask) / 2
-
-        
-  
-          
-        self._vwap_midprice = self._last_trade_price
-
-        return self._last_trade_price, self._vwap_midprice
+        return self._last_trade_price, self._ask_baseline, self._bid_baseline
 
     def call_garch_model(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
@@ -883,7 +874,7 @@ class SimplePMM(ScriptStrategyBase):
     def reservation_price(self):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        self._last_trade_price, self._vwap_midprice = self.get_midprice()
+        self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
        
         buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
 
@@ -891,8 +882,11 @@ class SimplePMM(ScriptStrategyBase):
         HALF = Decimal(0.5)
 
 
-        s = self._last_trade_price
-        s = Decimal(s)
+        s_bid = self._bid_baseline
+        s_bid = Decimal(s_bid)
+
+        s_ask = self._ask_baseline
+        s_ask = Decimal(s_ask)
 
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
             # from the actual mid price of the asset in absolute price units
@@ -903,10 +897,10 @@ class SimplePMM(ScriptStrategyBase):
         ### Convert Volatility Percents into Absolute Prices
 
         max_bid_volatility= Decimal(self.current_vola) 
-        bid_volatility_in_base = (max_bid_volatility) * s 
+        bid_volatility_in_base = (max_bid_volatility) * s_bid
 
         max_ask_volatility = Decimal(self.current_vola) 
-        ask_volatility_in_base = (max_ask_volatility) * s 
+        ask_volatility_in_base = (max_ask_volatility) * s_ask
 
 
         # msg_4 = (f"max_bid_volatility @ {bid_volatility_in_base:.8f} ::: max_ask_volatility @ {ask_volatility_in_base:.8f}")
@@ -928,36 +922,29 @@ class SimplePMM(ScriptStrategyBase):
         y_ask = min(y_ask,y_max)
         y_ask = max(y_ask,y_min)
 
-        # msg_1 = (f"y_bid @ {y_bid:.8f} ::: y_ask @ {y_ask:.8f}")
-        # self.log_with_clock(logging.INFO, msg_1)
         t = Decimal(1.0)
+
         #1 is replacement for time (T= 1 - t=0)
         bid_risk_rate = q * y_bid
         ask_risk_rate = q * y_ask
         bid_reservation_adjustment = bid_risk_rate * bid_volatility_in_base * t
         ask_reservation_adjustment = ask_risk_rate * ask_volatility_in_base * t
 
-        bid_reservation_price = (s*Decimal(sell_breakeven_mult)) - (bid_reservation_adjustment) 
-        ask_reservation_price = (s*Decimal(buy_breakeven_mult)) - (ask_reservation_adjustment)
+        bid_reservation_price = (s_bid*Decimal(sell_breakeven_mult)) - (bid_reservation_adjustment) 
+        ask_reservation_price = (s_ask*Decimal(buy_breakeven_mult)) - (ask_reservation_adjustment)
 
-        #msg_6 = (f" q {q} , bid_risk_rate {bid_risk_rate},ask_risk_rate {ask_risk_rate}  bid_reservation_adjustment {bid_reservation_adjustment}, ask_reservation_adjustment {ask_reservation_adjustment}")
-        #self.log_with_clock(logging.INFO, msg_6)
 
-        # Get 3 stdevs from price to use in volatility measurements upcoming. 
-        # msg = (f"Ask_RP :: {ask_reservation_price:.8f}  , Last TP :: {self._last_trade_price:.8f} , Bid_RP :: {bid_reservation_price:.8f}")
-        # self.log_with_clock(logging.INFO, msg)
-
-        bid_stdev_price = bid_reservation_price - (Decimal(3) * (max_bid_volatility * s))
-        ask_stdev_price = ask_reservation_price + (Decimal(3) * (max_ask_volatility * s))
+        bid_stdev_price = bid_reservation_price - (Decimal(3) * (max_bid_volatility * s_bid))
+        ask_stdev_price = ask_reservation_price + (Decimal(3) * (max_ask_volatility * s_ask))
 
         
-        return s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
+        return  t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
 
 
 
 
     def optimal_bid_ask_spread(self):
-        s, t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
+        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
         order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         

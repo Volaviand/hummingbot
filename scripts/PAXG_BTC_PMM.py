@@ -317,7 +317,6 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
-        # self._vwap_midprice = None
 
         self._bid_baseline = None
         self._ask_baseline = None
@@ -419,9 +418,7 @@ class SimplePMM(ScriptStrategyBase):
 
         if order_size_ask >= minimum_size:
             order_counter.append(sell_order)
-
-        # msg2 = (f"Bid % : {optimal_bid_percent:.4f} , Ask % : {optimal_ask_percent:.4f}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
-        # self.log_with_clock(logging.INFO, msg2)           
+    
 
         return order_counter #[buy_order , sell_order]
 
@@ -648,19 +645,6 @@ class SimplePMM(ScriptStrategyBase):
         return buy_breakeven_mult, sell_breakeven_mult
         
 
-
-    def on_stop(self):
-        for candle in self.candles.values():
-            candle.stop()
-
-    def get_formatted_market_analysis(self):
-        volatility_metrics_df, log_returns= self.get_market_analysis()
-        volatility_metrics_pct_str = format_df_for_printout(
-            volatility_metrics_df[self.columns_to_show].sort_values(by=self.sort_values_by, ascending=False).head(self.top_n),
-            table_format="psql")
-        return volatility_metrics_pct_str
-
-
     def get_current_top_bid_ask(self):
         ''' Find the current spread bid and ask prices'''
         top_bid_price = self.connectors[self.exchange].get_price(self.trading_pair, False)
@@ -757,8 +741,6 @@ class SimplePMM(ScriptStrategyBase):
         self.inventory_diff = inventory_difference
 
 
-        # msg_q = (f"Inventory Balance :: {q:4f}% :: Token :: {inventory_difference:8f}.  + = too much base - = too much quote")
-        # self.log_with_clock(logging.INFO, msg_q)
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
         
