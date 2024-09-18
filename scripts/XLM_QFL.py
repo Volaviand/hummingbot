@@ -373,7 +373,7 @@ class SimplePMM(ScriptStrategyBase):
         def save_timestamp(start_time, file_path=f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'):
             with open(file_path, 'w') as f:
                 json.dump({'trade_history_start_timestamp': start_time}, f)
-            print(f"Timestamp saved to {file_path}")
+            #print(f"Timestamp saved to {file_path}")
 
         # Save the timestamp
         save_timestamp(start_timestamp)
