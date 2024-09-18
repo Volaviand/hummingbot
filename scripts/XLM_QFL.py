@@ -423,8 +423,77 @@ class SimplePMM(ScriptStrategyBase):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
 
+    def call_trade_history(self, file_name = 'trades_XLM', start_timestamp = 1726652280000):
+        '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
+        # Specify the path to your CSV file
+        csv_file_path = f'/home/tyler/hummingbot/data/{file_name}.csv'
+
+        # Read the CSV file into a Pandas DataFrame
+        df = pd.read_csv(csv_file_path)
+
+        # Show the first few rows of the dataframe to verify the data
+        print(df.head())
+
+        # Convert timestamp column to datetime if it's in milliseconds
+        start_time = start_timestamp
+
+        # Filter trades within the specified period
+        filtered_df = df[(df['timestamp'] >= start_time)]
+
+
+        # Filter out buy and sell trades
+        buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
+        sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
+
+        # Calculate weighted sums with fees
+        sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
+        sum_of_buy_amount = buy_trades['amount'].sum()
+        sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
+
+        sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
+        sum_of_sell_amount = sell_trades['amount'].sum()
+        sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
+
+        # Amount Comparison
+        amount_comparison = abs(sum_of_buy_amount - sum_of_sell_amount)
+
+        # Calculate the total buy cost including fees
+        total_buy_cost = sum_of_buy_prices +  sum_of_buy_fees
+
+        # Calculate the total sell proceeds after deducting fees
+        total_sell_proceeds = sum_of_sell_prices -  sum_of_sell_fees
+
+        # Calculate the estimated breakeven values including an additional fee for balancing the position
+        # total_esimated_breakeven_buy_cost = sum_of_buy_prices + (2 * sum_of_buy_fees)
+        # total_esimated_breakeven_sell_proceeds = sum_of_sell_prices + (2 * sum_of_sell_fees)
+
+
+        # Calculate the breakeven prices
+        breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
+        breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
+
+
+        # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
+        balance_text = None
+        if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
+            balance_text = "Unbalanced Sells (Quote)"
+        elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
+            balance_text = "Unbalanced Buys (Base)"
+        else:
+            balance_text = "Balanced"
+
+        realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
+
+        # Calculate unrealized P&L: consider the remaining positions
+        # remaining_amount = abs(sum_of_buy_amount - sum_of_sell_amount)
+        # unrealized_pnl = (0.085314 - breakeven_buy_price) * remaining_amount
+        print(f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
+        return breakeven_buy_price, breakeven_sell_price, realized_pnl
+
     def did_fill_order(self, event: OrderFilledEvent):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
+
+
 
         ### Counter Method for Constant Trading without using breakeven levels
         # if event.price < self._bid_baseline or event.price <= bid_reservation_price:
@@ -458,7 +527,7 @@ class SimplePMM(ScriptStrategyBase):
 
         self.initialize_flag = False
 
-
+    
 
 
 
@@ -468,19 +537,7 @@ class SimplePMM(ScriptStrategyBase):
 
         self.fee_percent = Decimal(self.fee_percent)
 
-        # Update totals and calculate break-even price based on trade type
-        fee = event.price * event.amount * self.fee_percent
-        if event.price < self._bid_baseline:
-            self.total_spent += (event.price * event.amount) + fee
-            self.total_bought += event.amount
-            if self.total_bought > 0:
-                self.break_even_price = self.total_spent / self.total_bought
-        if event.price > self._ask_baseline:
-            self.total_earned += (event.price * event.amount) - fee
-            self.total_sold += event.amount
-            if self.total_bought > 0:
-                net_spent = self.total_spent - self.total_earned
-                self.break_even_price = net_spent / self.total_bought if self.total_bought > 0 else None
+
 
         
         # Print log
@@ -677,6 +734,7 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
+        a,b,c = call_trade_history(self)
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
