@@ -575,8 +575,8 @@ class SimplePMM(ScriptStrategyBase):
         # window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
-        bid_volume_cdf_value = self.sold_volume_depth #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
-        ask_volume_cdf_value = self.bought_volume_depth #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
+        bid_volume_cdf_value = Decimal(self.sold_volume_depth) #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
+        ask_volume_cdf_value = Decimal(self.bought_volume_depth) #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
         bid_depth_difference = abs(bid_volume_cdf_value - self.order_amount)
@@ -703,7 +703,7 @@ class SimplePMM(ScriptStrategyBase):
         return order_size_bid, order_size_ask
     
     def get_midprice(self):
-        sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth = call_kraken_data()
+        sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
         if self._last_trade_price == None:
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
