@@ -523,7 +523,9 @@ class SimplePMM(ScriptStrategyBase):
         warning_lines.extend(self.network_warning(self.get_market_trading_pair_tuples()))
 
         balance_df = self.get_balance_df()
-        lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
+        reversed_balance_df = balance_df.iloc[::-1]
+
+        lines.extend(["", "  Balances:"] + ["    " + line for line in reversed_balance_df.to_string(index=False).split("\n")])
 
         lines.extend(["", "| Inventory Imbalance |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
@@ -748,7 +750,7 @@ class SimplePMM(ScriptStrategyBase):
         inventory_difference = maker_base_balance  - target_inventory
         q = (inventory_difference) / total_balance_in_base
         q = Decimal(q)
-        
+
         self.q_imbalance = q
         self.inventory_diff = inventory_difference
 
