@@ -301,7 +301,7 @@ class SimplePMM(ScriptStrategyBase):
         self._ask_baseline = None
 
         self.initialize_startprice_flag = True
-        self.buy_counter = 1
+        self.buy_counter = 2
         self.sell_counter = 1
 
 
