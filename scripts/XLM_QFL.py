@@ -65,7 +65,7 @@ class KrakenAPI:
         initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
         while True:
             success, trades, last_timestamp = self.fetch_trades(self.last_timestamp)
-            print(len(trades))
+            #print(len(trades))
             if not success or not trades:
                 # print("No more data to fetch.")
                 break
