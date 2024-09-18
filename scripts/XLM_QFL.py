@@ -504,18 +504,21 @@ class SimplePMM(ScriptStrategyBase):
         balance_df = self.get_balance_df()
         lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
 
-        lines.extend(["", "|Inventory Imbalance|"])
+        lines.extend(["", "| Inventory Imbalance |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
 
-        lines.extend(["", "|Reservation Prices|"])
-        lines.extend([f"Ask :: {self.a_r_p:.8f} | Bid :: {self.b_r_p:.8f}"])
-        lines.extend([f"Last Trade Price :: {self._last_trade_price}"])
+        lines.extend(["", "| Reservation Prices | Profit Target |"])
+        lines.extend([f"Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
 
-        lines.extend(["", "|Market Depth|"])
+        lines.extend(["", "| Market Depth |"])
         lines.extend([f"Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
 
-        lines.extend(["", "|Profit Target |"])
-        lines.extend([f"Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
+        lines.extend(["", "| Order History |"])
+        lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
+
+        lines.extend(["", "| Volatility Measurements |"])
+        lines.extend([f"Current Volatility :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
 
         try:
             df = self.active_orders_df()
@@ -523,12 +526,7 @@ class SimplePMM(ScriptStrategyBase):
         except ValueError:
             lines.extend(["", "  No active maker orders."])
 
-        lines.extend(["", "|Order History|"])
 
-        lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
-
-        lines.extend(["", "|Volatility Measurements|"])
-        lines.extend([f"Current Volatility :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
 
 
         warning_lines.extend(self.balance_warning(self.get_market_trading_pair_tuples()))
