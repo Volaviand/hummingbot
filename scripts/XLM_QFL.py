@@ -379,12 +379,12 @@ class SimplePMM(ScriptStrategyBase):
         sell_price = optimal_ask_price 
 
 
-        if buy_price < self._bid_baseline:
+        if buy_price <= bid_reservation_price:
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                     order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
            
 
-        if sell_price > self._ask_baseline:
+        if sell_price >= ask_reservation_price:
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
 
@@ -781,32 +781,36 @@ class SimplePMM(ScriptStrategyBase):
                 if self._last_trade_price is None:
 
                     ## If I have to manually restart the bot mid trade, this is the last traded price. 
-                    manual_price = 0.08519
+                    manual_price = 0.084139
                     
                     #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
                     # Ensure midprice is not None before converting and assigning
                     if manual_price is not None:
-                        self._last_trade_price = Decimal(manual_price)
+                        self._last_trade_price = (manual_price)
                         self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
-
-                        self._bid_baseline = Decimal(self._last_trade_price)
-                        self._ask_baseline = Decimal(self._last_trade_price)
+                        self._bid_baseline = (self._last_trade_price)
+                        self._ask_baseline = (self._last_trade_price)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
         elif self.buy_counter == 1 and self.sell_counter == 1 and self._last_trade_price == None:
 
-            self._bid_baseline = Decimal(sold_baseline)
-            self._ask_baseline = Decimal(bought_baseline)
+            self._bid_baseline = (sold_baseline)
+            self._bid_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._bid_baseline)
+
+            self._ask_baseline = (bought_baseline)
+            self._ask_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._ask_baseline)
 
     
         else:
-            self._last_trade_price = Decimal(self._last_trade_price)
+            self._last_trade_price = self._last_trade_price
             self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
 
-            self._bid_baseline = Decimal(self._last_trade_price)
-            self._ask_baseline = Decimal(self._last_trade_price)
+            self._bid_baseline = self._last_trade_price
+            self._bid_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._bid_baseline)
 
+            self._ask_baseline = self._last_trade_price
+            self._ask_baseline = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._ask_baseline)
 
 
         return self._last_trade_price, self._ask_baseline, self._bid_baseline
