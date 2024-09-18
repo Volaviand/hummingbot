@@ -530,7 +530,7 @@ class SimplePMM(ScriptStrategyBase):
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
 
         lines.extend(["", "| Reservation Prices | Profit Target |"])
-        lines.extend([f"Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price:.8f} | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
 
         lines.extend(["", "| Market Depth |"])
