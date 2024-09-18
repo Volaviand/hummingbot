@@ -508,7 +508,7 @@ class SimplePMM(ScriptStrategyBase):
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
 
         lines.extend(["", "| Reservation Prices | Profit Target |"])
-        lines.extend([f"Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price:.8f} | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
 
         lines.extend(["", "| Market Depth |"])
@@ -518,7 +518,7 @@ class SimplePMM(ScriptStrategyBase):
         lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
 
         lines.extend(["", "| Volatility Measurements |"])
-        lines.extend([f"Current Volatility :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
+        lines.extend([f"Current Volatility(d%) :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
 
         try:
             df = self.active_orders_df()
@@ -528,28 +528,11 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-
         warning_lines.extend(self.balance_warning(self.get_market_trading_pair_tuples()))
         if len(warning_lines) > 0:
             lines.extend(["", "*** WARNINGS ***"] + warning_lines)
 
         return "\n".join(lines)
-
-    # def format_status(self) -> str:
-    #         if not self.ready_to_trade:
-    #             return "Market connectors are not ready."
-    #         mid_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
-    #         best_ask = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.BestAsk)
-    #         best_bid = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.BestBid)
-    #         last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastTrade)
-    #         custom_format_status = f"""
-    # | Mid price: {mid_price:.2f}| Last trade price: {last_trade_price:.2f}
-    # | Best ask: {best_ask:.2f} | Best bid: {best_bid:.2f} | 
-    # """
-    #         return custom_format_status
-
-
-
 
     #def trade_completion_counter(self, event: OrderFilledEvent):
     def determine_log_multipliers(self):
