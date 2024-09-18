@@ -960,7 +960,10 @@ class SimplePMM(ScriptStrategyBase):
         ask_reservation_adjustment = ask_risk_rate * ask_volatility_in_base * t
 
         bid_reservation_price = (s_bid*Decimal(sell_breakeven_mult)) - (bid_reservation_adjustment) 
+        bid_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, bid_reservation_price)
+
         ask_reservation_price = (s_ask*Decimal(buy_breakeven_mult)) - (ask_reservation_adjustment)
+        ask_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_reservation_price)
 
 
         bid_stdev_price = bid_reservation_price - (Decimal(3) * (max_bid_volatility * s_bid))
