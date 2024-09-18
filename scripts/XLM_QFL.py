@@ -487,7 +487,6 @@ class SimplePMM(ScriptStrategyBase):
         # Calculate unrealized P&L: consider the remaining positions
         # remaining_amount = abs(sum_of_buy_amount - sum_of_sell_amount)
         # unrealized_pnl = (0.085314 - breakeven_buy_price) * remaining_amount
-        print(f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
         return breakeven_buy_price, breakeven_sell_price, realized_pnl
 
     def did_fill_order(self, event: OrderFilledEvent):
@@ -734,7 +733,11 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
-        a,b,c = call_trade_history(self)
+        breakeven_buy_price,breakeven_sell_price,realized_pnl = call_trade_history(self)
+
+        msg_trade_data = (f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
+        self.log_with_clock(logging.INFO, msg_trade_data)
+
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
