@@ -417,16 +417,12 @@ class SimplePMM(ScriptStrategyBase):
             save_timestamp(init_timestamp, last_net_value)
 
         # Get the most recent timestamp from the CSV that represents your last trade
-        last_timestamp = df['timestamp'].max()
-
-
-
-
+        last_timestamp = int(df['timestamp'].max())
 
 
 
         # Filter trades from the start of your trade cycle
-        filtered_df = df[(df['timestamp'] >= init_timestamp)]
+        filtered_df = df[(int(df['timestamp']) >= init_timestamp)]
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
