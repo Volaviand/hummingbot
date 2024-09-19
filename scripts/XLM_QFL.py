@@ -445,7 +445,7 @@ class SimplePMM(ScriptStrategyBase):
         # This isnt a price movement, but a comparison of sum amount.  
         # If I bought $100 worth and paid 0.50, then I only have $99.5
         # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5
-        total_buy_cost = sum_of_buy_prices - sum_of_buy_fees
+        total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
 
         # Calculate the total sell proceeds after fees
         total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
@@ -598,10 +598,7 @@ class SimplePMM(ScriptStrategyBase):
         #     self.last_trade_timestamp = event.timestamp
 
         # Update Breakevens and Timestamps after a trade completes
-        # self.last_trade_timestamp = event.timestamp
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
-
-
+        _, _, _, _ = self.call_trade_history('trades_XLM')
 
         #reset S midprice to last traded value
         self._last_trade_price = event.price
@@ -670,14 +667,16 @@ class SimplePMM(ScriptStrategyBase):
     def determine_log_multipliers(self):
         """Determine the best placement of percentages based on the percentage/log values 
         (log(d)) / (log(p)) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n).  Or closer p = e^(ln(d) / n)
-        Match against minimum profit wanted.  Allows us to determine an approximate exhaustion drop percent."""
+        Match against minimum profit wanted.  Allows us to determine an approximate exhaustion drop percent.
+        
+        Multiply against breakevens to determine profit target levels (With fees included) that account for multiplicative/log aspects of charts."""
 
         ## If doing a 50/50 it would be /2 since each side is trading equally
         ## If I am doing a single side (QFL), then the maximum orders should account for only the buy side entry. 
         # n = math.floor(self.maximum_orders/2)
 
         ### Trades into the more volatile markets should be deeper to account for this
-        ## for example, buying XLM(more volatile than FIAT) should be harder to do than selling/ (profiting) from the trade. 
+        ## for example, buying illiquid or low volume coins(more volatile than FIAT) should be harder to do than selling/ (profiting) from the trade. 
 
         n = self.maximum_orders
         
@@ -686,7 +685,11 @@ class SimplePMM(ScriptStrategyBase):
         bd = 1 / 30
         bp = math.exp(math.log(bd)/n)
         
-        bp = np.minimum(1 - self.min_profitability)
+        bp = np.minimum(1 - self.min_profitability, bp)
+
+        ## Include Fees
+        bp = bp  * (1 - self.fee_percent)
+        
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
         sd = 30
@@ -694,6 +697,13 @@ class SimplePMM(ScriptStrategyBase):
 
         sp = np.maximum(1 + self.min_profitability, sp)
 
+        ## Include Fees
+        sp = sp * (1 + self.fee_percent)
+
+
+        #Decimalize for later use
+        bp = Decimal(bp)
+        sp = Decimal(sp)
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
         return bp, sp
@@ -1015,7 +1025,6 @@ class SimplePMM(ScriptStrategyBase):
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
-        bp,sp = self.determine_log_multipliers()
 
         msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
         self.log_with_clock(logging.INFO, msg_4)
@@ -1035,6 +1044,9 @@ class SimplePMM(ScriptStrategyBase):
         else:
             s_bid = breakeven_buy_price
 
+        ## Incorporate 2nd half of fees for more accurate breakeven
+        s_bid *= (1 + self.fee_percent)
+
         s_bid = Decimal(s_bid)
         s_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_bid)
 
@@ -1049,6 +1061,9 @@ class SimplePMM(ScriptStrategyBase):
         ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
         else:
             s_ask = breakeven_sell_price
+
+        ## Incorporate 2nd half of fees for more accurate breakeven
+        s_ask *= (1 - self.fee_percent)
 
         s_ask = Decimal(s_ask)
         s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
@@ -1112,7 +1127,8 @@ class SimplePMM(ScriptStrategyBase):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
         order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        
+        bp,sp = self.determine_log_multipliers()
+
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 
@@ -1168,12 +1184,12 @@ class SimplePMM(ScriptStrategyBase):
 
     
         ## Optimal Spread in comparison to the min profit wanted
-        min_profit_bid =  bid_reservation_price * (Decimal(1) - Decimal(self.min_profitability))
-        min_profit_ask = ask_reservation_price * (Decimal(1) + Decimal(self.min_profitability))
+        min_profit_bid =  bid_reservation_price * bp
+        min_profit_ask = ask_reservation_price * sp
 
         # Spread calculation price vs the minimum profit price for entries
-        optimal_bid_price = np.minimum(bid_reservation_price -  (optimal_bid_spread  / TWO), min_profit_bid)
-        optimal_ask_price = np.maximum(ask_reservation_price +  (optimal_ask_spread / TWO), min_profit_ask)
+        optimal_bid_price = np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
+        optimal_ask_price = np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
 
         ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
