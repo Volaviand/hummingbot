@@ -632,14 +632,14 @@ class SimplePMM(ScriptStrategyBase):
 
         lines.extend(["", "| Inventory Imbalance | Trade History |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
-        lines.extend([f"PnL :: {self.pnl:.8f} | Inventory Difference :: {self.n_v:.8f}"])
+        lines.extend([f"PnL :: {self.pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
         lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._bid_baseline} | Bid :: {self._ask_baseline}"])
         lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
-        lines.extend([f"PT /: Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
+        lines.extend([f"PT /: Ask(%) :: {self.ask_percent:.4f} | Bid(%) :: {self.bid_percent:.4f}"])
 
 
         lines.extend(["", "| Market Depth |"])
@@ -905,6 +905,10 @@ class SimplePMM(ScriptStrategyBase):
 
 
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
+
+        # if order_size_bid < minimum_size:
+        #     msg_q = (f"Order Size Bid is too small{order_size_bid:8f}")
+        #     self.log_with_clock(logging.INFO, msg_q)        
 
         order_size_bid = np.maximum(quote_balancing_volume , minimum_size )
         order_size_ask = np.maximum(base_balancing_volume , minimum_size )
