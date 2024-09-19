@@ -273,7 +273,7 @@ class SimplePMM(ScriptStrategyBase):
 
     ## Breakeven Initialization
     ## Trading Fee for Round Trip side Limit
-    fee_percent = 1 / 2 / 100  # Convert percentage to a fraction method
+    fee_percent = 1 / 4 / 100  # Convert percentage to a fraction method
     total_spent = 0
     total_bought = 0
     total_earned = 0
@@ -308,8 +308,8 @@ class SimplePMM(ScriptStrategyBase):
         self._ask_baseline = None
 
         self.initialize_startprice_flag = True
-        self.buy_counter = 2
-        self.sell_counter = 1
+        # self.buy_counter = 2
+        # self.sell_counter = 1
 
 
         # Volume Depth Init
@@ -557,7 +557,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def did_fill_order(self, event: OrderFilledEvent):
-        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
+        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
 
 
 
@@ -576,20 +576,20 @@ class SimplePMM(ScriptStrategyBase):
         # if self.buy_counter<= 0:
         #     self.buy_counter = 1
 
-        ### Counter method that resets the buy or sells if a breakeven trade is made. 
-        if event.price < self._bid_baseline or event.price <= bid_reservation_price:
-            self.sell_counter = 1
-            self.buy_counter += 1
+        # ### Counter method that resets the buy or sells if a breakeven trade is made. 
+        # if event.price < self._bid_baseline or event.price <= bid_reservation_price:
+        #     self.sell_counter = 1
+        #     self.buy_counter += 1
             
-        if event.price > self._ask_baseline or event.price >= ask_reservation_price:
-            self.sell_counter += 1
-            self.buy_counter = 1
+        # if event.price > self._ask_baseline or event.price >= ask_reservation_price:
+        #     self.sell_counter += 1
+        #     self.buy_counter = 1
 
-        if self.sell_counter <= 0:
-            self.sell_counter = 1
+        # if self.sell_counter <= 0:
+        #     self.sell_counter = 1
 
-        if self.buy_counter<= 0:
-            self.buy_counter = 1
+        # if self.buy_counter<= 0:
+        #     self.buy_counter = 1
 
         self.initialize_flag = False
 
@@ -613,7 +613,7 @@ class SimplePMM(ScriptStrategyBase):
 
         
         # Print log
-        msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}, Buy Counter {self.buy_counter}, Sell Counter{self.sell_counter}")
+        msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
 
@@ -647,8 +647,8 @@ class SimplePMM(ScriptStrategyBase):
         lines.extend(["", "| Market Depth |"])
         lines.extend([f"Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
 
-        lines.extend(["", "| Order History |"])
-        lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
+        # lines.extend(["", "| Order History |"])
+        # lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
 
         lines.extend(["", "| Volatility Measurements |"])
         lines.extend([f"Current Volatility(d%) :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
@@ -669,7 +669,8 @@ class SimplePMM(ScriptStrategyBase):
 
     def determine_log_multipliers(self):
         """Determine the best placement of percentages based on the percentage/log values 
-        (log(d)) / (log(p)) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n).  Or closer p = e^(ln(d) / n)"""
+        (log(d)) / (log(p)) = n, breakding this down with a fixed n to solve for p value turns into  p = d**(1/n).  Or closer p = e^(ln(d) / n)
+        Match against minimum profit wanted.  Allows us to determine an approximate exhaustion drop percent."""
 
         ## If doing a 50/50 it would be /2 since each side is trading equally
         ## If I am doing a single side (QFL), then the maximum orders should account for only the buy side entry. 
@@ -683,75 +684,74 @@ class SimplePMM(ScriptStrategyBase):
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
         bd = 1 / 30
-        ## Percent multiplier, <1 = buy(goes down), >1 = sell(goes up) 
-        #p = (1 - 0.05)
-        #bp = min( 1 - self.min_profitability, bd**(1/n) )
-        bp = 0.985 # math.exp(math.log(bd)/n)
+        bp = math.exp(math.log(bd)/n)
+        
+        bp = np.minimum(1 - self.min_profitability)
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
         sd = 30
-        #sp = max(1 + self.min_profitability, (sd**(1/n)) )
-        sp = 1.015 # math.exp(math.log(sd)/n)
+        sp = math.exp(math.log(sd)/n)
+
+        sp = np.maximum(1 + self.min_profitability, sp)
 
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
         return bp, sp
 
-    def determine_log_breakeven_levels(self):
-        bp,sp = self.determine_log_multipliers()
-        buy_counter_adjusted = self.buy_counter - 1
-        sell_counter_adjusted = self.sell_counter - 1
 
-        additive_buy = 0
-        additive_sell = 0
+
+
+            ### OLD METHOD
+            ### Now using CSV for more precise trade information
+            ######################xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    # def determine_log_breakeven_levels(self):
+        # bp,sp = self.determine_log_multipliers()
+        # buy_counter_adjusted = self.buy_counter - 1
+        # sell_counter_adjusted = self.sell_counter - 1
+
+        # additive_buy = 0
+        # additive_sell = 0
         
-        avg_buy_mult = 1
-        avg_sell_mult = 1
+        # avg_buy_mult = 1
+        # avg_sell_mult = 1
 
-        buy_breakeven_mult = 1
-        sell_breakeven_mult = 1
+        # buy_breakeven_mult = 1
+        # sell_breakeven_mult = 1
 
-        #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
-        if buy_counter_adjusted > 0:
-            for i in range(1, buy_counter_adjusted + 1):
-                if i == 1 : # First trade has no initial price drop
-                    additive_buy = 1 + self.fee_percent
-                elif i > 1 :   # Next trades decay log wise
-                    additive_buy += bp**(i-1) + self.fee_percent
-            # Find the avg percent of all trades        
-            avg_buy_mult = (additive_buy) / (buy_counter_adjusted)
-            # Divide the average price by the lowest price to get your multiplier for breakeven
-            buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
-        else:
-            additive_buy = 0
-            avg_buy_mult = 1
-            buy_breakeven_mult = 1
+        # #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
+        # if buy_counter_adjusted > 0:
+        #     for i in range(1, buy_counter_adjusted + 1):
+        #         if i == 1 : # First trade has no initial price drop
+        #             additive_buy = 1 + self.fee_percent
+        #         elif i > 1 :   # Next trades decay log wise
+        #             additive_buy += bp**(i-1) + self.fee_percent
+        #     # Find the avg percent of all trades        
+        #     avg_buy_mult = (additive_buy) / (buy_counter_adjusted)
+        #     # Divide the average price by the lowest price to get your multiplier for breakeven
+        #     buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
+        # else:
+        #     additive_buy = 0
+        #     avg_buy_mult = 1
+        #     buy_breakeven_mult = 1
 
-        if sell_counter_adjusted > 0:
-            for i in range(1, sell_counter_adjusted + 1):
-                if i == 1: # First trade has no initial price drop
-                    additive_sell = 1 - self.fee_percent
-                elif i > 1:  # Next trades decay log wise
-                    additive_sell += sp**(i-1) - self.fee_percent
-            # Find the avg percent of all trades        
-            avg_sell_mult = additive_sell / sell_counter_adjusted
-            # Divide the average price by the highest price to get your multiplier for breakeven
-            sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
+        # if sell_counter_adjusted > 0:
+        #     for i in range(1, sell_counter_adjusted + 1):
+        #         if i == 1: # First trade has no initial price drop
+        #             additive_sell = 1 - self.fee_percent
+        #         elif i > 1:  # Next trades decay log wise
+        #             additive_sell += sp**(i-1) - self.fee_percent
+        #     # Find the avg percent of all trades        
+        #     avg_sell_mult = additive_sell / sell_counter_adjusted
+        #     # Divide the average price by the highest price to get your multiplier for breakeven
+        #     sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
 
-        else:
-            additive_sell = 0
-            avg_sell_mult = 1
-            sell_breakeven_mult = 1
-
-        # msg2 = (f"additive_sell :: {additive_sell:.8f} , additive_buy :: {additive_buy:.8f}")
-        # self.log_with_clock(logging.INFO, msg2)
-        # msg = (f"avg_sell_mult :: {avg_sell_mult:.8f} , avg_buy_mult :: {avg_buy_mult:.8f}")
-        # self.log_with_clock(logging.INFO, msg)
-        # msg3 = (f"Sell Breakeven Mult(s * this = where buy level should be at) :: {sell_breakeven_mult:.8f} , Buy Breakeven Mult(s * this = where sell level should be above) :: {buy_breakeven_mult:.8f}")
-        # self.log_with_clock(logging.INFO, msg3)
+        # else:
+        #     additive_sell = 0
+        #     avg_sell_mult = 1
+        #     sell_breakeven_mult = 1
 
 
-        return buy_breakeven_mult, sell_breakeven_mult
+        # return buy_breakeven_mult, sell_breakeven_mult
         
 
     def get_current_top_bid_ask(self):
@@ -909,13 +909,13 @@ class SimplePMM(ScriptStrategyBase):
     def get_midprice(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
 
-        if self._last_trade_price == None and ( self.buy_counter != 1 or self.sell_counter != 1):
+        if self._last_trade_price == None :
             if self.initialize_flag == True:
                 # Fetch midprice only during initialization
                 if self._last_trade_price is None:
 
                     ## If I have to manually restart the bot mid trade, this is the last traded price. 
-                    manual_price = 0.084139
+                    manual_price = 0.087009
                     
                     #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
@@ -926,7 +926,7 @@ class SimplePMM(ScriptStrategyBase):
                         self._ask_baseline = (bought_baseline)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
-        elif self.buy_counter == 1 and self.sell_counter == 1 and self._last_trade_price == None:
+        elif self._last_trade_price == None and self.initialize_flag == False:
 
             self._bid_baseline = (sold_baseline)
 
@@ -1015,7 +1015,7 @@ class SimplePMM(ScriptStrategyBase):
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
-        buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
+        bp,sp = self.determine_log_multipliers()
 
         msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
         self.log_with_clock(logging.INFO, msg_4)
@@ -1102,17 +1102,14 @@ class SimplePMM(ScriptStrategyBase):
         ask_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_reservation_price)
 
 
-        bid_stdev_price = bid_reservation_price - (Decimal(3) * (max_bid_volatility * s_bid))
-        ask_stdev_price = ask_reservation_price + (Decimal(3) * (max_ask_volatility * s_ask))
-
         
-        return  t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price
+        return  t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price
 
 
 
 
     def optimal_bid_ask_spread(self):
-        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price, bid_stdev_price, ask_stdev_price = self.reservation_price()
+        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
         order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
@@ -1171,8 +1168,8 @@ class SimplePMM(ScriptStrategyBase):
 
     
         ## Optimal Spread in comparison to the min profit wanted
-        min_profit_bid =  bid_reservation_price * (Decimal(1) / (Decimal(1) + Decimal(self.min_profitability)))
-        min_profit_ask = ask_reservation_price * (Decimal(1) / (Decimal(1) - Decimal(self.min_profitability)))
+        min_profit_bid =  bid_reservation_price * (Decimal(1) - Decimal(self.min_profitability))
+        min_profit_ask = ask_reservation_price * (Decimal(1) + Decimal(self.min_profitability))
 
         # Spread calculation price vs the minimum profit price for entries
         optimal_bid_price = np.minimum(bid_reservation_price -  (optimal_bid_spread  / TWO), min_profit_bid)
