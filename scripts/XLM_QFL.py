@@ -384,13 +384,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Function to convert data to JSON-compatible types
         def convert_to_native(data):
-            if isinstance(data, dict):
-                return {k: convert_to_native(v) for k, v in data.items()}
-            elif isinstance(data, list):
-                return [convert_to_native(i) for i in data]
-            elif isinstance(data, (pd.Timestamp, pd._libs.tslibs.np_datetime)):
-                return int(data.timestamp() * 1000)  # Convert to milliseconds
-            elif isinstance(data, np.int64):
+            if isinstance(data, np.int64):
                 return int(data)  # Convert numpy int64 to regular int
             elif isinstance(data, np.float64):
                 return float(data)  # Convert numpy float64 to regular float
