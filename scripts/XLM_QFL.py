@@ -504,8 +504,8 @@ class SimplePMM(ScriptStrategyBase):
         if order_size_ask >= minimum_size:
             order_counter.append(sell_order)
 
-        msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
-        self.log_with_clock(logging.INFO, msg)
+        # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
+        # self.log_with_clock(logging.INFO, msg)
 
         return order_counter #[buy_order , sell_order]
 
