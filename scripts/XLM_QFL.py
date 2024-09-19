@@ -357,7 +357,7 @@ class SimplePMM(ScriptStrategyBase):
             self.last_time_reported = self.current_timestamp
 
         
-    def call_trade_history(file_name='trades_XLM', start_timestamp=1726652280000):
+    def call_trade_history(self, file_name='trades_XLM', start_timestamp = 1726652280000):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
@@ -560,7 +560,7 @@ class SimplePMM(ScriptStrategyBase):
         #     self.trade_history_start_timestamp = event.timestamp
 
         # Update Breakevens and Timestamps after a trade completes
-        breakeven_buy_price,breakeven_sell_price,realized_pnl = self.call_trade_history('trades_XLM', self.trade_history_start_timestamp)
+        breakeven_buy_price, breakeven_sell_price, realized_pnl = self.call_trade_history('trades_XLM', self.trade_history_start_timestamp)
 
 
 
