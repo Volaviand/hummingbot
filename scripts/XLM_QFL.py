@@ -360,6 +360,7 @@ class SimplePMM(ScriptStrategyBase):
     def call_trade_history(self, file_name='trades_XLM'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
+        # Match to the timestamp of the start of a trade cycle. 
         init_timestamp = 1726708662000
 
         # Specify the path to your CSV file
@@ -375,6 +376,8 @@ class SimplePMM(ScriptStrategyBase):
         timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
 
         # Load previous state if file exists
+        # If you are in the middle of a trade cycle, this should reflect net value
+        ## and the starting timestamp of your history calculations
         if os.path.exists(timestamp_file_path):
             with open(timestamp_file_path, 'r') as f:
                 state = json.load(f)
@@ -384,7 +387,7 @@ class SimplePMM(ScriptStrategyBase):
             last_net_value = 0
             init_timestamp = init_timestamp
 
-        # Get the most recent timestamp from the CSV
+        # Get the most recent timestamp from the CSV that represents your last trade
         last_timestamp = df['timestamp'].max()
 
         # Function to save the start timestamp and last net value
@@ -400,7 +403,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        # Filter trades within the specified period
+        # Filter trades from the start of your trade cycle
         filtered_df = df[(df['timestamp'] >= init_timestamp)]
 
         # Filter out buy and sell trades
@@ -446,7 +449,7 @@ class SimplePMM(ScriptStrategyBase):
         ########## New Trade Cycle Starting Behavior
         ##################################============================
 
-        # Save the current state if there's a crossover
+        # Save the current state if there's a crossover, this means a new cycle is happening
         if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
             save_timestamp(last_timestamp, net_value)
             init_timestamp = last_timestamp
