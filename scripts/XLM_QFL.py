@@ -381,12 +381,18 @@ class SimplePMM(ScriptStrategyBase):
         # Function to save the start timestamp and last net value
         def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
             try:
+                data_to_save = {'trade_history_last_timestamp': start_time, 'last_net_value': last_net_value}
+                
+                # Validate that JSON can be serialized
+                json_string = json.dumps(data_to_save)
+                
                 with open(file_path, 'w') as f:
-                    json.dump({
-                        'trade_history_last_timestamp': start_time,
-                        'last_net_value': last_net_value
-                    }, f)
+                    f.write(json_string)
+                    f.flush()  # Ensure all data is written to disk
                 print(f"Timestamp and net value saved to {file_path}")
+                
+            except (TypeError, ValueError) as e:
+                print(f"Data serialization error: {e}")
             except Exception as e:
                 print(f"Error writing to {file_path}: {e}")
 
