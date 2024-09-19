@@ -422,7 +422,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Filter trades from the start of your trade cycle
-        filtered_df = df[(int(df['timestamp']) >= init_timestamp)]
+        filtered_df = df[(df['timestamp'] >= init_timestamp)]
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
