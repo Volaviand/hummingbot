@@ -376,6 +376,21 @@ class SimplePMM(ScriptStrategyBase):
         # File path for saving and loading state
         timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
 
+
+
+        # Function to save the start timestamp and last net value
+        def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
+            try:
+                with open(file_path, 'w') as f:
+                    json.dump({
+                        'trade_history_last_timestamp': start_time,
+                        'last_net_value': last_net_value
+                    }, f)
+                print(f"Timestamp and net value saved to {file_path}")
+            except Exception as e:
+                print(f"Error writing to {file_path}: {e}")
+
+
         # Load previous state if file exists
         # If you are in the middle of a trade cycle, this should reflect net value
         ## and the starting timestamp of your history calculations
@@ -392,22 +407,13 @@ class SimplePMM(ScriptStrategyBase):
                 print(f"Error accessing {timestamp_file_path}: {e}")
         else:
             print(f"No existing state file found at {timestamp_file_path}. Using default values.")
-        
+            # Save the default state immediately to create the file
+            save_timestamp(init_timestamp, last_net_value)
 
         # Get the most recent timestamp from the CSV that represents your last trade
         last_timestamp = df['timestamp'].max()
 
-        # Function to save the start timestamp and last net value
-        def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
-            try:
-                with open(file_path, 'w') as f:
-                    json.dump({
-                        'trade_history_last_timestamp': start_time,
-                        'last_net_value': last_net_value
-                    }, f)
-                print(f"Timestamp and net value saved to {file_path}")
-            except Exception as e:
-                print(f"Error writing to {file_path}: {e}")
+
 
 
 
@@ -466,6 +472,7 @@ class SimplePMM(ScriptStrategyBase):
         if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
             save_timestamp(last_timestamp, net_value)
             init_timestamp = last_timestamp
+            last_net_value = net_value
 
 
 
