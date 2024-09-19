@@ -654,7 +654,7 @@ class SimplePMM(ScriptStrategyBase):
 
         lines.extend(["", "| Inventory Imbalance | Trade History |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
-        lines.extend([f"R_PnL :: {self.pnl:.8f} | U_PnL :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
+        lines.extend([f"R_PnL (Quote) :: {self.pnl:.8f} | U_PnL (Quote) :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
         lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
