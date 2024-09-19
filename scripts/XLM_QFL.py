@@ -299,7 +299,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Trade History Timestamp
-        self.last_trade_timestamp = 1726652280000
+        # self.last_trade_timestamp = 1726652280000
 
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
@@ -357,10 +357,10 @@ class SimplePMM(ScriptStrategyBase):
             self.last_time_reported = self.current_timestamp
 
         
-    def call_trade_history(self, file_name='trades_XLM', last_timestamp = 1726652280000):
+    def call_trade_history(self, file_name='trades_XLM'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
-        init_timestamp = 1726652280000
+        init_timestamp = 1726708662000
 
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
@@ -384,6 +384,9 @@ class SimplePMM(ScriptStrategyBase):
             last_net_value = 0
             init_timestamp = init_timestamp
 
+        # Get the most recent timestamp from the CSV
+        last_timestamp = df['timestamp'].max()
+
         # Function to save the start timestamp and last net value
         def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
             with open(file_path, 'w') as f:
@@ -398,7 +401,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Filter trades within the specified period
-        filtered_df = df[(df['timestamp'] >= last_timestamp)]
+        filtered_df = df[(df['timestamp'] >= init_timestamp)]
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
@@ -566,8 +569,8 @@ class SimplePMM(ScriptStrategyBase):
         #     self.last_trade_timestamp = event.timestamp
 
         # Update Breakevens and Timestamps after a trade completes
-        self.last_trade_timestamp = event.timestamp
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM', self.last_trade_timestamp)
+        # self.last_trade_timestamp = event.timestamp
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
 
 
@@ -981,7 +984,7 @@ class SimplePMM(ScriptStrategyBase):
         
         self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM', self.last_trade_timestamp)
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
         buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
 
