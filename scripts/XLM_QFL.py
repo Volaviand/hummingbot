@@ -29,6 +29,8 @@ from arch import arch_model
 import sqlite3
 import json
 import sys
+import os
+
 sys.path.append('/home/tyler/quant/API_call_tests/')
 from Kraken_Calculations import BuyTrades, SellTrades
 
@@ -297,7 +299,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Trade History Timestamp
-        self.trade_history_start_timestamp = 1726652280000
+        self.trade_history_start_timestamp = 0
 
         ## Initialize Trading Flag for use 
         self.initialize_flag = True
@@ -355,7 +357,7 @@ class SimplePMM(ScriptStrategyBase):
             self.last_time_reported = self.current_timestamp
 
         
-    def call_trade_history(self, file_name = 'trades_XLM', start_timestamp = 1726652280000):
+    def call_trade_history(file_name='trades_XLM', start_timestamp=1726652280000):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
@@ -364,30 +366,36 @@ class SimplePMM(ScriptStrategyBase):
         df = pd.read_csv(csv_file_path)
 
         # Show the first few rows of the dataframe to verify the data
-        print(df.head())
+        #print(df.head())
 
-        # Convert timestamp column to datetime if it's in milliseconds
-        start_time = start_timestamp
+        # File path for saving and loading state
+        timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
 
-        # Initialize tracking
-        last_net_value = 0
+        # Load previous state if file exists
+        if os.path.exists(timestamp_file_path):
+            with open(timestamp_file_path, 'r') as f:
+                state = json.load(f)
+            last_net_value = state.get('last_net_value', 0)
+            start_time = state.get('trade_history_start_timestamp', start_timestamp)
+        else:
+            last_net_value = 0
+            start_time = start_timestamp
 
-        # Function to save the start timestamp
-        def save_timestamp(start_time, last_net_value,  file_path=f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'):
+        # Function to save the start timestamp and last net value
+        def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
             with open(file_path, 'w') as f:
                 json.dump({
                     'trade_history_start_timestamp': start_time,
                     'last_net_value': last_net_value
-                }, f)            
-                #print(f"Timestamp saved to {file_path}")
+                }, f)
+            print(f"Timestamp saved to {file_path}")
 
 
-        # Save the timestamp
-        save_timestamp(start_time)
+
+
 
         # Filter trades within the specified period
         filtered_df = df[(df['timestamp'] >= start_time)]
-
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
@@ -402,32 +410,28 @@ class SimplePMM(ScriptStrategyBase):
         sum_of_sell_amount = sell_trades['amount'].sum()
         sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
 
-        # Amount Comparison
-        amount_comparison = abs(sum_of_buy_amount - sum_of_sell_amount)
-
-
-
         # Calculate the total buy cost including fees
-        total_buy_cost = sum_of_buy_prices +  sum_of_buy_fees
+        total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
 
         # Calculate the total sell proceeds after deducting fees
-        total_sell_proceeds = sum_of_sell_prices -  sum_of_sell_fees
+        total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
 
         # Calculate net value in quote
         net_value = total_buy_cost - total_sell_proceeds
 
-
         # Save the current state if there's a crossover
         if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
             save_timestamp(start_time, net_value)
-        
-        last_net_value = net_value
 
+        # Save timestamp to global variable for use
+        self.trade_history_start_timestamp = start_time
+
+        # Update the last net value
+        last_net_value = net_value
 
         # Calculate the breakeven prices
         breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
         breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
-
 
         # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
         balance_text = None
@@ -440,9 +444,7 @@ class SimplePMM(ScriptStrategyBase):
 
         realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
 
-        # Calculate unrealized P&L: consider the remaining positions
-        # remaining_amount = abs(sum_of_buy_amount - sum_of_sell_amount)
-        # unrealized_pnl = (0.085314 - breakeven_buy_price) * remaining_amount
+        # Return results
         return breakeven_buy_price, breakeven_sell_price, realized_pnl
 
 
@@ -765,7 +767,7 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
-        breakeven_buy_price,breakeven_sell_price,realized_pnl = self.call_trade_history('trades_XLM', self.trade_history_start_timestamp)
+        breakeven_buy_price, breakeven_sell_price, realized_pnl = self.call_trade_history('trades_XLM', self.trade_history_start_timestamp)
 
         msg_trade_data = (f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
         self.log_with_clock(logging.INFO, msg_trade_data)
