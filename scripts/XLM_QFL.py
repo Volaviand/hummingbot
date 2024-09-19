@@ -464,18 +464,25 @@ class SimplePMM(ScriptStrategyBase):
         else:
             balance_text = "Balanced"
 
-        current_midprice = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
-
         realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
 
         # Calculate Unrealized PnL (for the remaining open position)
         open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
 
+
+        vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                False,
+                                                open_position_size).result_price
+
+        vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                True,
+                                                open_position_size).result_price
+
         # Unrealized PnL is based on the current midprice and the breakeven of the open position
         if sum_of_buy_amount > sum_of_sell_amount:
-            unrealized_pnl = open_position_size * (current_midprice - Decimal(breakeven_buy_price))
+            unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
         elif sum_of_buy_amount < sum_of_sell_amount:
-            unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - current_midprice)
+            unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
         else:
             unrealized_pnl = 0
 
