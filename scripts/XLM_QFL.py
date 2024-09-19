@@ -775,9 +775,6 @@ class SimplePMM(ScriptStrategyBase):
 
     def get_current_positions(self):
 
-        msg_trade_data = (f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
-        self.log_with_clock(logging.INFO, msg_trade_data)
-
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
