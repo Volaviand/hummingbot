@@ -659,7 +659,7 @@ class SimplePMM(ScriptStrategyBase):
 
         lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
-        lines.extend([f"Bl /: Ask :: {self._bid_baseline} | Bid :: {self._ask_baseline}"])
+        lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
         lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
         lines.extend([f"PT /: Ask(%) :: {self.ask_percent:.4f} | Bid(%) :: {self.bid_percent:.4f}"])
 
