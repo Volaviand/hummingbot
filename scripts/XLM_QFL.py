@@ -1030,8 +1030,8 @@ class SimplePMM(ScriptStrategyBase):
         self.pnl = realized_pnl
         self.n_v = net_value
 
-        msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
-        self.log_with_clock(logging.INFO, msg_4)
+        # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
+        # self.log_with_clock(logging.INFO, msg_4)
 
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
