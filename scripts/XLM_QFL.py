@@ -334,6 +334,7 @@ class SimplePMM(ScriptStrategyBase):
         self.b_be = 0
         self.s_be = 0
         self.pnl = 0
+        self.u_pnl = 0
         self.n_v = 0
 
     def on_tick(self):
@@ -463,8 +464,22 @@ class SimplePMM(ScriptStrategyBase):
         else:
             balance_text = "Balanced"
 
+        current_midprice = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+
         realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
 
+        # Calculate Unrealized PnL (for the remaining open position)
+        open_position_size = abs(sum_of_buy_amount - sum_of_sell_amount)
+
+        # Unrealized PnL is based on the current midprice and the breakeven of the open position
+        if sum_of_buy_amount > sum_of_sell_amount:
+            unrealized_pnl = open_position_size * (current_midprice - breakeven_buy_price)
+        elif sum_of_buy_amount < sum_of_sell_amount:
+            unrealized_pnl = open_position_size * (breakeven_sell_price - current_midprice)
+        else:
+            unrealized_pnl = 0
+
+        self.u_pnl = unrealized_pnl
 
         ##################################============================
         ########## New Trade Cycle Starting Behavior
@@ -632,7 +647,7 @@ class SimplePMM(ScriptStrategyBase):
 
         lines.extend(["", "| Inventory Imbalance | Trade History |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
-        lines.extend([f"PnL :: {self.pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
+        lines.extend([f"R_PnL :: {self.pnl:.8f} | U_PnL :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
         lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
