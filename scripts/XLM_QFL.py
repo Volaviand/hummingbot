@@ -331,6 +331,10 @@ class SimplePMM(ScriptStrategyBase):
         self.q_imbalance = 0
         self.inventory_diff = 0
         
+        self.b_be = 0
+        self.s_be = 0
+        self.pnl = 0
+        self.n_v = 0
 
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
@@ -386,8 +390,10 @@ class SimplePMM(ScriptStrategyBase):
                 return [convert_to_native(i) for i in data]
             elif isinstance(data, (pd.Timestamp, pd._libs.tslibs.np_datetime)):
                 return int(data.timestamp() * 1000)  # Convert to milliseconds
-            elif isinstance(data, (np.int64, np.float64)):
-                return int(data)
+            elif isinstance(data, np.int64):
+                return int(data)  # Convert numpy int64 to regular int
+            elif isinstance(data, np.float64):
+                return float(data)  # Convert numpy float64 to regular float
             else:
                 return data
 
@@ -647,18 +653,21 @@ class SimplePMM(ScriptStrategyBase):
         balance_df = self.get_balance_df()
         lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
 
-        lines.extend(["", "| Inventory Imbalance |"])
+        lines.extend(["", "| Inventory Imbalance | Trade History |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
+        lines.extend([f"PnL :: {self.pnl:.8f} | Inventory Difference :: {self.n_v:.8f}"])
 
-        lines.extend(["", "| Reservation Prices | Profit Target |"])
-        lines.extend([f"Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
-        lines.extend([f"Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
+
+        lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
+        lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"Bl /: Ask :: {self._bid_baseline} | Bid :: {self._ask_baseline}"])
+        lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
+        lines.extend([f"PT /: Ask(d%) :: {self.ask_percent:.4f} | Bid(d%) :: {self.bid_percent:.4f}"])
+
 
         lines.extend(["", "| Market Depth |"])
         lines.extend([f"Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
 
-        # lines.extend(["", "| Order History |"])
-        # lines.extend([f"Buys :: {self.buy_counter - 1} | Sells :: {self.sell_counter - 1}"])
 
         lines.extend(["", "| Volatility Measurements |"])
         lines.extend([f"Current Volatility(d%) :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
@@ -1029,6 +1038,10 @@ class SimplePMM(ScriptStrategyBase):
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
+        self.b_be = breakeven_buy_price
+        self.s_be = breakeven_sell_price
+        self.pnl = realized_pnl
+        self.n_v = net_value
 
         msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
         self.log_with_clock(logging.INFO, msg_4)
