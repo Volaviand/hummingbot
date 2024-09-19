@@ -994,7 +994,8 @@ class SimplePMM(ScriptStrategyBase):
 
         buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
 
-
+        msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
+        self.log_with_clock(logging.INFO, msg_4)
 
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
