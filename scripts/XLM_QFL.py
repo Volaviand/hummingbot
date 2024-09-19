@@ -419,10 +419,13 @@ class SimplePMM(ScriptStrategyBase):
         sum_of_sell_amount = sell_trades['amount'].sum()
         sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
 
-        # Calculate the total buy cost including fees
-        total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
+        # Calculate the total buy cost after  fees
+        # This isnt a price movement, but a comparison of sum amount.  
+        # If I bought $100 worth and paid 0.50, then I only have $99.5
+        # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5
+        total_buy_cost = sum_of_buy_prices - sum_of_buy_fees
 
-        # Calculate the total sell proceeds after deducting fees
+        # Calculate the total sell proceeds after fees
         total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
 
         # Calculate net value in quote
@@ -896,8 +899,8 @@ class SimplePMM(ScriptStrategyBase):
                     # Ensure midprice is not None before converting and assigning
                     if manual_price is not None:
                         self._last_trade_price = (manual_price)
-                        self._bid_baseline = (self._last_trade_price)
-                        self._ask_baseline = (self._last_trade_price)
+                        self._bid_baseline = (sold_baseline)
+                        self._ask_baseline = (bought_baseline)
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
         elif self.buy_counter == 1 and self.sell_counter == 1 and self._last_trade_price == None:
