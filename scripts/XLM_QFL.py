@@ -362,6 +362,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Match to the timestamp of the start of a trade cycle. 
         init_timestamp = 1726708662000
+        last_net_value = 0
 
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
