@@ -228,11 +228,11 @@ class SimplePMM(ScriptStrategyBase):
     exchange, with a distance defined by the ask_spread and bid_spread. Every order_refresh_time in seconds,
     the bot will cancel and replace the orders.
     """
-    bid_spread = 0.05
-    ask_spread = 0.05
+    # bid_spread = 0.05
+    # ask_spread = 0.05
     min_profitability = 0.02
     target_profitability = min_profitability
-    _order_refresh_tolerance_pct = 0.0301
+    # _order_refresh_tolerance_pct = 0.0301
 
 
 
@@ -483,15 +483,15 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
-            #vwap_bid, vwap_ask = self.get_vwap_bid_ask()
-            # if spread diff is more than the tolerance or order quantities are different, return false.
-            current = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
-            if self._order_refresh_tolerance_pct > 0:
-                if abs(proposal - current)/current > self._order_refresh_tolerance_pct:
-                    return False
-                else:
-                    return True
+    # def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
+    #         #vwap_bid, vwap_ask = self.get_vwap_bid_ask()
+    #         # if spread diff is more than the tolerance or order quantities are different, return false.
+    #         current = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+    #         if self._order_refresh_tolerance_pct > 0:
+    #             if abs(proposal - current)/current > self._order_refresh_tolerance_pct:
+    #                 return False
+    #             else:
+    #                 return True
 
 
     def create_proposal(self) -> List[OrderCandidate]:
@@ -678,7 +678,8 @@ class SimplePMM(ScriptStrategyBase):
         ## for example, buying illiquid or low volume coins(more volatile than FIAT) should be harder to do than selling/ (profiting) from the trade. 
 
         n = self.maximum_orders
-        
+        # n = math.floor(self.maximum_orders/2)
+
         ## Buys
         #Minimum Distance in percent. 0.01 = a drop of 99% from original value
         bd = 1 / 30
