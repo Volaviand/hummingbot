@@ -472,9 +472,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # Unrealized PnL is based on the current midprice and the breakeven of the open position
         if sum_of_buy_amount > sum_of_sell_amount:
-            unrealized_pnl = open_position_size * (current_midprice - breakeven_buy_price)
+            unrealized_pnl = open_position_size * (current_midprice - Decimal(breakeven_buy_price))
         elif sum_of_buy_amount < sum_of_sell_amount:
-            unrealized_pnl = open_position_size * (breakeven_sell_price - current_midprice)
+            unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - current_midprice)
         else:
             unrealized_pnl = 0
 
