@@ -512,7 +512,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
-        self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
+        self._last_trade_price = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
         # Save Values for Status use without recalculating them over and over again
@@ -1025,7 +1025,7 @@ class SimplePMM(ScriptStrategyBase):
     def reservation_price(self):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
+        self._last_trade_price = self.get_midprice()
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
