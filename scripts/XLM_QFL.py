@@ -230,7 +230,7 @@ class SimplePMM(ScriptStrategyBase):
     """
     bid_spread = 0.05
     ask_spread = 0.05
-    min_profitability = 0.01
+    min_profitability = 0.02
     target_profitability = min_profitability
     _order_refresh_tolerance_pct = 0.0301
 
@@ -451,7 +451,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Return results
-        return breakeven_buy_price, breakeven_sell_price, realized_pnl
+        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
 
 
@@ -567,7 +567,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Update Breakevens and Timestamps after a trade completes
         self.last_trade_timestamp = event.timestamp
-        breakeven_buy_price, breakeven_sell_price, realized_pnl = self.call_trade_history('trades_XLM', self.last_trade_timestamp)
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM', self.last_trade_timestamp)
 
 
 
@@ -774,7 +774,6 @@ class SimplePMM(ScriptStrategyBase):
         return  vwap_bid, vwap_ask
 
     def get_current_positions(self):
-        breakeven_buy_price, breakeven_sell_price, realized_pnl = self.call_trade_history('trades_XLM', self.last_trade_timestamp)
 
         msg_trade_data = (f"{breakeven_buy_price}, {breakeven_sell_price}, {realized_pnl}")
         self.log_with_clock(logging.INFO, msg_trade_data)
@@ -984,19 +983,43 @@ class SimplePMM(ScriptStrategyBase):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         self._last_trade_price, self._ask_baseline, self._bid_baseline = self.get_midprice()
-       
+
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM', self.last_trade_timestamp)
+
         buy_breakeven_mult, sell_breakeven_mult = self.determine_log_breakeven_levels()
+
+
 
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 
+        # If there is no trade data, use the IQR baseline
+        if breakeven_buy_price == 0 :
+            s_bid = self._bid_baseline
 
-        s_bid = self._bid_baseline
+        ### If you are in the middle of a sell heavy trade, your buys should be below the sell breakeven to make a profit
+        elif breakeven_buy_price > 0 and net_value < 0:
+            s_bid = breakeven_sell_price
+
+        ### If you are in the middle of a buy(base) heavy trade, your next purchase should be below the buy BE to improve bid BE
+        else:
+            s_bid = breakeven_buy_price
+
         s_bid = Decimal(s_bid)
         s_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_bid)
 
+        # If there is no trade data, use the IQR baseline
+        if breakeven_sell_price == 0 :
+            s_ask = self._ask_baseline
 
-        s_ask = self._ask_baseline
+        ### If you are in the middle of a buy heavy trade, your sells should be above the buy breakeven to make a profit
+        if breakeven_sell_price > 0 and net_value > 0:
+            s_ask = breakeven_buy_price
+
+        ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
+        else:
+            s_ask = breakeven_sell_price
+
         s_ask = Decimal(s_ask)
         s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
 
@@ -1042,10 +1065,10 @@ class SimplePMM(ScriptStrategyBase):
         bid_reservation_adjustment = bid_risk_rate * bid_volatility_in_base * t
         ask_reservation_adjustment = ask_risk_rate * ask_volatility_in_base * t
 
-        bid_reservation_price = (s_bid*Decimal(sell_breakeven_mult)) - (bid_reservation_adjustment) 
+        bid_reservation_price = (s_bid) - (bid_reservation_adjustment) 
         bid_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, bid_reservation_price)
 
-        ask_reservation_price = (s_ask*Decimal(buy_breakeven_mult)) - (ask_reservation_adjustment)
+        ask_reservation_price = (s_ask) - (ask_reservation_adjustment)
         ask_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_reservation_price)
 
 
