@@ -381,27 +381,14 @@ class SimplePMM(ScriptStrategyBase):
         timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
 
 
-
-        # Function to convert data to JSON-compatible types
-        def convert_to_native(data):
-            if isinstance(data, np.int64):
-                return int(data)  # Convert numpy int64 to regular int
-            elif isinstance(data, np.float64):
-                return float(data)  # Convert numpy float64 to regular float
-            else:
-                return data
-
         # Function to save the start timestamp and last net value
         def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
             try:
-                data_to_save = {'trade_history_last_timestamp': start_time, 'last_net_value': last_net_value}
-                
-                # Convert data to native types for JSON serialization
-                data_to_save_native = convert_to_native(data_to_save)
-                
+                data_to_save = {'trade_history_last_timestamp': int(start_time), 'last_net_value': last_net_value}
+
                 # Manually convert to JSON string and write to file
                 with open(file_path, 'w') as f:
-                    json_string = json.dumps(data_to_save_native)
+                    json_string = json.dumps(data_to_save)
                     f.write(json_string)
                     f.flush()  # Ensure all data is written to disk
                 print(f"Timestamp and net value saved to {file_path}")
