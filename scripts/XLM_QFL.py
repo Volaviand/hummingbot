@@ -939,8 +939,8 @@ class SimplePMM(ScriptStrategyBase):
 
         self._bid_baseline = (sold_baseline)
         self._ask_baseline = (bought_baseline)
-        msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
-        self.log_with_clock(logging.INFO, msg_gv)
+        # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
+        # self.log_with_clock(logging.INFO, msg_gv)
         return self._last_trade_price
 
     def call_garch_model(self):
