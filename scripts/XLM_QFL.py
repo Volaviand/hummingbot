@@ -379,25 +379,34 @@ class SimplePMM(ScriptStrategyBase):
         # If you are in the middle of a trade cycle, this should reflect net value
         ## and the starting timestamp of your history calculations
         if os.path.exists(timestamp_file_path):
-            with open(timestamp_file_path, 'r') as f:
-                state = json.load(f)
-            last_net_value = state.get('last_net_value', 0)
-            init_timestamp = state.get('trade_history_last_timestamp', init_timestamp)
+            try:
+                print(f"Loading state from {timestamp_file_path}")
+                with open(timestamp_file_path, 'r') as f:
+                    state = json.load(f)
+                last_net_value = state.get('last_net_value', 0)
+                init_timestamp = state.get('trade_history_last_timestamp', init_timestamp)
+            except (json.JSONDecodeError, ValueError) as e:
+                print(f"Error reading JSON file {timestamp_file_path}: {e}. Initializing default values.")
+            except Exception as e:
+                print(f"Error accessing {timestamp_file_path}: {e}")
         else:
-            last_net_value = 0
-            init_timestamp = init_timestamp
+            print(f"No existing state file found at {timestamp_file_path}. Using default values.")
+        
 
         # Get the most recent timestamp from the CSV that represents your last trade
         last_timestamp = df['timestamp'].max()
 
         # Function to save the start timestamp and last net value
         def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
-            with open(file_path, 'w') as f:
-                json.dump({
-                    'trade_history_last_timestamp': start_time,
-                    'last_net_value': last_net_value
-                }, f)
-            print(f"Timestamp saved to {file_path}")
+            try:
+                with open(file_path, 'w') as f:
+                    json.dump({
+                        'trade_history_last_timestamp': start_time,
+                        'last_net_value': last_net_value
+                    }, f)
+                print(f"Timestamp and net value saved to {file_path}")
+            except Exception as e:
+                print(f"Error writing to {file_path}: {e}")
 
 
 
