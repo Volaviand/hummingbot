@@ -906,15 +906,19 @@ class SimplePMM(ScriptStrategyBase):
 
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
-        if order_size_bid < minimum_size * 0.9 :
+        if quote_balancing_volume < minimum_size * 0.9 :
             msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
             self.log_with_clock(logging.INFO, msg_b) 
+
+            order_size_bid = quote_balancing_volume
         else:
             order_size_bid = np.maximum(quote_balancing_volume , minimum_size )
 
-        if order_size_ask < minimum_size * 0.9 :
+        if base_balancing_volume < minimum_size * 0.9 :
             msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
-            self.log_with_clock(logging.INFO, msg_a)   
+            self.log_with_clock(logging.INFO, msg_a)  
+
+            order_size_ask = base_balancing_volume 
         else:
             order_size_ask = np.maximum(base_balancing_volume , minimum_size )
 
