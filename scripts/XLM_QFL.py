@@ -378,15 +378,30 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+        # Function to convert data to JSON-compatible types
+        def convert_to_native(data):
+            if isinstance(data, dict):
+                return {k: convert_to_native(v) for k, v in data.items()}
+            elif isinstance(data, list):
+                return [convert_to_native(i) for i in data]
+            elif isinstance(data, (pd.Timestamp, pd._libs.tslibs.np_datetime)):
+                return int(data.timestamp() * 1000)  # Convert to milliseconds
+            elif isinstance(data, (np.int64, np.float64)):
+                return int(data)
+            else:
+                return data
+
         # Function to save the start timestamp and last net value
         def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
             try:
                 data_to_save = {'trade_history_last_timestamp': start_time, 'last_net_value': last_net_value}
                 
-                # Validate that JSON can be serialized
-                json_string = json.dumps(data_to_save)
+                # Convert data to native types for JSON serialization
+                data_to_save_native = convert_to_native(data_to_save)
                 
+                # Manually convert to JSON string and write to file
                 with open(file_path, 'w') as f:
+                    json_string = json.dumps(data_to_save_native)
                     f.write(json_string)
                     f.flush()  # Ensure all data is written to disk
                 print(f"Timestamp and net value saved to {file_path}")
@@ -396,15 +411,13 @@ class SimplePMM(ScriptStrategyBase):
             except Exception as e:
                 print(f"Error writing to {file_path}: {e}")
 
-
         # Load previous state if file exists
-        # If you are in the middle of a trade cycle, this should reflect net value
-        ## and the starting timestamp of your history calculations
         if os.path.exists(timestamp_file_path):
             try:
                 print(f"Loading state from {timestamp_file_path}")
                 with open(timestamp_file_path, 'r') as f:
-                    state = json.load(f)
+                    json_string = f.read()
+                    state = json.loads(json_string)
                 last_net_value = state.get('last_net_value', 0)
                 init_timestamp = state.get('trade_history_last_timestamp', init_timestamp)
             except (json.JSONDecodeError, ValueError) as e:
@@ -932,26 +945,17 @@ class SimplePMM(ScriptStrategyBase):
                     # Ensure midprice is not None before converting and assigning
                     if manual_price is not None:
                         self._last_trade_price = (manual_price)
-                        self._bid_baseline = (sold_baseline)
-                        self._ask_baseline = (bought_baseline)
+
                     self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
-        elif self._last_trade_price == None and self.initialize_flag == False:
-
-            self._bid_baseline = (sold_baseline)
-
-            self._ask_baseline = (bought_baseline)
-
-    
         else:
             self._last_trade_price = self._last_trade_price
 
-            self._bid_baseline = self._last_trade_price
-
-            self._ask_baseline = self._last_trade_price
-
-
-        return self._last_trade_price, self._ask_baseline, self._bid_baseline
+        self._bid_baseline = (sold_baseline)
+        self._ask_baseline = (bought_baseline)
+        msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
+        self.log_with_clock(logging.INFO, msg_gv)
+        return self._last_trade_price
 
     def call_garch_model(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
