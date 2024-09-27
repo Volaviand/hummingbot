@@ -1253,7 +1253,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
         if optimal_bid_price <= 0 :
-            msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0.")
+            msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0. ::: Bid Locations :Deepest Bid: {deepest_bid}; 
+                    Optimal Bid Price: {optimal_bid_price}; Price Above Bid : {price_above_bid}; Top Bid Price: {top_bid_price}")
             self.log_with_clock(logging.INFO, msg_2)
 
             
