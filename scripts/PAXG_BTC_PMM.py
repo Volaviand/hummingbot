@@ -728,8 +728,8 @@ class SimplePMM(ScriptStrategyBase):
         #Decimalize for later use
         bp = Decimal(bp)
         sp = Decimal(sp)
-        # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
-        # self.log_with_clock(logging.INFO, msg)
+        msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
+        self.log_with_clock(logging.INFO, msg)
         return bp, sp
 
 
@@ -1202,8 +1202,7 @@ class SimplePMM(ScriptStrategyBase):
         ask_spread_rate = Decimal(ask_spread_rate)
         ask_log_term = Decimal.ln(ask_spread_rate)  
 
-        # msg_1 = (f"k_bid Depth Volume @ {k_bid_size:.8f} ::: k_ask Depth Volume @ {k_ask_size:.8f}")
-        # self.log_with_clock(logging.INFO, msg_1)
+
 
 
 
@@ -1214,6 +1213,9 @@ class SimplePMM(ScriptStrategyBase):
         ## Optimal Spread in comparison to the min profit wanted
         min_profit_bid =  bid_reservation_price * bp
         min_profit_ask = ask_reservation_price * sp
+
+        msg_1 = (f"optimal_bid_spread {optimal_bid_spread}, optimal_ask_spread{optimal_ask_spread};   min_profit_bid @ {min_profit_bid:.8f} ::: min_profit_ask @ {min_profit_ask:.8f}")
+        self.log_with_clock(logging.INFO, msg_1)
 
         # Spread calculation price vs the minimum profit price for entries
         optimal_bid_price = np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
