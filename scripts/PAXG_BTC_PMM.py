@@ -1208,7 +1208,7 @@ class SimplePMM(ScriptStrategyBase):
 
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-        msg_1 = (f"y_bid {y_bid}, y_ask{y_ask};   bid_volatility_in_base @ {bid_volatility_in_base:.8f} ::: ask_volatility_in_base @ {ask_volatility_in_base:.8f}")
+        msg_1 = (f"bid_log_term {bid_log_term}, ask_log_term{ask_log_term};   bid_volatility_in_base @ {bid_volatility_in_base:.8f} ::: ask_volatility_in_base @ {ask_volatility_in_base:.8f}")
         self.log_with_clock(logging.INFO, msg_1)
     
         ## Optimal Spread in comparison to the min profit wanted
