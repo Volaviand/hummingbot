@@ -1187,7 +1187,8 @@ class SimplePMM(ScriptStrategyBase):
         bid_spread_rate = Decimal(bid_spread_rate)
         bid_log_term = Decimal.ln(bid_spread_rate)
 
-
+        msg_1 = (f"bid_inside_exp {bid_inside_exp}, k_bid_size{k_bid_size};   bid_k_division @ {bid_k_division:.8f} ::: bid_spread_rate @ {bid_spread_rate:.8f}, bid_log_term{bid_log_term}")
+        self.log_with_clock(logging.INFO, msg_1)
 
         ask_inside_exp = ((ask_maximum_spread_in_price * y_ask) - (ask_volatility_in_base**TWO * y_ask**TWO)) / TWO
         ask_inside_exp = Decimal(ask_inside_exp).exp()
@@ -1208,8 +1209,7 @@ class SimplePMM(ScriptStrategyBase):
 
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-        msg_1 = (f"bid_log_term {bid_log_term}, ask_log_term{ask_log_term};   bid_volatility_in_base @ {bid_volatility_in_base:.8f} ::: ask_volatility_in_base @ {ask_volatility_in_base:.8f}")
-        self.log_with_clock(logging.INFO, msg_1)
+
     
         ## Optimal Spread in comparison to the min profit wanted
         min_profit_bid =  bid_reservation_price * bp
