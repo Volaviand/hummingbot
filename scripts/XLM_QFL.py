@@ -1209,8 +1209,9 @@ class SimplePMM(ScriptStrategyBase):
         ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
         else:
             s_ask = breakeven_sell_price
-        print(self._ask_baseline)
-        print(s_ask)
+        print(f"be Sell P {breakeven_sell_price}")
+        print(f"_ask_baseline {self._ask_baseline}")
+        print(f"s_ask {s_ask}")
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_ask *= (1 - self.fee_percent)
 
