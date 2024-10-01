@@ -585,10 +585,10 @@ class SimplePMM(ScriptStrategyBase):
 
             # Calculate the breakeven prices
             breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
-            print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
+            # print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
             
             breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
-            print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
+            # print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
 
             # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
             balance_text = None
@@ -602,8 +602,7 @@ class SimplePMM(ScriptStrategyBase):
             realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
 
             # # Calculate Unrealized PnL (for the remaining open position)
-            open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
-
+            open_position_size = Decimal(abs(float(sum_of_buy_amount) - float(sum_of_sell_amount)))
 
             if open_position_size > 0:
                 vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
@@ -1170,7 +1169,7 @@ class SimplePMM(ScriptStrategyBase):
         
         self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
         self.b_be = breakeven_buy_price
         self.s_be = breakeven_sell_price
@@ -1182,6 +1181,9 @@ class SimplePMM(ScriptStrategyBase):
 
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
+
+        s_bid = None
+        s_ask = None
 
         # If there is no trade data, use the IQR baseline
         if breakeven_buy_price == 0 :
@@ -1210,8 +1212,12 @@ class SimplePMM(ScriptStrategyBase):
             s_ask = breakeven_buy_price
 
         ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
+        # If none of the above, and we have a valid breakeven_sell_price (not zero), set s_ask based on your needs
         else:
-            s_ask = breakeven_sell_price
+            # Avoid setting to 0, can use some fallback logic or a defined behavior here
+            if breakeven_sell_price > 0:
+                s_ask = breakeven_sell_price  # This is the fallback, but ensure breakeven_sell_price is a valid non-zero value
+
 
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_ask *= (1 - self.fee_percent)
@@ -1328,7 +1334,8 @@ class SimplePMM(ScriptStrategyBase):
         ask_spread_rate = Decimal(ask_spread_rate)
         ask_log_term = Decimal.ln(ask_spread_rate)  
 
-
+        # msg_1 = (f"k_bid Depth Volume @ {k_bid_size:.8f} ::: k_ask Depth Volume @ {k_ask_size:.8f}")
+        # self.log_with_clock(logging.INFO, msg_1)
 
 
 
@@ -1340,11 +1347,9 @@ class SimplePMM(ScriptStrategyBase):
         min_profit_bid =  bid_reservation_price * bp
         min_profit_ask = ask_reservation_price * sp
 
-
-
         # Spread calculation price vs the minimum profit price for entries
-        optimal_bid_price = min_profit_bid ## np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
-        optimal_ask_price = min_profit_ask ## np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
+        optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
+        optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
 
         ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
@@ -1380,7 +1385,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         if optimal_bid_price <= 0 :
-            msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0. ::: Bid Locations :Deepest Bid: {deepest_bid}; Optimal Bid Price: {optimal_bid_price}; Price Above Bid : {price_above_bid}; Top Bid Price: {top_bid_price}")
+            msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0.")
             self.log_with_clock(logging.INFO, msg_2)
 
             

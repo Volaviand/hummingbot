@@ -583,10 +583,10 @@ class SimplePMM(ScriptStrategyBase):
 
             # Calculate the breakeven prices
             breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
-            print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
+            # print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
             
             breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
-            print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
+            # print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
 
             # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
             balance_text = None
@@ -1216,15 +1216,13 @@ class SimplePMM(ScriptStrategyBase):
             if breakeven_sell_price > 0:
                 s_ask = breakeven_sell_price  # This is the fallback, but ensure breakeven_sell_price is a valid non-zero value
 
-        # print(f"be Sell P {breakeven_sell_price}")
-        # print(f"_ask_baseline {self._ask_baseline}")
-        # print(f"s_ask {s_ask}")
+
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_ask *= (1 - self.fee_percent)
 
         s_ask = Decimal(s_ask)
         s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
-        print(s_ask)
+
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
             # from the actual mid price of the asset in absolute price units
             # gamma / risk_factor gains a meaning of a fraction (percentage) of the volatility (standard deviation between ticks) to be subtraced from the
