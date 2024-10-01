@@ -1180,6 +1180,9 @@ class SimplePMM(ScriptStrategyBase):
         TWO = Decimal(2.0)
         HALF = Decimal(0.5)
 
+        s_bid = None
+        s_ask = None
+
         # If there is no trade data, use the IQR baseline
         if breakeven_buy_price == 0 :
             s_bid = self._bid_baseline
@@ -1207,8 +1210,13 @@ class SimplePMM(ScriptStrategyBase):
             s_ask = breakeven_buy_price
 
         ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
+        # If none of the above, and we have a valid breakeven_sell_price (not zero), set s_ask based on your needs
         else:
-            s_ask = breakeven_sell_price
+            # Avoid setting to 0, can use some fallback logic or a defined behavior here
+            if breakeven_sell_price > 0:
+                s_ask = breakeven_sell_price  # This is the fallback, but ensure breakeven_sell_price is a valid non-zero value
+
+
         print(f"be Sell P {breakeven_sell_price}")
         print(f"_ask_baseline {self._ask_baseline}")
         print(f"s_ask {s_ask}")
