@@ -1219,15 +1219,13 @@ class SimplePMM(ScriptStrategyBase):
 
 
         ## Incorporate 2nd half of fees for more accurate breakeven
-        s_bid *= (1 + self.fee_percent)
+        s_bid = Decimal(s_bid) * (Decimal(1.0) + Decimal(self.fee_percent))
 
-        s_bid = Decimal(s_bid)
         s_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_bid)
 
         ## Incorporate 2nd half of fees for more accurate breakeven
-        s_ask *= (1 - self.fee_percent)
+        s_ask = Decimal(s_ask) * (Decimal(1.0) - Decimal(self.fee_percent))
 
-        s_ask = Decimal(s_ask)
         s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
 
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
