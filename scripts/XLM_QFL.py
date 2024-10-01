@@ -1183,7 +1183,7 @@ class SimplePMM(ScriptStrategyBase):
         # If there is no trade data, use the IQR baseline
         if breakeven_buy_price == 0 :
             s_bid = self._bid_baseline
-        print(self._bid_baseline)
+            print(self._bid_baseline)
         ### If you are in the middle of a sell heavy trade, your buys should be below the sell breakeven to make a profit
         elif breakeven_buy_price > 0 and net_value < 0:
             s_bid = breakeven_sell_price
