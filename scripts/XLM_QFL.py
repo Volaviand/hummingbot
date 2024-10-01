@@ -1311,7 +1311,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
         ask_inside_exp = ((ask_maximum_spread_in_price * y_ask) - (ask_volatility_in_base**TWO * y_ask**TWO)) / TWO
-
         ask_inside_exp = Decimal(ask_inside_exp).exp()
         if ask_inside_exp == 1 :
             ask_inside_exp = Decimal(0.99999999)
