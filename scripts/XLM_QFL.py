@@ -1209,13 +1209,13 @@ class SimplePMM(ScriptStrategyBase):
         ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
         else:
             s_ask = breakeven_sell_price
-
+        print(s_ask)
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_ask *= (1 - self.fee_percent)
 
         s_ask = Decimal(s_ask)
         s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
-
+        print(s_ask)
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
             # from the actual mid price of the asset in absolute price units
             # gamma / risk_factor gains a meaning of a fraction (percentage) of the volatility (standard deviation between ticks) to be subtraced from the
