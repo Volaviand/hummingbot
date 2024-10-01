@@ -1216,9 +1216,9 @@ class SimplePMM(ScriptStrategyBase):
             if breakeven_sell_price > 0:
                 s_ask = breakeven_sell_price  # This is the fallback, but ensure breakeven_sell_price is a valid non-zero value
 
-        print(f"be Sell P {breakeven_sell_price}")
-        print(f"_ask_baseline {self._ask_baseline}")
-        print(f"s_ask {s_ask}")
+        # print(f"be Sell P {breakeven_sell_price}")
+        # print(f"_ask_baseline {self._ask_baseline}")
+        # print(f"s_ask {s_ask}")
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_ask *= (1 - self.fee_percent)
 
