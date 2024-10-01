@@ -740,7 +740,7 @@ class SimplePMM(ScriptStrategyBase):
         #     self.last_trade_timestamp = event.timestamp
 
         # Update Breakevens and Timestamps after a trade completes
-        _, _, _, _ = self.call_trade_history('trades_XLM')
+        _, _, _, _ = self.call_trade_history('trades_PAXG_BTC')
 
         #reset S midprice to last traded value
         self._last_trade_price = event.price
@@ -1169,7 +1169,7 @@ class SimplePMM(ScriptStrategyBase):
         
         self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
 
         self.b_be = breakeven_buy_price
         self.s_be = breakeven_sell_price
