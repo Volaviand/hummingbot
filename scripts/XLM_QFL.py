@@ -831,7 +831,7 @@ class SimplePMM(ScriptStrategyBase):
         bp = np.minimum(1 - self.min_profitability, bp)
 
         ## Include Fees
-        bp = bp  * (1 - self.fee_percent)
+        bp = Decimal(bp)  * (Decimal(1.0) - Decimal(self.fee_percent))
         
         ## Sells
         ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
@@ -841,12 +841,11 @@ class SimplePMM(ScriptStrategyBase):
         sp = np.maximum(1 + self.min_profitability, sp)
 
         ## Include Fees
-        sp = sp * (1 + self.fee_percent)
+        sp = Decimal(sp) * (Decimal(1.0) + Decimal(self.fee_percent))
 
 
         #Decimalize for later use
-        bp = Decimal(bp)
-        sp = Decimal(sp)
+
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
         return bp, sp
