@@ -503,7 +503,7 @@ class SimplePMM(ScriptStrategyBase):
     #     # Return results
     #     return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
-    def call_trade_history(file_name='trades_XLM.csv'):
+    def call_trade_history(self, file_name='trades_XLM.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
         # Start with default values
@@ -602,24 +602,26 @@ class SimplePMM(ScriptStrategyBase):
             # # Calculate Unrealized PnL (for the remaining open position)
             open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
 
+            if open_position_size > 0:
+                vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                        False,
+                                                        open_position_size).result_price
 
-            vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                    False,
-                                                    open_position_size).result_price
+                vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                        True,
+                                                        open_position_size).result_price
 
-            vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                    True,
-                                                    open_position_size).result_price
+                # Unrealized PnL is based on the current midprice and the breakeven of the open position
+                if sum_of_buy_amount > sum_of_sell_amount:
+                    unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
+                elif sum_of_buy_amount < sum_of_sell_amount:
+                    unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
+                else:
+                    unrealized_pnl = 0
 
-            # Unrealized PnL is based on the current midprice and the breakeven of the open position
-            if sum_of_buy_amount > sum_of_sell_amount:
-                unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
-            elif sum_of_buy_amount < sum_of_sell_amount:
-                unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
+                self.u_pnl = unrealized_pnl
             else:
-                unrealized_pnl = 0
-
-            self.u_pnl = unrealized_pnl
+                self.u_pnl = 0
 
             return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
