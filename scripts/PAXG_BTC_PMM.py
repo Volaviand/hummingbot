@@ -1194,9 +1194,9 @@ class SimplePMM(ScriptStrategyBase):
             s_bid = breakeven_sell_price
 
         ### If you are in the middle of a buy(base) heavy trade, your next purchase should be below the buy BE to improve bid BE
-        else:
+        elif breakeven_buy_price > 0 and net_value >= 0:
             s_bid = breakeven_buy_price
-
+        
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_bid *= (1 + self.fee_percent)
 
@@ -1208,15 +1208,12 @@ class SimplePMM(ScriptStrategyBase):
             s_ask = self._ask_baseline
 
         ### If you are in the middle of a buy heavy trade, your sells should be above the buy breakeven to make a profit
-        if breakeven_sell_price > 0 and net_value > 0:
+        elif breakeven_sell_price > 0 and net_value > 0:
             s_ask = breakeven_buy_price
 
-        ### If you are in the middle of a sell(quote) heavy trade, your next purchase should be above the sell BE to improve ask BE
-        # If none of the above, and we have a valid breakeven_sell_price (not zero), set s_ask based on your needs
-        else:
-            # Avoid setting to 0, can use some fallback logic or a defined behavior here
-            if breakeven_sell_price > 0:
-                s_ask = breakeven_sell_price  # This is the fallback, but ensure breakeven_sell_price is a valid non-zero value
+        ### If you are in the middle of a sell(quote) heavy trade, your next sell should be above the sell BE to improve ask BE
+        elif breakeven_sell_price > 0 and net_value <= 0:
+            s_ask = breakeven_sell_price
 
 
         ## Incorporate 2nd half of fees for more accurate breakeven
