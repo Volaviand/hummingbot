@@ -1295,7 +1295,8 @@ class SimplePMM(ScriptStrategyBase):
 
         bid_inside_exp = ((bid_maximum_spread_in_price * y_bid) - (bid_volatility_in_base**TWO * y_bid**TWO)) / TWO
         bid_inside_exp = Decimal(bid_inside_exp).exp()
-
+        if bid_inside_exp == 1 :
+            bid_inside_exp = 0.99999999
 
         k_bid_size = y_bid / (bid_inside_exp - Decimal(1))
         k_bid_size = Decimal(k_bid_size)
