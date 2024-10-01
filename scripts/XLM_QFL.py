@@ -362,12 +362,153 @@ class SimplePMM(ScriptStrategyBase):
             self.last_time_reported = self.current_timestamp
 
         
-    def call_trade_history(self, file_name='trades_XLM'):
-        '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
+    # def call_trade_history(self, file_name='trades_XLM'):
+    #     '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
-        # Match to the timestamp of the start of a trade cycle. 
-        init_timestamp = 1726708662000
+    #     # Match to the timestamp of the start of a trade cycle. 
+    #     init_timestamp = 1726708662000
+    #     last_net_value = 0
+
+    #     # Specify the path to your CSV file
+    #     csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
+
+    #     # Read the CSV file into a Pandas DataFrame
+    #     df = pd.read_csv(csv_file_path)
+
+    #     # Show the first few rows of the dataframe to verify the data
+    #     #print(df.head())
+
+    #     # File path for saving and loading state
+    #     timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
+
+
+    #     # Function to save the start timestamp and last net value
+    #     def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
+    #         try:
+    #             data_to_save = {'trade_history_last_timestamp': int(start_time), 'last_net_value': last_net_value}
+
+    #             # Manually convert to JSON string and write to file
+    #             with open(file_path, 'w') as f:
+    #                 json_string = json.dumps(data_to_save)
+    #                 f.write(json_string)
+    #                 f.flush()  # Ensure all data is written to disk
+    #             print(f"Timestamp and net value saved to {file_path}")
+                
+    #         except (TypeError, ValueError) as e:
+    #             print(f"Data serialization error: {e}")
+    #         except Exception as e:
+    #             print(f"Error writing to {file_path}: {e}")
+
+    #     # Load previous state if file exists
+    #     if os.path.exists(timestamp_file_path):
+    #         try:
+    #             print(f"Loading state from {timestamp_file_path}")
+    #             with open(timestamp_file_path, 'r') as f:
+    #                 json_string = f.read()
+    #                 state = json.loads(json_string)
+    #             last_net_value = state.get('last_net_value', 0)
+    #             init_timestamp = state.get('trade_history_last_timestamp', init_timestamp)
+    #         except (json.JSONDecodeError, ValueError) as e:
+    #             print(f"Error reading JSON file {timestamp_file_path}: {e}. Initializing default values.")
+    #         except Exception as e:
+    #             print(f"Error accessing {timestamp_file_path}: {e}")
+    #     else:
+    #         print(f"No existing state file found at {timestamp_file_path}. Using default values.")
+    #         # Save the default state immediately to create the file
+    #         save_timestamp(init_timestamp, last_net_value)
+
+    #     # Get the most recent timestamp from the CSV that represents your last trade
+    #     last_timestamp = int(df['timestamp'].max())
+
+
+
+    #     # Filter trades from the start of your trade cycle
+    #     filtered_df = df[(df['timestamp'] >= init_timestamp)]
+
+    #     # Filter out buy and sell trades
+    #     buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
+    #     sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
+
+    #     # Calculate weighted sums with fees
+    #     sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
+    #     sum_of_buy_amount = buy_trades['amount'].sum()
+    #     sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
+
+    #     sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
+    #     sum_of_sell_amount = sell_trades['amount'].sum()
+    #     sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
+
+    #     # Calculate the total buy cost after  fees
+    #     # This isnt a price movement, but a comparison of sum amount.  
+    #     # If I bought $100 worth and paid 0.50, then I only have $99.5
+    #     # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5
+    #     total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
+
+    #     # Calculate the total sell proceeds after fees
+    #     total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
+
+    #     # Calculate net value in quote
+    #     net_value = total_buy_cost - total_sell_proceeds
+
+
+    #     # Calculate the breakeven prices
+    #     breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
+    #     breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
+
+    #     # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
+    #     balance_text = None
+    #     if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
+    #         balance_text = "Unbalanced Sells (Quote)"
+    #     elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
+    #         balance_text = "Unbalanced Buys (Base)"
+    #     else:
+    #         balance_text = "Balanced"
+
+    #     realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
+
+    #     # Calculate Unrealized PnL (for the remaining open position)
+    #     open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
+
+
+    #     vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+    #                                             False,
+    #                                             open_position_size).result_price
+
+    #     vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+    #                                             True,
+    #                                             open_position_size).result_price
+
+    #     # Unrealized PnL is based on the current midprice and the breakeven of the open position
+    #     if sum_of_buy_amount > sum_of_sell_amount:
+    #         unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
+    #     elif sum_of_buy_amount < sum_of_sell_amount:
+    #         unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
+    #     else:
+    #         unrealized_pnl = 0
+
+    #     self.u_pnl = unrealized_pnl
+
+    #     ##################################============================
+    #     ########## New Trade Cycle Starting Behavior
+    #     ##################################============================
+
+    #     # Save the current state if there's a crossover, this means a new cycle is happening
+    #     if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
+    #         save_timestamp(last_timestamp, net_value)
+    #         init_timestamp = last_timestamp
+    #         last_net_value = net_value
+
+
+
+    #     # Return results
+    #     return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
+
+    def call_trade_history(file_name='trades_XLM.csv'):
+        '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
+        
+        # Start with default values
         last_net_value = 0
+        prev_net_value = 0  # This tracks the previous net value for comparison
 
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
@@ -375,134 +516,112 @@ class SimplePMM(ScriptStrategyBase):
         # Read the CSV file into a Pandas DataFrame
         df = pd.read_csv(csv_file_path)
 
-        # Show the first few rows of the dataframe to verify the data
-        #print(df.head())
 
-        # File path for saving and loading state
-        timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
+        # Variables to store trade cycle start point
+        cycle_start_index = 0
 
+        # Iterate through the trade history in reverse order
+        for index, row in df.iterrows():
+            trade_type = row['trade_type']
+            trade_price = row['price']
+            trade_amount = row['amount']
+            trade_fee = row['trade_fee_in_quote'] if 'trade_fee_in_quote' in row else 0
 
-        # Function to save the start timestamp and last net value
-        def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
-            try:
-                data_to_save = {'trade_history_last_timestamp': int(start_time), 'last_net_value': last_net_value}
+            # Update previous net value before calculating the new one
+            prev_net_value = last_net_value
 
-                # Manually convert to JSON string and write to file
-                with open(file_path, 'w') as f:
-                    json_string = json.dumps(data_to_save)
-                    f.write(json_string)
-                    f.flush()  # Ensure all data is written to disk
-                print(f"Timestamp and net value saved to {file_path}")
-                
-            except (TypeError, ValueError) as e:
-                print(f"Data serialization error: {e}")
-            except Exception as e:
-                print(f"Error writing to {file_path}: {e}")
+            # Calculate the new net value
+            if trade_type == 'BUY':
+                # print(f"Buy Trade # {index}")
+                intermediate_buy_cost = trade_price * trade_amount + trade_fee
+                # print(f"intermediate Buy Cost : {intermediate_buy_cost}")
+                last_net_value += intermediate_buy_cost
+                # print(f"NET {last_net_value}")
+            elif trade_type == 'SELL':
+                # print(f"Sell Trade # {index}")
+                intermediate_sell_proceeds = trade_price * trade_amount - trade_fee
+                # print(f"intermediate Sell Proceeds : -{intermediate_sell_proceeds}")
+                last_net_value -= intermediate_sell_proceeds
+                # print(f"NET {last_net_value}")
 
-        # Load previous state if file exists
-        if os.path.exists(timestamp_file_path):
-            try:
-                print(f"Loading state from {timestamp_file_path}")
-                with open(timestamp_file_path, 'r') as f:
-                    json_string = f.read()
-                    state = json.loads(json_string)
-                last_net_value = state.get('last_net_value', 0)
-                init_timestamp = state.get('trade_history_last_timestamp', init_timestamp)
-            except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error reading JSON file {timestamp_file_path}: {e}. Initializing default values.")
-            except Exception as e:
-                print(f"Error accessing {timestamp_file_path}: {e}")
-        else:
-            print(f"No existing state file found at {timestamp_file_path}. Using default values.")
-            # Save the default state immediately to create the file
-            save_timestamp(init_timestamp, last_net_value)
-
-        # Get the most recent timestamp from the CSV that represents your last trade
-        last_timestamp = int(df['timestamp'].max())
+            # Detect crossover in net value (crossing zero)
+            if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
+                # new_trade_cycle = True
+                cycle_start_index = index  # Update to the most recent crossover index
+                # print("=====================CROSS=============================")
 
 
+            # print(f"Cycle Starting Index = {cycle_start_index}")
+            # Filter out trades after the identified cycle start point
+            filtered_df = df.iloc[cycle_start_index:]
 
-        # Filter trades from the start of your trade cycle
-        filtered_df = df[(df['timestamp'] >= init_timestamp)]
+            # Filter out buy and sell trades
+            buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
+            sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
 
-        # Filter out buy and sell trades
-        buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
-        sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
+            # Calculate weighted sums with fees
+            sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
+            sum_of_buy_amount = buy_trades['amount'].sum()
+            sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
 
-        # Calculate weighted sums with fees
-        sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
-        sum_of_buy_amount = buy_trades['amount'].sum()
-        sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
+            sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
+            sum_of_sell_amount = sell_trades['amount'].sum()
+            sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
 
-        sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
-        sum_of_sell_amount = sell_trades['amount'].sum()
-        sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
+            # Calculate the total buy cost after  fees
+            # This isnt a price movement, but a comparison of sum amount.  
+            # If I bought $100 worth and paid 0.50, then I only have $99.5
+            # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5
+            total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
 
-        # Calculate the total buy cost after  fees
-        # This isnt a price movement, but a comparison of sum amount.  
-        # If I bought $100 worth and paid 0.50, then I only have $99.5
-        # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5
-        total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
+            # Calculate the total sell proceeds after fees
+            total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
 
-        # Calculate the total sell proceeds after fees
-        total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
-
-        # Calculate net value in quote
-        net_value = total_buy_cost - total_sell_proceeds
-
-
-        # Calculate the breakeven prices
-        breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
-        breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
-
-        # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
-        balance_text = None
-        if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
-            balance_text = "Unbalanced Sells (Quote)"
-        elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
-            balance_text = "Unbalanced Buys (Base)"
-        else:
-            balance_text = "Balanced"
-
-        realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
-
-        # Calculate Unrealized PnL (for the remaining open position)
-        open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
+            # Calculate net value in quote
+            net_value = total_buy_cost - total_sell_proceeds
 
 
-        vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                False,
-                                                open_position_size).result_price
+            # Calculate the breakeven prices
+            breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
+            print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
+            
+            breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
+            print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
 
-        vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                True,
-                                                open_position_size).result_price
+            # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
+            balance_text = None
+            if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
+                balance_text = "Unbalanced Sells (Quote)"
+            elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
+                balance_text = "Unbalanced Buys (Base)"
+            else:
+                balance_text = "Balanced"
 
-        # Unrealized PnL is based on the current midprice and the breakeven of the open position
-        if sum_of_buy_amount > sum_of_sell_amount:
-            unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
-        elif sum_of_buy_amount < sum_of_sell_amount:
-            unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
-        else:
-            unrealized_pnl = 0
+            realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
 
-        self.u_pnl = unrealized_pnl
-
-        ##################################============================
-        ########## New Trade Cycle Starting Behavior
-        ##################################============================
-
-        # Save the current state if there's a crossover, this means a new cycle is happening
-        if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
-            save_timestamp(last_timestamp, net_value)
-            init_timestamp = last_timestamp
-            last_net_value = net_value
+            # # Calculate Unrealized PnL (for the remaining open position)
+            open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
 
 
+            vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                    False,
+                                                    open_position_size).result_price
 
-        # Return results
-        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
+            vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                    True,
+                                                    open_position_size).result_price
 
+            # Unrealized PnL is based on the current midprice and the breakeven of the open position
+            if sum_of_buy_amount > sum_of_sell_amount:
+                unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
+            elif sum_of_buy_amount < sum_of_sell_amount:
+                unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
+            else:
+                unrealized_pnl = 0
+
+            self.u_pnl = unrealized_pnl
+
+            return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
 
     # def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
