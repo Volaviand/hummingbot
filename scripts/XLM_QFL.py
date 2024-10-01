@@ -1336,8 +1336,8 @@ class SimplePMM(ScriptStrategyBase):
         min_profit_ask = ask_reservation_price * sp
 
         # Spread calculation price vs the minimum profit price for entries
-        optimal_bid_price = np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
-        optimal_ask_price = np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
+        optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
+        optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
 
         ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
