@@ -1124,14 +1124,9 @@ class SimplePMM(ScriptStrategyBase):
         model_fit = model.fit(disp="off")
         msg_gv = (f"GARCH  { model_fit.summary()}")
         self.log_with_clock(logging.INFO, msg_gv)
-        # Extract the scale factor used by the model
-        scale_factor = model_fit.scale
-
-        # Extract conditional volatility
-        volatility_rescaled = np.exp(model_fit.conditional_volatility) - 1
         
-        # Apply the scale factor to descaled volatility
-        volatility = volatility_rescaled / scale_factor 
+        # Adjust Volatility to Decimal Percent values 
+        volatility = model_fit.conditional_volatility / 100 
 
         length = len(model_fit.conditional_volatility)
 
