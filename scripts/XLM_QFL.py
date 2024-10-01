@@ -600,7 +600,7 @@ class SimplePMM(ScriptStrategyBase):
             realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
 
             # # Calculate Unrealized PnL (for the remaining open position)
-            open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
+            open_position_size = Decimal(abs(float(sum_of_buy_amount) - float(sum_of_sell_amount)))
 
             if open_position_size > 0:
                 vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
