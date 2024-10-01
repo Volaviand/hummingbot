@@ -1183,41 +1183,62 @@ class SimplePMM(ScriptStrategyBase):
         s_bid = None
         s_ask = None
 
+        is_buy_data = breakeven_buy_price > 0
+        is_sell_data = breakeven_sell_price > 0
+
         # If there is no trade data, use the IQR baseline
-        if breakeven_buy_price == 0 :
+        if not is_buy_data :
             s_bid = self._bid_baseline
+        
+        # Opposite Side has data, but not current side, Just starting a cycle:
+        elif not is_buy_data and is_sell_data:
+            s_bid = breakeven_sell_price
 
         ### If you are in the middle of a sell heavy trade, your buys should be below the sell breakeven to make a profit
-        elif breakeven_buy_price > 0 and net_value < 0:
+        elif is_buy_data and net_value < 0:
             s_bid = breakeven_sell_price
 
         ### If you are in the middle of a buy(base) heavy trade, your next purchase should be below the buy BE to improve bid BE
-        elif breakeven_buy_price > 0 and net_value >= 0:
+        elif is_buy_data and net_value >= 0:
             s_bid = breakeven_buy_price
-        
+
+        #Catchall Safety
+        else:
+            s_bid = self._bid_baseline
+
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_bid *= (1 + self.fee_percent)
 
         s_bid = Decimal(s_bid)
         s_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_bid)
 
+
+        ####### Sell Side
         # If there is no trade data, use the IQR baseline
-        if breakeven_sell_price == 0 :
+        if not is_sell_data  :
             s_ask = self._ask_baseline
 
+        # Opposite Side has data, but not current side, Just starting a cycle:
+        elif not is_sell_data and is_buy_data:
+            s_ask = breakeven_buy_price
+
         ### If you are in the middle of a buy heavy trade, your sells should be above the buy breakeven to make a profit
-        elif breakeven_sell_price > 0 and net_value > 0:
+        elif is_sell_data and net_value > 0:
             s_ask = breakeven_buy_price
 
         ### If you are in the middle of a sell(quote) heavy trade, your next sell should be above the sell BE to improve ask BE
-        elif breakeven_sell_price > 0 and net_value <= 0:
+        elif is_sell_data and net_value <= 0:
             s_ask = breakeven_sell_price
+
+        #Catchall Safety
+        else:
+            s_ask = self._ask_baseline
 
         ## Incorporate 2nd half of fees for more accurate breakeven
         s_ask *= (1 - self.fee_percent)
 
         s_ask = Decimal(s_ask)
-        s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
+        s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)f
 
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
             # from the actual mid price of the asset in absolute price units
