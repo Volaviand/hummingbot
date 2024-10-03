@@ -518,6 +518,10 @@ class SimplePMM(ScriptStrategyBase):
         # Variables to store trade cycle start point
         cycle_start_index = 0
 
+        if self._last_trade_price == None or self._last_trade_price == 0:
+            self._last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+        else:
+            self._last_trade_price = df['price'].iloc[-1]
         # Iterate through the trade history in reverse order
         for index, row in df.iterrows():
             trade_type = row['trade_type']
@@ -637,7 +641,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def create_proposal(self) -> List[OrderCandidate]:
         time.sleep(10)
-        self._last_trade_price = self.get_midprice()
+        #self._last_trade_price = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
         # Save Values for Status use without recalculating them over and over again
@@ -739,8 +743,8 @@ class SimplePMM(ScriptStrategyBase):
         _, _, _, _ = self.call_trade_history('trades_XLM')
 
         #reset S midprice to last traded value
-        self._last_trade_price = event.price
-        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
+        #self._last_trade_price = event.price
+        #self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
 
         self.fee_percent = Decimal(self.fee_percent)
 
@@ -1067,33 +1071,33 @@ class SimplePMM(ScriptStrategyBase):
 
         return order_size_bid, order_size_ask
     
-    def get_midprice(self):
-        sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
+    # def get_midprice(self):
+    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
 
-        if self._last_trade_price == None :
-            if self.initialize_flag == True:
-                # Fetch midprice only during initialization
-                if self._last_trade_price is None:
+    #     if self._last_trade_price == None :
+    #         if self.initialize_flag == True:
+    #             # Fetch midprice only during initialization
+    #             if self._last_trade_price is None:
 
-                    ## If I have to manually restart the bot mid trade, this is the last traded price. 
-                    manual_price = 0.087009
+    #                 ## If I have to manually restart the bot mid trade, this is the last traded price. 
+    #                 manual_price = 0.087009
                     
-                    #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+    #                 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
-                    # Ensure midprice is not None before converting and assigning
-                    if manual_price is not None:
-                        self._last_trade_price = (manual_price)
+    #                 # Ensure midprice is not None before converting and assigning
+    #                 if manual_price is not None:
+    #                     self._last_trade_price = (manual_price)
 
-                    self.initialize_flag = False  # Set flag to prevent further updates with midprice
+    #                 self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
-        else:
-            self._last_trade_price = self._last_trade_price
+    #     else:
+    #         self._last_trade_price = self._last_trade_price
 
-        self._bid_baseline = (sold_baseline)
-        self._ask_baseline = (bought_baseline)
-        # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
-        # self.log_with_clock(logging.INFO, msg_gv)
-        return self._last_trade_price
+    #     self._bid_baseline = (sold_baseline)
+    #     self._ask_baseline = (bought_baseline)
+    #     # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
+    #     # self.log_with_clock(logging.INFO, msg_gv)
+    #     return self._last_trade_price
 
     def call_garch_model(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
@@ -1158,7 +1162,7 @@ class SimplePMM(ScriptStrategyBase):
     def reservation_price(self):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        self._last_trade_price = self.get_midprice()
+        #self._last_trade_price = self.get_midprice()
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
