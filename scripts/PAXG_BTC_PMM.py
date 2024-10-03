@@ -338,7 +338,6 @@ class SimplePMM(ScriptStrategyBase):
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
-            #time.sleep(10)
 
             proposal: List[OrderCandidate] = self.create_proposal()
             proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
@@ -639,6 +638,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
+        time.sleep(10)
         self._last_trade_price = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
