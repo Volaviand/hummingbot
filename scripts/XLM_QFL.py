@@ -177,7 +177,7 @@ def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
     nonzero_sell_volumes = sell_trades_df[sell_trades_df['Volume'] > 0]['Volume']
 
     # Find the percentile depth of buy and sell volumes
-    percentile = 50
+    percentile = 84.16
     bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
     sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
 
