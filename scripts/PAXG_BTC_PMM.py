@@ -335,6 +335,9 @@ class SimplePMM(ScriptStrategyBase):
         self.u_pnl = 0
         self.n_v = 0
 
+        self._last_buy_price = 0
+        self._last_sell_price = 0
+
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
@@ -360,148 +363,6 @@ class SimplePMM(ScriptStrategyBase):
 
         
 
-    # def call_trade_history(self, file_name='trades_PAXG_BTC'):
-    #     '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
-
-    #     # Match to the timestamp of the start of a trade cycle. 
-    #     init_timestamp = 1722712048000
-    #     last_net_value = 0
-
-    #     # Specify the path to your CSV file
-    #     csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
-
-    #     # Read the CSV file into a Pandas DataFrame
-    #     df = pd.read_csv(csv_file_path)
-
-    #     # Show the first few rows of the dataframe to verify the data
-    #     #print(df.head())
-
-    #     # File path for saving and loading state
-    #     timestamp_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}_timestamp.json'
-
-
-    #     # Function to save the start timestamp and last net value
-    #     def save_timestamp(start_time, last_net_value, file_path=timestamp_file_path):
-    #         try:
-    #             data_to_save = {'trade_history_last_timestamp': int(start_time), 'last_net_value': last_net_value}
-
-    #             # Manually convert to JSON string and write to file
-    #             with open(file_path, 'w') as f:
-    #                 json_string = json.dumps(data_to_save)
-    #                 f.write(json_string)
-    #                 f.flush()  # Ensure all data is written to disk
-    #             print(f"Timestamp and net value saved to {file_path}")
-                
-    #         except (TypeError, ValueError) as e:
-    #             print(f"Data serialization error: {e}")
-    #         except Exception as e:
-    #             print(f"Error writing to {file_path}: {e}")
-
-    #     # Load previous state if file exists
-    #     if os.path.exists(timestamp_file_path):
-    #         try:
-    #             print(f"Loading state from {timestamp_file_path}")
-    #             with open(timestamp_file_path, 'r') as f:
-    #                 json_string = f.read()
-    #                 state = json.loads(json_string)
-    #             last_net_value = state.get('last_net_value', 0)
-    #             init_timestamp = state.get('trade_history_last_timestamp', init_timestamp)
-    #         except (json.JSONDecodeError, ValueError) as e:
-    #             print(f"Error reading JSON file {timestamp_file_path}: {e}. Initializing default values.")
-    #         except Exception as e:
-    #             print(f"Error accessing {timestamp_file_path}: {e}")
-    #     else:
-    #         print(f"No existing state file found at {timestamp_file_path}. Using default values.")
-    #         # Save the default state immediately to create the file
-    #         save_timestamp(init_timestamp, last_net_value)
-
-    #     # Get the most recent timestamp from the CSV that represents your last trade
-    #     last_timestamp = int(df['timestamp'].max())
-
-
-
-    #     # Filter trades from the start of your trade cycle
-    #     filtered_df = df[(df['timestamp'] >= init_timestamp)]
-
-    #     # Filter out buy and sell trades
-    #     buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
-    #     sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
-
-    #     # Calculate weighted sums with fees
-    #     sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
-    #     sum_of_buy_amount = buy_trades['amount'].sum()
-    #     sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
-
-    #     sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
-    #     sum_of_sell_amount = sell_trades['amount'].sum()
-    #     sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
-
-    #     # Calculate the total buy cost after  fees
-    #     # This isnt a price movement, but a comparison of sum amount.  
-    #     # If I bought $100 worth and paid 0.50, then I only have $99.5
-    #     # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5
-    #     total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
-
-    #     # Calculate the total sell proceeds after fees
-    #     total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
-
-    #     # Calculate net value in quote
-    #     net_value = total_buy_cost - total_sell_proceeds
-
-
-    #     # Calculate the breakeven prices
-    #     breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
-    #     breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
-
-    #     # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
-    #     balance_text = None
-    #     if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
-    #         balance_text = "Unbalanced Sells (Quote)"
-    #     elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
-    #         balance_text = "Unbalanced Buys (Base)"
-    #     else:
-    #         balance_text = "Balanced"
-
-
-    #     realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
-
-    #     # Calculate Unrealized PnL (for the remaining open position)
-    #     open_position_size = Decimal(abs(sum_of_buy_amount - sum_of_sell_amount))
-
-
-    #     vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-    #                                             False,
-    #                                             open_position_size).result_price
-
-    #     vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-    #                                             True,
-    #                                             open_position_size).result_price
-
-    #     # Unrealized PnL is based on the current midprice and the breakeven of the open position
-    #     if sum_of_buy_amount > sum_of_sell_amount:
-    #         unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
-    #     elif sum_of_buy_amount < sum_of_sell_amount:
-    #         unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
-    #     else:
-    #         unrealized_pnl = 0
-
-    #     self.u_pnl = unrealized_pnl
-
-    #     ##################################============================
-    #     ########## New Trade Cycle Starting Behavior
-    #     ##################################============================
-
-    #     # Save the current state if there's a crossover, this means a new cycle is happening
-    #     if (last_net_value <= 0 and net_value > 0) or (last_net_value >= 0 and net_value < 0):
-    #         save_timestamp(last_timestamp, net_value)
-    #         init_timestamp = last_timestamp
-    #         last_net_value = net_value
-
-
-
-    #     # Return results
-    #     return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
-
     def call_trade_history(self, file_name='trades_PAXG_BTC'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
@@ -518,6 +379,17 @@ class SimplePMM(ScriptStrategyBase):
 
         # Variables to store trade cycle start point
         cycle_start_index = 0
+
+        # Filter the DataFrame for BUY and SELL trades
+        buy_trades = df[df['trade_type'] == 'BUY']
+        sell_trades = df[df['trade_type'] == 'SELL']
+        
+        # Get the last traded price for BUY and SELL, or set to 0 if no trades exist
+        self._last_buy_price = buy_trades['price'].iloc[-1] if not buy_trades.empty else 0
+        self._last_sell_price = sell_trades['price'].iloc[-1] if not sell_trades.empty else 0
+
+
+        # self._last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
         # Iterate through the trade history in reverse order
         for index, row in df.iterrows():
@@ -626,20 +498,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    # def refresh_tolerance_met(self, proposal: List[OrderCandidate]) -> List[OrderCandidate] :
-    #         #vwap_bid, vwap_ask = self.get_vwap_bid_ask()
-    #         # if spread diff is more than the tolerance or order quantities are different, return false.
-    #         current = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
-    #         if self._order_refresh_tolerance_pct > 0:
-    #             if abs(proposal - current)/current > self._order_refresh_tolerance_pct:
-    #                 return False
-    #             else:
-    #                 return True
-
-
     def create_proposal(self) -> List[OrderCandidate]:
         time.sleep(10)
-        self._last_trade_price = self.get_midprice()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
         # Save Values for Status use without recalculating them over and over again
@@ -700,54 +560,13 @@ class SimplePMM(ScriptStrategyBase):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
 
 
-
-        ### Counter Method for Constant Trading without using breakeven levels
-        # if event.price < self._bid_baseline or event.price <= bid_reservation_price:
-        #     self.sell_counter -= 1
-        #     self.buy_counter += 1
-            
-        # if event.price > self._ask_baseline or event.price >= ask_reservation_price:
-        #     self.sell_counter += 1
-        #     self.buy_counter -= 1
-
-        # if self.sell_counter <= 0:
-        #     self.sell_counter = 1
-
-        # if self.buy_counter<= 0:
-        #     self.buy_counter = 1
-
-        # ### Counter method that resets the buy or sells if a breakeven trade is made. 
-        # if event.price < self._bid_baseline or event.price <= bid_reservation_price:
-        #     self.sell_counter = 1
-        #     self.buy_counter += 1
-            
-        # if event.price > self._ask_baseline or event.price >= ask_reservation_price:
-        #     self.sell_counter += 1
-        #     self.buy_counter = 1
-
-        # if self.sell_counter <= 0:
-        #     self.sell_counter = 1
-
-        # if self.buy_counter<= 0:
-        #     self.buy_counter = 1
-
         self.initialize_flag = False
 
-        ######################################################################
-        # if the filled trade triggers a new trade cycle:
-        #     self.last_trade_timestamp = event.timestamp
-
-        # Update Breakevens and Timestamps after a trade completes
+        # Update Trade CSV after a trade completes
         _, _, _, _ = self.call_trade_history('trades_PAXG_BTC')
 
-        #reset S midprice to last traded value
-        self._last_trade_price = event.price
-        self._last_trade_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, self._last_trade_price)
 
         self.fee_percent = Decimal(self.fee_percent)
-
-
-
         
         # Print log
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
@@ -780,7 +599,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
         lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
-        lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | Last Trade Price :: {self._last_trade_price} | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | | Bid :: {self.b_r_p:.8f}"])
+        lines.extend([f"LT /: Ask :: {self._last_sell_price:.8f} || Bid :: {self._last_buy_price:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
         lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
         lines.extend([f"PT /: Ask(%) :: {self.ask_percent:.4f} | Bid(%) :: {self.bid_percent:.4f}"])
@@ -1068,33 +888,33 @@ class SimplePMM(ScriptStrategyBase):
 
         return order_size_bid, order_size_ask
     
-    def get_midprice(self):
-        sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
+    # def get_midprice(self):
+    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
 
-        if self._last_trade_price == None :
-            if self.initialize_flag == True:
-                # Fetch midprice only during initialization
-                if self._last_trade_price is None:
+    #     if self._last_trade_price == None :
+    #         if self.initialize_flag == True:
+    #             # Fetch midprice only during initialization
+    #             if self._last_trade_price is None:
 
-                    ## If I have to manually restart the bot mid trade, this is the last traded price. 
-                    manual_price = 0.045978
+    #                 ## If I have to manually restart the bot mid trade, this is the last traded price. 
+    #                 manual_price = 0.045978
                     
-                    #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
+    #                 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
-                    # Ensure midprice is not None before converting and assigning
-                    if manual_price is not None:
-                        self._last_trade_price = (manual_price)
+    #                 # Ensure midprice is not None before converting and assigning
+    #                 if manual_price is not None:
+    #                     self._last_trade_price = (manual_price)
 
-                    self.initialize_flag = False  # Set flag to prevent further updates with midprice
+    #                 self.initialize_flag = False  # Set flag to prevent further updates with midprice
 
-        else:
-            self._last_trade_price = self._last_trade_price
+    #     else:
+    #         self._last_trade_price = self._last_trade_price
 
-        self._bid_baseline = (sold_baseline)
-        self._ask_baseline = (bought_baseline)
-        # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
-        # self.log_with_clock(logging.INFO, msg_gv)
-        return self._last_trade_price
+    #     self._bid_baseline = (sold_baseline)
+    #     self._ask_baseline = (bought_baseline)
+    #     # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
+    #     # self.log_with_clock(logging.INFO, msg_gv)
+    #     return self._last_trade_price
 
     def call_garch_model(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
@@ -1160,7 +980,7 @@ class SimplePMM(ScriptStrategyBase):
     def reservation_price(self):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        self._last_trade_price = self.get_midprice()
+        #self._last_trade_price = self.get_midprice()
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
 
@@ -1192,23 +1012,25 @@ class SimplePMM(ScriptStrategyBase):
         
         # You have started a Buy Cycle, use Bid BE
         elif is_buy_data and not is_sell_data:
-            s_bid = breakeven_buy_price
+            s_bid = self._last_buy_price # breakeven_buy_price
             s_ask = breakeven_buy_price
         
         # You have started a Sell Cycle, use Ask BE
         elif not is_buy_data and is_sell_data:
             s_bid = breakeven_sell_price
-            s_ask = breakeven_sell_price
+            s_ask = self._last_sell_price # breakeven_sell_price
 
         # You are mid trade, use net values to determine locations
         elif is_buy_data and is_sell_data:
             if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
-                s_bid = s_ask = breakeven_buy_price
+                s_bid = self._last_buy_price
+                s_ask = breakeven_buy_price
             elif is_sell_net: # Mid Sell Trade, Sell Above BE, Buy for profit
-                s_bid = s_ask = breakeven_sell_price
+                s_bid = breakeven_sell_price
+                s_ask = self._last_sell_price
             elif is_neutral_net: # Price is perfectly neutral, use prospective BE's
-                s_bid = breakeven_buy_price
-                s_ask = breakeven_sell_price
+                s_bid = self._last_buy_price # breakeven_buy_price
+                s_ask = self._last_sell_price # breakeven_sell_price
 
 
         ## Incorporate 2nd half of fees for more accurate breakeven
