@@ -339,6 +339,8 @@ class SimplePMM(ScriptStrategyBase):
         self._last_buy_price = 0
         self._last_sell_price = 0
 
+        self.trade_position_text = ""
+
     def on_tick(self):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
@@ -594,6 +596,8 @@ class SimplePMM(ScriptStrategyBase):
 
         balance_df = self.get_balance_df()
         lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
+
+        lines.extend(["", f"Direction :: {self.trade_position_text} "])
 
         lines.extend(["", "| Inventory Imbalance | Trade History |"])
         lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
@@ -1007,30 +1011,36 @@ class SimplePMM(ScriptStrategyBase):
         is_sell_net = net_value < 0
         is_neutral_net = net_value == 0 
 
-        # There is no data, Use baselines
+         # There is no data, Use baselines
         if not is_buy_data and not is_sell_data:
+            self.trade_position_text = "No Trades, Use Baseline"
             s_bid = self._bid_baseline
             s_ask = self._ask_baseline
         
         # You have started a Buy Cycle, use Bid BE
         elif is_buy_data and not is_sell_data:
+            self.trade_position_text = "Buy Cycle"
             s_bid = self._last_buy_price # breakeven_buy_price
             s_ask = breakeven_buy_price
         
         # You have started a Sell Cycle, use Ask BE
         elif not is_buy_data and is_sell_data:
+            self.trade_position_text = "Sell Cycle"
             s_bid = breakeven_sell_price
             s_ask = self._last_sell_price # breakeven_sell_price
 
         # You are mid trade, use net values to determine locations
         elif is_buy_data and is_sell_data:
             if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
+                self.trade_position_text = "Unfinished Buy Cycle"
                 s_bid = self._last_buy_price
                 s_ask = breakeven_buy_price
             elif is_sell_net: # Mid Sell Trade, Sell Above BE, Buy for profit
+                self.trade_position_text = "Unfinished Sell Cycle"
                 s_bid = breakeven_sell_price
                 s_ask = self._last_sell_price
-            elif is_neutral_net: # Price is perfectly neutral, use prospective BE's
+            elif is_neutral_net: # Price is perfectly neutral, use prospective levels
+                self.trade_position_text = "Neutral Cycle"
                 s_bid = self._last_buy_price # breakeven_buy_price
                 s_ask = self._last_sell_price # breakeven_sell_price
 
