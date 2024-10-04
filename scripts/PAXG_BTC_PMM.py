@@ -30,6 +30,7 @@ import sqlite3
 import json
 import sys
 import os
+import csv
 
 sys.path.append('/home/tyler/quant/API_call_tests/')
 from Kraken_Calculations import BuyTrades, SellTrades
