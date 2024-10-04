@@ -396,38 +396,42 @@ class SimplePMM(ScriptStrategyBase):
 
         # self._last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
-        # Iterate through the trade history  order
-        for index, row in df.iterrows():
-            trade_type = row['trade_type']
-            trade_price = row['price']
-            trade_amount = row['amount']
-            trade_fee = row['trade_fee_in_quote'] if 'trade_fee_in_quote' in row else 0
+        try:
+            for index, row in df.iterrows():
+                trade_type = row['trade_type']
+                trade_price = row['price']
+                trade_amount = row['amount']
+                trade_fee = row['trade_fee_in_quote'] if 'trade_fee_in_quote' in row else 0
 
-            # Update previous net value before calculating the new one
-            prev_net_value = last_net_value
+                # Update previous net value before calculating the new one
+                prev_net_value = last_net_value
 
-            # Calculate the new net value
-            if trade_type == 'BUY':
-                print(f"Buy Trade # {index}")
-                intermediate_buy_cost = trade_price * trade_amount + trade_fee
-                print(f"intermediate Buy Cost : {intermediate_buy_cost}")
-                last_net_value += intermediate_buy_cost
-                print(f"NET {last_net_value}")
-            elif trade_type == 'SELL':
-                print(f"Sell Trade # {index}")
-                intermediate_sell_proceeds = trade_price * trade_amount - trade_fee
-                print(f"intermediate Sell Proceeds : -{intermediate_sell_proceeds}")
-                last_net_value -= intermediate_sell_proceeds
-                print(f"NET -{last_net_value}")
+                # Calculate the new net value
+                if trade_type == 'BUY':
+                    print(f"Buy Trade # {index}")
+                    intermediate_buy_cost = trade_price * trade_amount + trade_fee
+                    print(f"intermediate Buy Cost : {intermediate_buy_cost}")
+                    last_net_value += intermediate_buy_cost
+                    print(f"NET {last_net_value}")
+                elif trade_type == 'SELL':
+                    print(f"Sell Trade # {index}")
+                    intermediate_sell_proceeds = trade_price * trade_amount - trade_fee
+                    print(f"intermediate Sell Proceeds : -{intermediate_sell_proceeds}")
+                    last_net_value -= intermediate_sell_proceeds
+                    print(f"NET -{last_net_value}")
 
-            # Detect crossover in net value (crossing zero)
-            if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
-                # new_trade_cycle = True
-                cycle_start_index = index  # Update to the most recent crossover index
+                # Detect crossover in net value (crossing zero)
+                if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
+                    cycle_start_index = index  # Update to the most recent crossover index
 
-            print(f"{cycle_start_index}=====================CROSS=============================")
-            msg = (f"cycle_start_index :: {cycle_start_index}")
-            self.log_with_clock(logging.INFO, msg)
+                print(f"{cycle_start_index}=====================CROSS=============================")
+                msg = (f"cycle_start_index :: {cycle_start_index}")
+                self.log_with_clock(logging.INFO, msg)
+
+            # print final log message
+            print("Loop completed")
+        except Exception as e:
+            print(f"Error occurred: {e}")
             # print(f"Cycle Starting Index = {cycle_start_index}")
             # Filter out trades after the identified cycle start point
             filtered_df = df.iloc[cycle_start_index:]
