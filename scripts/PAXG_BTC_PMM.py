@@ -421,7 +421,7 @@ class SimplePMM(ScriptStrategyBase):
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
                 # new_trade_cycle = True
                 cycle_start_index = index  # Update to the most recent crossover index
-                # print("=====================CROSS=============================")
+                print(f"{cycle_start_index}=====================CROSS=============================")
 
 
             # print(f"Cycle Starting Index = {cycle_start_index}")
@@ -930,7 +930,7 @@ class SimplePMM(ScriptStrategyBase):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
         self._bid_baseline = (sold_baseline)
         self._ask_baseline = (bought_baseline)
-        
+
         # Retrieve the log returns from the DataFrame
         log_returns = log_returns_list##self.log_returns
 
