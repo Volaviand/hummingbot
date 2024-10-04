@@ -572,7 +572,7 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = False
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_XBT.csv')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_XBT')
 
 
         self.fee_percent = Decimal(self.fee_percent)
@@ -995,7 +995,7 @@ class SimplePMM(ScriptStrategyBase):
         
         #self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC.csv')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
 
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
