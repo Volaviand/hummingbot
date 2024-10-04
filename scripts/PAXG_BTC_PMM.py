@@ -422,88 +422,88 @@ class SimplePMM(ScriptStrategyBase):
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
                 # new_trade_cycle = True
                 cycle_start_index = index  # Update to the most recent crossover index
-                print(f"{cycle_start_index}=====================CROSS=============================")
+                # print(f"{cycle_start_index}=====================CROSS=============================")
 
         
-            # print(f"Cycle Starting Index = {cycle_start_index}")
-            # Filter out trades after the identified cycle start point
-            filtered_df = df.iloc[cycle_start_index:]
+        # print(f"Cycle Starting Index = {cycle_start_index}")
+        # Filter out trades after the identified cycle start point
+        filtered_df = df.iloc[cycle_start_index:]
 
-            # Filter out buy and sell trades
-            buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
-            sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
+        # Filter out buy and sell trades
+        buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
+        sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
 
-            # Calculate weighted sums with fees
-            sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
-            sum_of_buy_amount = buy_trades['amount'].sum()
-            sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
+        # Calculate weighted sums with fees
+        sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
+        sum_of_buy_amount = buy_trades['amount'].sum()
+        sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
 
-            sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
-            sum_of_sell_amount = sell_trades['amount'].sum()
-            sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
+        sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
+        sum_of_sell_amount = sell_trades['amount'].sum()
+        sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
 
-            # Calculate the total buy cost after  fees
-            # This isnt a price movement, but a comparison of sum amount.  
-            # If I bought $100 worth and paid 0.50, then I paid a total of $100.50 after fees
-            # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5 after fees
-            total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
+        # Calculate the total buy cost after  fees
+        # This isnt a price movement, but a comparison of sum amount.  
+        # If I bought $100 worth and paid 0.50, then I paid a total of $100.50 after fees
+        # If I sold $100 worth, but paid 0.50 to do so, then I only sold $99.5 after fees
+        total_buy_cost = sum_of_buy_prices + sum_of_buy_fees
 
-            # Calculate the total sell proceeds after fees
-            total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
+        # Calculate the total sell proceeds after fees
+        total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
 
-            # Calculate net value in quote
-            net_value = total_buy_cost - total_sell_proceeds
+        # Calculate net value in quote
+        net_value = total_buy_cost - total_sell_proceeds
 
 
-            # Calculate the breakeven prices
-            breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
-            # print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
-            
-            breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
-            # print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
+        # Calculate the breakeven prices
+        breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
+        # print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
+        
+        breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
+        # print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
 
-            # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
-            balance_text = None
-            if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
-                balance_text = "Unbalanced Sells (Quote)"
-            elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
-                balance_text = "Unbalanced Buys (Base)"
+        # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
+        balance_text = None
+        if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
+            balance_text = "Unbalanced Sells (Quote)"
+        elif min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_sell_amount:
+            balance_text = "Unbalanced Buys (Base)"
+        else:
+            balance_text = "Balanced"
+
+        realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
+
+        # # Calculate Unrealized PnL (for the remaining open position)
+        open_position_size = Decimal(abs(float(sum_of_buy_amount) - float(sum_of_sell_amount)))
+
+        if open_position_size > 0:
+            vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                    False,
+                                                    open_position_size).result_price
+
+            vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
+                                                    True,
+                                                    open_position_size).result_price
+
+            # Unrealized PnL is based on the current midprice and the breakeven of the open position
+            if sum_of_buy_amount > sum_of_sell_amount:
+                unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
+            elif sum_of_buy_amount < sum_of_sell_amount:
+                unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
             else:
-                balance_text = "Balanced"
+                unrealized_pnl = 0
 
-            realized_pnl = min(sum_of_buy_amount, sum_of_sell_amount) * (breakeven_sell_price - breakeven_buy_price)
+            self.u_pnl = unrealized_pnl
+        else:
+            self.u_pnl = 0
 
-            # # Calculate Unrealized PnL (for the remaining open position)
-            open_position_size = Decimal(abs(float(sum_of_buy_amount) - float(sum_of_sell_amount)))
+        ## Update Global Values
+        self.b_be = breakeven_buy_price
+        self.s_be = breakeven_sell_price
+        self.pnl = realized_pnl
+        self.n_v = net_value
 
-            if open_position_size > 0:
-                vwap_bid = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                        False,
-                                                        open_position_size).result_price
-
-                vwap_ask = self.connectors[self.exchange].get_vwap_for_volume(self.trading_pair,
-                                                        True,
-                                                        open_position_size).result_price
-
-                # Unrealized PnL is based on the current midprice and the breakeven of the open position
-                if sum_of_buy_amount > sum_of_sell_amount:
-                    unrealized_pnl = open_position_size * (Decimal(vwap_bid) - Decimal(breakeven_buy_price))
-                elif sum_of_buy_amount < sum_of_sell_amount:
-                    unrealized_pnl = open_position_size * (Decimal(breakeven_sell_price) - Decimal(vwap_ask))
-                else:
-                    unrealized_pnl = 0
-
-                self.u_pnl = unrealized_pnl
-            else:
-                self.u_pnl = 0
-
-            ## Update Global Values
-            self.b_be = breakeven_buy_price
-            self.s_be = breakeven_sell_price
-            self.pnl = realized_pnl
-            self.n_v = net_value
-
-            return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
+        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
 
 
