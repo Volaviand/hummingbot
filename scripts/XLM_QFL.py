@@ -406,17 +406,17 @@ class SimplePMM(ScriptStrategyBase):
 
             # Calculate the new net value
             if trade_type == 'BUY':
-                # print(f"Buy Trade # {index}")
+                print(f"Buy Trade # {index}")
                 intermediate_buy_cost = trade_price * trade_amount + trade_fee
-                # print(f"intermediate Buy Cost : {intermediate_buy_cost}")
+                print(f"intermediate Buy Cost : {intermediate_buy_cost}")
                 last_net_value += intermediate_buy_cost
-                # print(f"NET {last_net_value}")
+                print(f"NET {last_net_value}")
             elif trade_type == 'SELL':
-                # print(f"Sell Trade # {index}")
+                print(f"Sell Trade # {index}")
                 intermediate_sell_proceeds = trade_price * trade_amount - trade_fee
-                # print(f"intermediate Sell Proceeds : -{intermediate_sell_proceeds}")
+                print(f"intermediate Sell Proceeds : -{intermediate_sell_proceeds}")
                 last_net_value -= intermediate_sell_proceeds
-                # print(f"NET {last_net_value}")
+                print(f"NET {last_net_value}")
 
             # Detect crossover in net value (crossing zero)
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
