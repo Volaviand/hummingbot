@@ -565,8 +565,12 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = False
 
         # Update Trade CSV after a trade completes
-        _, _, _, _ = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
+        self.b_be = breakeven_buy_price
+        self.s_be = breakeven_sell_price
+        self.pnl = realized_pnl
+        self.n_v = net_value
 
         self.fee_percent = Decimal(self.fee_percent)
         
@@ -594,7 +598,7 @@ class SimplePMM(ScriptStrategyBase):
 
         balance_df = self.get_balance_df()
         lines.extend(["", "  Balances:"] + ["    " + line for line in balance_df.to_string(index=False).split("\n")])
-        
+
         lines.extend(["", f"Direction :: {self.trade_position_text} "])
 
         lines.extend(["", "| Inventory Imbalance | Trade History |"])
