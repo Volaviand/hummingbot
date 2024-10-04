@@ -453,7 +453,9 @@ class SimplePMM(ScriptStrategyBase):
         total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
 
         # Calculate net value in quote
-        net_value = total_buy_cost - total_sell_proceeds
+        # Needed to change since the net value here used to calculate only based on the history of the current situation, 
+        # It is now updated for the net of the entirety of the bot's history 
+        net_value = last_net_value ## total_buy_cost - total_sell_proceeds
 
 
         # Calculate the breakeven prices
