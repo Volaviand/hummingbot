@@ -379,8 +379,8 @@ class SimplePMM(ScriptStrategyBase):
 
         # Read the CSV file into a Pandas DataFrame
         df = pd.read_csv(csv_file_path)
-        print(df.tail())
-        
+        #print(df.tail())
+        print(f"Index :: {df.index}")
 
         # Variables to store trade cycle start point
         cycle_start_index = 0
@@ -418,7 +418,7 @@ class SimplePMM(ScriptStrategyBase):
                 intermediate_sell_proceeds = trade_price * trade_amount - trade_fee
                 print(f"intermediate Sell Proceeds : -{intermediate_sell_proceeds}")
                 last_net_value -= intermediate_sell_proceeds
-                print(f"NET {last_net_value}")
+                print(f"NET -{last_net_value}")
 
             # Detect crossover in net value (crossing zero)
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
