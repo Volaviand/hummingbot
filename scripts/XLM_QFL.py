@@ -379,7 +379,8 @@ class SimplePMM(ScriptStrategyBase):
 
         # Read the CSV file into a Pandas DataFrame
         df = pd.read_csv(csv_file_path)
-
+        print(df.tail())
+        
 
         # Variables to store trade cycle start point
         cycle_start_index = 0
