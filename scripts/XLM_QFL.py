@@ -424,7 +424,8 @@ class SimplePMM(ScriptStrategyBase):
                 cycle_start_index = index  # Update to the most recent crossover index
 
             print(f"{cycle_start_index}=====================CROSS=============================")
-
+            msg = (f"cycle_start_index :: {cycle_start_index}")
+            self.log_with_clock(logging.INFO, msg)
             # print(f"Cycle Starting Index = {cycle_start_index}")
             # Filter out trades after the identified cycle start point
             filtered_df = df.iloc[cycle_start_index:]
