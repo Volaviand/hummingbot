@@ -497,6 +497,12 @@ class SimplePMM(ScriptStrategyBase):
             else:
                 self.u_pnl = 0
 
+            ## Update Global Values
+            self.b_be = breakeven_buy_price
+            self.s_be = breakeven_sell_price
+            self.pnl = realized_pnl
+            self.n_v = net_value
+
             return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
 
@@ -574,7 +580,7 @@ class SimplePMM(ScriptStrategyBase):
         self.pnl = realized_pnl
         self.n_v = net_value
 
-        
+
         self.fee_percent = Decimal(self.fee_percent)
         
         # Print log
