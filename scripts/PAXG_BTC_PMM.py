@@ -496,6 +496,12 @@ class SimplePMM(ScriptStrategyBase):
             else:
                 self.u_pnl = 0
 
+            ## Update Global Values
+            self.b_be = breakeven_buy_price
+            self.s_be = breakeven_sell_price
+            self.pnl = realized_pnl
+            self.n_v = net_value
+
             return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
 
 
@@ -567,10 +573,6 @@ class SimplePMM(ScriptStrategyBase):
         # Update Trade CSV after a trade completes
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_XLM')
 
-        self.b_be = breakeven_buy_price
-        self.s_be = breakeven_sell_price
-        self.pnl = realized_pnl
-        self.n_v = net_value
 
         self.fee_percent = Decimal(self.fee_percent)
         
@@ -992,10 +994,6 @@ class SimplePMM(ScriptStrategyBase):
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
 
-        self.b_be = breakeven_buy_price
-        self.s_be = breakeven_sell_price
-        self.pnl = realized_pnl
-        self.n_v = net_value
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
         # self.log_with_clock(logging.INFO, msg_4)
