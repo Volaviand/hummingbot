@@ -928,7 +928,9 @@ class SimplePMM(ScriptStrategyBase):
 
     def call_garch_model(self):
         sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-
+        self._bid_baseline = (sold_baseline)
+        self._ask_baseline = (bought_baseline)
+        
         # Retrieve the log returns from the DataFrame
         log_returns = log_returns_list##self.log_returns
 
