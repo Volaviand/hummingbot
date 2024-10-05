@@ -342,6 +342,16 @@ class SimplePMM(ScriptStrategyBase):
         self.trade_position_text = ""
 
     def on_tick(self):
+
+        #Calculate garch every so many seconds
+        if self.create_garch_timestamp<= self.current_timestamp:
+                ### Call Garch Test
+                self.call_garch_model()
+                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                #self.log_with_clock(logging.INFO, msg_gv)
+                self.target_profitability = max(self.min_profitability, self.current_vola)
+                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
 
@@ -351,14 +361,7 @@ class SimplePMM(ScriptStrategyBase):
             self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
             
-        #Calculate garch every so many seconds
-        if self.create_garch_timestamp<= self.current_timestamp:
-                ### Call Garch Test
-                self.call_garch_model()
-                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-                #self.log_with_clock(logging.INFO, msg_gv)
-                self.target_profitability = max(self.min_profitability, self.current_vola)
-                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+
         
         # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
