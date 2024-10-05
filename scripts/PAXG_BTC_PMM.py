@@ -427,7 +427,10 @@ class SimplePMM(ScriptStrategyBase):
         
         # print(f"Cycle Starting Index = {cycle_start_index}")
         # Filter out trades after the identified cycle start point
-        filtered_df = df.iloc[cycle_start_index:]
+        if cycle_start_index == 0:
+            filtered_df = df.iloc[cycle_start_index:]
+        else:
+            filtered_df = df.iloc[cycle_start_index + 1 :]
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
@@ -454,7 +457,7 @@ class SimplePMM(ScriptStrategyBase):
         # Calculate net value in quote
         # Needed to change since the net value here used to calculate only based on the history of the current situation, 
         # It is now updated for the net of the entirety of the bot's history 
-        net_value = last_net_value ## total_buy_cost - total_sell_proceeds
+        net_value = total_buy_cost - total_sell_proceeds
 
         # Calculate the breakeven prices
         breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
