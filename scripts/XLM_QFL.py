@@ -1155,7 +1155,7 @@ class SimplePMM(ScriptStrategyBase):
          
         else :
             ## Adjust this logic just for one sided entries :: if you are completely sold out, then you should not have the capability to sell in the first place. 
-            base_balancing_volume = 0.0 #minimum_size
+            base_balancing_volume = minimum_size
             quote_balancing_volume = minimum_size
 
 
@@ -1186,6 +1186,8 @@ class SimplePMM(ScriptStrategyBase):
             self.log_with_clock(logging.INFO, msg_b) 
         else:
             order_size_bid = np.maximum(quote_balancing_volume , minimum_size )
+
+
 
         if base_balancing_volume < minimum_size  :
             order_size_ask = base_balancing_volume
