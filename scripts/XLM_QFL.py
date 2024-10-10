@@ -182,182 +182,7 @@ class KrakenAPI:
         # print(df)
         return df
 
-    def get_ohlc_calculations(self, df):
-        df = df
-        df['Open'] = pd.to_numeric(df['Open'])
-        df['High'] = pd.to_numeric(df['High'])
-        df['Low'] =pd.to_numeric(df['Low'])
-        source = ( df['High'] + df['Low']) / 2 # pd.to_numeric(df['Close'])# 
-        df['Source'] = source
-        df['Close'] = pd.to_numeric(df['Close'])
-        close = df['Close']
-        log_returns = np.log(source/np.roll(source,shift=1))[1:].dropna()
-        log_returns_series = pd.Series(log_returns)
-        
-        # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
 
-        # Fit the model
-        model_fit = model.fit(disp="off")
-        # fig1 = model_fit.plot()
-        print(model_fit.summary())
-        # Extract standardized residuals
-        std_residuals = model_fit.std_resid
-        
-        # Extract conditional volatility
-        volatility_rescaled = model_fit.conditional_volatility
-
-        # Convert the percent to decimal percent
-        volatility = volatility_rescaled / 100 
-
-        dates = log_returns_series.index
-
-        #######################::::::::::::::::::::::::::::::::::::::::::
-        ############## Volatility of volatility, Secondary Volatility::::
-        secondary_log_returns = np.log(volatility / np.roll(volatility, shift=1))[1:]
-        
-        # Convert log returns to a pandas Series
-        secondary_log_returns_series = pd.Series(secondary_log_returns) #* scale
-
-        # Define the GARCH model with automatic rescaling
-        secondary_model = arch_model(secondary_log_returns, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True, dist="StudentsT")
-
-        # Fit the model
-        secondary_model_fit = secondary_model.fit(disp="off")
-
-        # Extract conditional volatility
-        secondary_volatility_rescaled = np.exp(secondary_model_fit.conditional_volatility) - 1
-        
-        # Convert the percent to decimal percent
-        secondary_volatility = secondary_volatility_rescaled / 100 
-
-        #Append values to df
-        df['Mean'] = source.dropna().mean()
-        df['Log Returns'] = log_returns_series.dropna()
-        df['Volatility'] = volatility.dropna()
-        df['Secondary Volatility'] = secondary_volatility.dropna()
-        df['Standard Residuals'] = std_residuals.dropna()
-
-        # Edit Volume for calculations
-        df['Volume'] = pd.to_numeric(df['Volume'])
-        rolling_period = 365
-        
-        IQR3_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.75)
-        vola_median = df['Volatility'].rolling(window=rolling_period).quantile(0.50)
-        IQR1_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.25)
-        
-        IQR3_Source = df['High'].rolling(window=3).quantile(0.75)
-        IQR1_Source = df['Low'].rolling(window=3).quantile(0.25)    # Assign these values to the entire DataFrame in new columns
-
-        
-        df['IQR3_vola'] = IQR3_vola
-        df['Vola_Median'] = vola_median
-        df['IQR1_vola'] = IQR1_vola
-        df['IQR3_Source'] = IQR3_Source
-        df['IQR1_Source'] = IQR1_Source
-        
-        dt = 1  # np.sqrt(window)# / len(df['Volatility']))
-        
-
-
-        df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
-
-
-
-        # Rank the Volatility
-        #init vol rank
-        self.volatility_rank = 1
-
-        self.max_vola = df['Volatility'].iloc[-rolling_period:].max()
-        min_vola = df['Volatility'].iloc[-rolling_period:].max()
-        self.current_vola = df['Volatility'].iloc[-1]
-
-
-        # Prevent division by zero
-        if self.max_vola != min_vola:
-            self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
-        else:
-            self.volatility_rank = 1  # Handle constant volatility case
-
-        df['volatility_rank'] = self.volatility_rank
-
-        # print(f"Max Volatility :: {max_vola}")
-        # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
-
-
-
-        ## Boolean Values for plotting areas;:
-        # Initialize flags and trackers before the loop
-        latest_low_tail_value = None  # Store the most recent low tail value
-        latest_high_tail_value = None  # Store the most recent high tail value
-        # high_tail_flag = False  # Initially set to False
-        # low_tail_flag = False  # Initially set to False
-        
-        # Create conditions for high and low tails
-        high_volatility = df['Volatility'] > df['IQR3_vola']
-        low_tail = (df['Low'] < df['IQR1_Source']) & high_volatility
-        high_tail = (df['High'] > df['IQR3_Source']) & high_volatility
-        
-        # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
-        df['Low Line'] = np.nan
-        df['High Line'] = np.nan
-        df.loc[0, 'Low Line'] = df.loc[0, 'IQR1_Source']  # Start Low Line with the first value of IQR1_Source
-        df.loc[0, 'High Line'] = df.loc[0, 'IQR3_Source']  # Start High Line with the first value of IQR3_Source
-        
-        # Iterate through each row and update the Low Line and High Line
-        for i in range(1, len(df)):
-            # Get the previous Low and High Line values, if NaN, use current IQR1_Source or IQR3_Source
-            previous_low_line = df.loc[i-1, 'Low Line'] # if not np.isnan(df.loc[i-1, 'Low Line']) else df.loc[i-1, 'IQR1_Source']
-            previous_high_line = df.loc[i-1, 'High Line'] # if not np.isnan(df.loc[i-1, 'High Line']) else df.loc[i-1, 'IQR3_Source']
-            
-            # Handle Low Line updates (when a high tail happens)
-            # Hidden Line for each Low Event
-            if low_tail[i-1]:
-                latest_low_tail_value = df.loc[i, 'IQR1_Source']
-
-            # If High Tail and there is a last low value, use it.
-            if high_tail[i] and latest_low_tail_value is not None:
-                df.loc[i, 'Low Line'] = latest_low_tail_value
-
-            # If a High Tail and there is no last value, make one
-            elif high_tail[i] and latest_low_tail_value is None:
-                df.loc[i, 'Low Line'] = df.loc[i, 'IQR1_Source']
-
-                
-            else:
-                df.loc[i, 'Low Line'] = np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
-
-            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
-            df.loc[i, 'Low Line'] = np.minimum(df.loc[i, 'Low Line'] , df.loc[i, 'IQR1_Source'])
-
-            # Handle High Line updates (when a low tail happens)
-            if high_tail[i-1]:
-                latest_high_tail_value = df.loc[i, 'IQR3_Source']
-
-        
-            if low_tail[i] and latest_high_tail_value is not None:
-                df.loc[i, 'High Line'] = latest_high_tail_value
-
-                
-            elif low_tail[i] and latest_high_tail_value is None:
-                df.loc[i, 'High Line'] = df.loc[i, 'IQR3_Source']
-
-            else:
-                df.loc[i, 'High Line'] = np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
-                
-            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
-            df.loc[i, 'High Line'] = np.maximum(df.loc[i, 'High Line'] , df.loc[i, 'IQR3_Source'])
-
-        
-        # Condition to check if the Low value is below the Low Line or High value is above the High Line
-        low_below_base = df['Low'] < df['Low Line']
-        high_above_base = df['High'] > df['High Line']
-
-
-        self._bid_baseline = df['Low Line'].iloc[-1]
-        self._ask_baseline = df['High Line'].iloc[-1]
-
-        return df
 
 
 # def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
@@ -608,7 +433,185 @@ class SimplePMM(ScriptStrategyBase):
         self._last_sell_price = 0
 
         self.trade_position_text = ""
-    def call_trade_history(self, file_name='trades_PAXG_BTC.csv'):
+
+    def get_ohlc_calculations(self, df):
+        df = df
+        df['Open'] = pd.to_numeric(df['Open'])
+        df['High'] = pd.to_numeric(df['High'])
+        df['Low'] =pd.to_numeric(df['Low'])
+        source = ( df['High'] + df['Low']) / 2 # pd.to_numeric(df['Close'])# 
+        df['Source'] = source
+        df['Close'] = pd.to_numeric(df['Close'])
+        close = df['Close']
+        log_returns = np.log(source/np.roll(source,shift=1))[1:].dropna()
+        log_returns_series = pd.Series(log_returns)
+        
+        # Define the GARCH model with automatic rescaling
+        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
+
+        # Fit the model
+        model_fit = model.fit(disp="off")
+        # fig1 = model_fit.plot()
+        print(model_fit.summary())
+        # Extract standardized residuals
+        std_residuals = model_fit.std_resid
+        
+        # Extract conditional volatility
+        volatility_rescaled = model_fit.conditional_volatility
+
+        # Convert the percent to decimal percent
+        volatility = volatility_rescaled / 100 
+
+        dates = log_returns_series.index
+
+        #######################::::::::::::::::::::::::::::::::::::::::::
+        ############## Volatility of volatility, Secondary Volatility::::
+        secondary_log_returns = np.log(volatility / np.roll(volatility, shift=1))[1:]
+        
+        # Convert log returns to a pandas Series
+        secondary_log_returns_series = pd.Series(secondary_log_returns) #* scale
+
+        # Define the GARCH model with automatic rescaling
+        secondary_model = arch_model(secondary_log_returns, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True, dist="StudentsT")
+
+        # Fit the model
+        secondary_model_fit = secondary_model.fit(disp="off")
+
+        # Extract conditional volatility
+        secondary_volatility_rescaled = np.exp(secondary_model_fit.conditional_volatility) - 1
+        
+        # Convert the percent to decimal percent
+        secondary_volatility = secondary_volatility_rescaled / 100 
+
+        #Append values to df
+        df['Mean'] = source.dropna().mean()
+        df['Log Returns'] = log_returns_series.dropna()
+        df['Volatility'] = volatility.dropna()
+        df['Secondary Volatility'] = secondary_volatility.dropna()
+        df['Standard Residuals'] = std_residuals.dropna()
+
+        # Edit Volume for calculations
+        df['Volume'] = pd.to_numeric(df['Volume'])
+        rolling_period = 365
+        
+        IQR3_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.75)
+        vola_median = df['Volatility'].rolling(window=rolling_period).quantile(0.50)
+        IQR1_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.25)
+        
+        IQR3_Source = df['High'].rolling(window=3).quantile(0.75)
+        IQR1_Source = df['Low'].rolling(window=3).quantile(0.25)    # Assign these values to the entire DataFrame in new columns
+
+        
+        df['IQR3_vola'] = IQR3_vola
+        df['Vola_Median'] = vola_median
+        df['IQR1_vola'] = IQR1_vola
+        df['IQR3_Source'] = IQR3_Source
+        df['IQR1_Source'] = IQR1_Source
+        
+        dt = 1  # np.sqrt(window)# / len(df['Volatility']))
+        
+
+
+        df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
+
+
+
+        # Rank the Volatility
+        #init vol rank
+        self.volatility_rank = 1
+
+        self.max_vola = df['Volatility'].iloc[-rolling_period:].max()
+        min_vola = df['Volatility'].iloc[-rolling_period:].max()
+        self.current_vola = df['Volatility'].iloc[-1]
+
+
+        # Prevent division by zero
+        if self.max_vola != min_vola:
+            self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+        else:
+            self.volatility_rank = 1  # Handle constant volatility case
+
+        df['volatility_rank'] = self.volatility_rank
+
+        # print(f"Max Volatility :: {max_vola}")
+        # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
+
+
+
+        ## Boolean Values for plotting areas;:
+        # Initialize flags and trackers before the loop
+        latest_low_tail_value = None  # Store the most recent low tail value
+        latest_high_tail_value = None  # Store the most recent high tail value
+        # high_tail_flag = False  # Initially set to False
+        # low_tail_flag = False  # Initially set to False
+        
+        # Create conditions for high and low tails
+        high_volatility = df['Volatility'] > df['IQR3_vola']
+        low_tail = (df['Low'] < df['IQR1_Source']) & high_volatility
+        high_tail = (df['High'] > df['IQR3_Source']) & high_volatility
+        
+        # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
+        df['Low Line'] = np.nan
+        df['High Line'] = np.nan
+        df.loc[0, 'Low Line'] = df.loc[0, 'IQR1_Source']  # Start Low Line with the first value of IQR1_Source
+        df.loc[0, 'High Line'] = df.loc[0, 'IQR3_Source']  # Start High Line with the first value of IQR3_Source
+        
+        # Iterate through each row and update the Low Line and High Line
+        for i in range(1, len(df)):
+            # Get the previous Low and High Line values, if NaN, use current IQR1_Source or IQR3_Source
+            previous_low_line = df.loc[i-1, 'Low Line'] # if not np.isnan(df.loc[i-1, 'Low Line']) else df.loc[i-1, 'IQR1_Source']
+            previous_high_line = df.loc[i-1, 'High Line'] # if not np.isnan(df.loc[i-1, 'High Line']) else df.loc[i-1, 'IQR3_Source']
+            
+            # Handle Low Line updates (when a high tail happens)
+            # Hidden Line for each Low Event
+            if low_tail[i-1]:
+                latest_low_tail_value = df.loc[i, 'IQR1_Source']
+
+            # If High Tail and there is a last low value, use it.
+            if high_tail[i] and latest_low_tail_value is not None:
+                df.loc[i, 'Low Line'] = latest_low_tail_value
+
+            # If a High Tail and there is no last value, make one
+            elif high_tail[i] and latest_low_tail_value is None:
+                df.loc[i, 'Low Line'] = df.loc[i, 'IQR1_Source']
+
+                
+            else:
+                df.loc[i, 'Low Line'] = np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
+
+            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
+            df.loc[i, 'Low Line'] = np.minimum(df.loc[i, 'Low Line'] , df.loc[i, 'IQR1_Source'])
+
+            # Handle High Line updates (when a low tail happens)
+            if high_tail[i-1]:
+                latest_high_tail_value = df.loc[i, 'IQR3_Source']
+
+        
+            if low_tail[i] and latest_high_tail_value is not None:
+                df.loc[i, 'High Line'] = latest_high_tail_value
+
+                
+            elif low_tail[i] and latest_high_tail_value is None:
+                df.loc[i, 'High Line'] = df.loc[i, 'IQR3_Source']
+
+            else:
+                df.loc[i, 'High Line'] = np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
+                
+            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
+            df.loc[i, 'High Line'] = np.maximum(df.loc[i, 'High Line'] , df.loc[i, 'IQR3_Source'])
+
+        
+        # Condition to check if the Low value is below the Low Line or High value is above the High Line
+        low_below_base = df['Low'] < df['Low Line']
+        high_above_base = df['High'] > df['High Line']
+
+
+        self._bid_baseline = df['Low Line'].iloc[-1]
+        self._ask_baseline = df['High Line'].iloc[-1]
+
+        return df
+
+    def call_trade_history(self, file_name='trades_XLM.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
         # Start with default values
@@ -760,7 +763,7 @@ class SimplePMM(ScriptStrategyBase):
                 ### Call Historical Calculations
                 kraken_api = KrakenAPI(self.history_market)
                 df = kraken_api.call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
-                ohlc_calc_df = kraken_api.get_ohlc_calculations(df)
+                ohlc_calc_df = self.get_ohlc_calculations(df)
 
                 #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
                 #self.log_with_clock(logging.INFO, msg_gv)
