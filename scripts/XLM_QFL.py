@@ -758,7 +758,7 @@ class SimplePMM(ScriptStrategyBase):
         #Calculate garch every so many seconds
         if self.create_garch_timestamp<= self.current_timestamp:
                 ### Call Historical Calculations
-                kraken_api = KrakenAPI(history_market)
+                kraken_api = KrakenAPI(self.history_market)
                 df = kraken_api.call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
                 ohlc_calc_df = kraken_api.get_ohlc_calculations(df)
 
