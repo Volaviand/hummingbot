@@ -135,7 +135,7 @@ class KrakenAPI:
         initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
         while True:
             success, trades, last_timestamp = self.fetch_kraken_ohlc_data(self.last_timestamp, interval)
-            print(len(trades))
+            # print(len(trades))
             if not success or not trades:
                 # print("No more data to fetch.")
                 break
@@ -758,7 +758,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def on_tick(self):
         #Calculate garch every so many seconds
-        if self.create_garch_timestamp<= self.current_timestamp:
+        if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
                 kraken_api = KrakenAPI(self.history_market)
                 df = kraken_api.call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
@@ -793,7 +793,8 @@ class SimplePMM(ScriptStrategyBase):
         time.sleep(10)
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
         _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-
+        print(maker_base_balance)
+        print(quote_balance_in_base)
         # Save Values for Status use without recalculating them over and over again
         self.bid_percent = optimal_bid_percent
         self.ask_percent = optimal_ask_percent
