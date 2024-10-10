@@ -59,7 +59,7 @@ class KrakenAPI:
             
                 return True, trades, last_timestamp
             else:
-                print(f"No data found or error in response for symbol: {self.symbol}")
+                # print(f"No data found or error in response for symbol: {self.symbol}")
                 return False, [], self.last_timestamp
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
@@ -69,7 +69,7 @@ class KrakenAPI:
         initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
         while True:
             success, trades, last_timestamp = self.fetch_trades(self.last_timestamp)
-            #print(len(trades))
+            # print(len(trades))
             if not success or not trades:
                 # print("No more data to fetch.")
                 break
@@ -86,137 +86,206 @@ class KrakenAPI:
                 # print("No more trades.")
                 break
 
-            # Limit the loop to avoid excessive requests
-            if len(self.data) > 100000:  # Example limit
-                print("Data limit reached.")
+            # # Limit the loop to avoid excessive requests
+            # if len(self.data) > 100000:  # Example limit
+            #     print("Data limit reached.")
+            #     break
+
+            # Rate limit to avoid hitting API too hard
+            time.sleep(1)
+
+        return self.data
+        
+    def fetch_kraken_ohlc_data(self, since, interval):
+        try:
+            url = "https://api.kraken.com/0/public/OHLC"
+            
+            # Define parameters
+            params = {
+                'pair': self.symbol,  # Asset pair (e.g., 'XBTUSD' for Bitcoin/USD)
+                'interval': interval,     # Time frame in minutes (1440 = 1 day)
+                'since': since        # Unix timestamp for fetching data since a specific time
+            }
+            
+            # Make the GET request to Kraken API with params
+            response = requests.get(url, params=params)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            
+            # Parse the response JSON
+            data = response.json()
+    
+            # Check if the response contains the 'result' and data for the given symbol
+            if "result" in data and self.symbol in data["result"]:
+                trades = data["result"][self.symbol]  # OHLC data
+                last_timestamp = int(data["result"].get("last", self.last_timestamp))  # Timestamp of the last data point
+                
+                # print(f"Data Saved. Last Timestamp: {last_timestamp}")
+            
+                return True, trades, last_timestamp
+            else:
+                # print(f"No data found or error in response for symbol: {self.symbol}")
+                return False, [], self.last_timestamp
+    
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            return False, [], self.last_timestamp
+
+    def get_ohlc_since(self, interval):
+        initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
+        while True:
+            success, trades, last_timestamp = self.fetch_kraken_ohlc_data(self.last_timestamp, interval)
+            print(len(trades))
+            if not success or not trades:
+                # print("No more data to fetch.")
                 break
+
+            self.data.extend(trades)
+            self.last_timestamp = last_timestamp
+
+            # Stop if last timestamp exceeds end timestamp or if no new data is returned
+            if  self.last_timestamp >= self.end_timestamp:
+                # print("Reached the end timestamp.")
+                break
+
+            if len(trades) == 1:
+                # print("No more trades.")
+                break
+
+            # # Limit the loop to avoid excessive requests
+            # if len(self.data) > 100000:  # Example limit
+            #     print("Data limit reached.")
+            #     break
 
             # Rate limit to avoid hitting API too hard
             time.sleep(1)
 
         return self.data
 
-def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
-    # Calculate the timestamp for 1 day ago
-    since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
-    since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
 
-    # Calculate the timestamp for now
-    now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
-    # print(now_timestamp)
 
-    # Initialize Kraken API object with your symbol and start timestamp
-    api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
-    trades = api.get_trades_since()
+# def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
+#     # Calculate the timestamp for 1 day ago
+#     since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
+#     since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
 
-    # Convert to DataFrame
-    kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
+#     # Calculate the timestamp for now
+#     now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
+#     # print(now_timestamp)
 
-    #Convert values to numerics
-    kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
-    kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce').fillna(0)
+#     # Initialize Kraken API object with your symbol and start timestamp
+#     api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
+#     trades = api.get_trades_since()
+
+#     # Convert to DataFrame
+#     kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
+
+#     #Convert values to numerics
+#     kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
+#     kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce').fillna(0)
     
-    # Calculate log returns
-    kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
+#     # Calculate log returns
+#     kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
 
-    # Drop any NaN values created due to shifting
-    kdf.dropna(subset=['Log_Returns'], inplace=True)
+#     # Drop any NaN values created due to shifting
+#     kdf.dropna(subset=['Log_Returns'], inplace=True)
 
-    # Save log returns to a list
-    log_returns_list = kdf['Log_Returns'].tolist()
-
-
-    # Create separate lists for buys and sells
-    buy_trades = []
-    sell_trades = []
+#     # Save log returns to a list
+#     log_returns_list = kdf['Log_Returns'].tolist()
 
 
-    # Initialize the total volumes
-    total_buy_volume = 0
-    total_sell_volume = 0
+#     # Create separate lists for buys and sells
+#     buy_trades = []
+#     sell_trades = []
 
-    # Separate buys and sells and track volumes
-    for index, row in kdf.iterrows():
-        if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
-            # Add buy trade with actual volume
-            buy_trades.append(row)
-            total_buy_volume += row['Volume']
-            # Add corresponding sell trade with zero volume if needed
-            sell_trade = row.copy()
-            sell_trade['Volume'] = 0
-            sell_trades.append(sell_trade)
-        elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
-            # Add sell trade with actual volume
-            sell_trades.append(row)
-            total_sell_volume += row['Volume']
-            # Add corresponding buy trade with zero volume if needed
-            buy_trade = row.copy()
-            buy_trade['Volume'] = 0
-            buy_trades.append(buy_trade)
+
+#     # Initialize the total volumes
+#     total_buy_volume = 0
+#     total_sell_volume = 0
+
+#     # Separate buys and sells and track volumes
+#     for index, row in kdf.iterrows():
+#         if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
+#             # Add buy trade with actual volume
+#             buy_trades.append(row)
+#             total_buy_volume += row['Volume']
+#             # Add corresponding sell trade with zero volume if needed
+#             sell_trade = row.copy()
+#             sell_trade['Volume'] = 0
+#             sell_trades.append(sell_trade)
+#         elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
+#             # Add sell trade with actual volume
+#             sell_trades.append(row)
+#             total_sell_volume += row['Volume']
+#             # Add corresponding buy trade with zero volume if needed
+#             buy_trade = row.copy()
+#             buy_trade['Volume'] = 0
+#             buy_trades.append(buy_trade)
             
-    # Convert buy_trades and sell_trades to DataFrames for further analysis
-    buy_trades_df = pd.DataFrame(buy_trades)
-    sell_trades_df = pd.DataFrame(sell_trades)
+#     # Convert buy_trades and sell_trades to DataFrames for further analysis
+#     buy_trades_df = pd.DataFrame(buy_trades)
+#     sell_trades_df = pd.DataFrame(sell_trades)
 
 
 
-    kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
+#     kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
 
-    # Ensure the 'Timestamp' column is retained and converted to datetime if needed
-    buy_trades_df['Timestamp'] = pd.to_datetime(buy_trades_df['Timestamp'], unit='s')
-    sell_trades_df['Timestamp'] = pd.to_datetime(sell_trades_df['Timestamp'], unit='s')
+#     # Ensure the 'Timestamp' column is retained and converted to datetime if needed
+#     buy_trades_df['Timestamp'] = pd.to_datetime(buy_trades_df['Timestamp'], unit='s')
+#     sell_trades_df['Timestamp'] = pd.to_datetime(sell_trades_df['Timestamp'], unit='s')
 
-    # Sort DataFrames by Timestamp if you want them ordered
-    buy_trades_df = buy_trades_df.sort_values(by='Timestamp')
-    sell_trades_df = sell_trades_df.sort_values(by='Timestamp')
-
-
+#     # Sort DataFrames by Timestamp if you want them ordered
+#     buy_trades_df = buy_trades_df.sort_values(by='Timestamp')
+#     sell_trades_df = sell_trades_df.sort_values(by='Timestamp')
 
 
-    # Calculate percentiles, excluding zeros
-    nonzero_buy_volumes = buy_trades_df[buy_trades_df['Volume'] > 0]['Volume']
-    nonzero_sell_volumes = sell_trades_df[sell_trades_df['Volume'] > 0]['Volume']
-
-    # Find the percentile depth of buy and sell volumes
-    percentile = 50
-    bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
-    sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
-
-    # Calculate the percentile window
-    percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
-
-    # Function to calculate the baseline percentile for sell trades
-    def calculate_sold_baseline(row, percentile):
-        # Get the relevant prices from sell_trades_df within the window
-        relevant_prices = sell_trades_df['Price'][(sell_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
-        return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
-
-    # Function to calculate the baseline percentile for buy trades
-    def calculate_bought_baseline(row, percentile):
-        # Get the relevant prices from buy_trades_df within the window
-        relevant_prices = buy_trades_df['Price'][(buy_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
-        return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
 
 
-    # Define the desired percentile values
-    sell_percentile = 25  # You can change this to any value
-    buy_percentile =  75  # You can change this to any value
+#     # Calculate percentiles, excluding zeros
+#     nonzero_buy_volumes = buy_trades_df[buy_trades_df['Volume'] > 0]['Volume']
+#     nonzero_sell_volumes = sell_trades_df[sell_trades_df['Volume'] > 0]['Volume']
 
-    # Apply the functions to create new columns in kdf with variable percentiles
-    kdf['sold_baseline'] = kdf.apply(lambda row: calculate_sold_baseline(row, sell_percentile), axis=1)
-    kdf['bought_baseline'] = kdf.apply(lambda row: calculate_bought_baseline(row, buy_percentile), axis=1)
+#     # Find the percentile depth of buy and sell volumes
+#     percentile = 50
+#     bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
+#     sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
 
-    sold_baseline = kdf['sold_baseline'].iloc[-1]
-    bought_baseline = kdf['bought_baseline'].iloc[-1]
+#     # Calculate the percentile window
+#     percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
 
-    # Drop the 'Blank' column
-    kdf.drop('Blank', axis=1, inplace=True)
+#     # Function to calculate the baseline percentile for sell trades
+#     def calculate_sold_baseline(row, percentile):
+#         # Get the relevant prices from sell_trades_df within the window
+#         relevant_prices = sell_trades_df['Price'][(sell_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
+#         return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
+
+#     # Function to calculate the baseline percentile for buy trades
+#     def calculate_bought_baseline(row, percentile):
+#         # Get the relevant prices from buy_trades_df within the window
+#         relevant_prices = buy_trades_df['Price'][(buy_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
+#         return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
 
 
-    # Check for any missing values and fill or drop them if necessary
-    kdf.dropna(inplace=True)
+#     # Define the desired percentile values
+#     sell_percentile = 25  # You can change this to any value
+#     buy_percentile =  75  # You can change this to any value
 
-    return sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth
+#     # Apply the functions to create new columns in kdf with variable percentiles
+#     kdf['sold_baseline'] = kdf.apply(lambda row: calculate_sold_baseline(row, sell_percentile), axis=1)
+#     kdf['bought_baseline'] = kdf.apply(lambda row: calculate_bought_baseline(row, buy_percentile), axis=1)
+
+#     sold_baseline = kdf['sold_baseline'].iloc[-1]
+#     bought_baseline = kdf['bought_baseline'].iloc[-1]
+
+#     # Drop the 'Blank' column
+#     kdf.drop('Blank', axis=1, inplace=True)
+
+
+#     # Check for any missing values and fill or drop them if necessary
+#     kdf.dropna(inplace=True)
+
+#     return sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth
+
+
 
 class SimplePMM(ScriptStrategyBase):
     """
@@ -341,34 +410,6 @@ class SimplePMM(ScriptStrategyBase):
         self._last_sell_price = 0
 
         self.trade_position_text = ""
-
-    def on_tick(self):
-        #Calculate garch every so many seconds
-        if self.create_garch_timestamp<= self.current_timestamp:
-                ### Call Garch Test
-                self.call_garch_model()
-                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-                #self.log_with_clock(logging.INFO, msg_gv)
-                self.target_profitability = max(self.min_profitability, self.current_vola)
-                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
-
-        if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
-
-            proposal: List[OrderCandidate] = self.create_proposal()
-            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-            self.place_orders(proposal_adjusted)
-            self.create_timestamp = self.order_refresh_time + self.current_timestamp
-
-            
-
-        
-        # Update the timestamp model 
-        if self.current_timestamp - self.last_time_reported > self.report_interval:
-            self.last_time_reported = self.current_timestamp
-
-        
-
     def call_trade_history(self, file_name='trades_PAXG_BTC.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
@@ -512,6 +553,233 @@ class SimplePMM(ScriptStrategyBase):
         self.n_v = net_value
 
         return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
+
+    def call_kraken_ohlc_data(self, hist_days = 365, market = 'XXLMZEUR', interval = 1440):
+        # Calculate the timestamp for hist_days ago
+        since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
+        since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
+        # print(f'Since Timestamp, {since_timestamp}')
+        # Calculate the timestamp for now
+        now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
+        # print(f'Now Timestamp {now_timestamp}')
+        markets = market 
+        # Initialize Kraken API object with your symbol and start timestamp
+        api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
+        trades = api.get_ohlc_since(interval)
+        # Convert to DataFrame
+        #[int <time>, string <open>, string <high>, string <low>, string <close>, string <vwap>, string <volume>, int <count>]
+        df = pd.DataFrame(trades, columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'VWAP', 'Volume', 'Count'])
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='s')
+        # Pop out last data point, which is a duplicate of current data etc * 
+        df = df.iloc[:-1]
+        # print(df)
+        return df
+
+    def get_ohlc_calculations(self, df):
+        df = df
+        df['Open'] = pd.to_numeric(df['Open'])
+        df['High'] = pd.to_numeric(df['High'])
+        df['Low'] =pd.to_numeric(df['Low'])
+        source = ( df['High'] + df['Low']) / 2 # pd.to_numeric(df['Close'])# 
+        df['Source'] = source
+        df['Close'] = pd.to_numeric(df['Close'])
+        close = df['Close']
+        log_returns = np.log(source/np.roll(source,shift=1))[1:].dropna()
+        log_returns_series = pd.Series(log_returns)
+        
+        # Define the GARCH model with automatic rescaling
+        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
+
+        # Fit the model
+        model_fit = model.fit(disp="off")
+        # fig1 = model_fit.plot()
+        print(model_fit.summary())
+        # Extract standardized residuals
+        std_residuals = model_fit.std_resid
+        
+        # Extract conditional volatility
+        volatility_rescaled = model_fit.conditional_volatility
+
+        # Convert the percent to decimal percent
+        volatility = volatility_rescaled / 100 
+
+        dates = log_returns_series.index
+
+        #######################::::::::::::::::::::::::::::::::::::::::::
+        ############## Volatility of volatility, Secondary Volatility::::
+        secondary_log_returns = np.log(volatility / np.roll(volatility, shift=1))[1:]
+        
+        # Convert log returns to a pandas Series
+        secondary_log_returns_series = pd.Series(secondary_log_returns) #* scale
+
+        # Define the GARCH model with automatic rescaling
+        secondary_model = arch_model(secondary_log_returns, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True, dist="StudentsT")
+
+        # Fit the model
+        secondary_model_fit = secondary_model.fit(disp="off")
+
+        # Extract conditional volatility
+        secondary_volatility_rescaled = np.exp(secondary_model_fit.conditional_volatility) - 1
+        
+        # Convert the percent to decimal percent
+        secondary_volatility = secondary_volatility_rescaled / 100 
+
+        #Append values to df
+        df['Mean'] = source.dropna().mean()
+        df['Log Returns'] = log_returns_series.dropna()
+        df['Volatility'] = volatility.dropna()
+        df['Secondary Volatility'] = secondary_volatility.dropna()
+        df['Standard Residuals'] = std_residuals.dropna()
+
+        # Edit Volume for calculations
+        df['Volume'] = pd.to_numeric(df['Volume'])
+        rolling_period = 365
+        
+        IQR3_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.75)
+        vola_median = df['Volatility'].rolling(window=rolling_period).quantile(0.50)
+        IQR1_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.25)
+        
+        IQR3_Source = df['High'].rolling(window=3).quantile(0.75)
+        IQR1_Source = df['Low'].rolling(window=3).quantile(0.25)    # Assign these values to the entire DataFrame in new columns
+
+        
+        df['IQR3_vola'] = IQR3_vola
+        df['Vola_Median'] = vola_median
+        df['IQR1_vola'] = IQR1_vola
+        df['IQR3_Source'] = IQR3_Source
+        df['IQR1_Source'] = IQR1_Source
+        
+        dt = 1  # np.sqrt(window)# / len(df['Volatility']))
+        
+
+
+        df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
+
+
+
+        # Rank the Volatility
+        #init vol rank
+        self.volatility_rank = 1
+
+        self.max_vola = df['Volatility'].iloc[-rolling_period:].max()
+        min_vola = df['Volatility'].iloc[-rolling_period:].max()
+        self.current_vola = df['Volatility'].iloc[-1]
+
+
+        # Prevent division by zero
+        if self.max_vola != min_vola:
+            self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+        else:
+            self.volatility_rank = 1  # Handle constant volatility case
+
+        df['volatility_rank'] = self.volatility_rank
+
+        # print(f"Max Volatility :: {max_vola}")
+        # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
+
+
+
+        ## Boolean Values for plotting areas;:
+        # Initialize flags and trackers before the loop
+        latest_low_tail_value = None  # Store the most recent low tail value
+        latest_high_tail_value = None  # Store the most recent high tail value
+        # high_tail_flag = False  # Initially set to False
+        # low_tail_flag = False  # Initially set to False
+        
+        # Create conditions for high and low tails
+        high_volatility = df['Volatility'] > df['IQR3_vola']
+        low_tail = (df['Low'] < df['IQR1_Source']) & high_volatility
+        high_tail = (df['High'] > df['IQR3_Source']) & high_volatility
+        
+        # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
+        df['Low Line'] = np.nan
+        df['High Line'] = np.nan
+        df.loc[0, 'Low Line'] = df.loc[0, 'IQR1_Source']  # Start Low Line with the first value of IQR1_Source
+        df.loc[0, 'High Line'] = df.loc[0, 'IQR3_Source']  # Start High Line with the first value of IQR3_Source
+        
+        # Iterate through each row and update the Low Line and High Line
+        for i in range(1, len(df)):
+            # Get the previous Low and High Line values, if NaN, use current IQR1_Source or IQR3_Source
+            previous_low_line = df.loc[i-1, 'Low Line'] # if not np.isnan(df.loc[i-1, 'Low Line']) else df.loc[i-1, 'IQR1_Source']
+            previous_high_line = df.loc[i-1, 'High Line'] # if not np.isnan(df.loc[i-1, 'High Line']) else df.loc[i-1, 'IQR3_Source']
+            
+            # Handle Low Line updates (when a high tail happens)
+            # Hidden Line for each Low Event
+            if low_tail[i-1]:
+                latest_low_tail_value = df.loc[i, 'IQR1_Source']
+
+            # If High Tail and there is a last low value, use it.
+            if high_tail[i] and latest_low_tail_value is not None:
+                df.loc[i, 'Low Line'] = latest_low_tail_value
+
+            # If a High Tail and there is no last value, make one
+            elif high_tail[i] and latest_low_tail_value is None:
+                df.loc[i, 'Low Line'] = df.loc[i, 'IQR1_Source']
+
+                
+            else:
+                df.loc[i, 'Low Line'] = np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
+
+            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
+            df.loc[i, 'Low Line'] = np.minimum(df.loc[i, 'Low Line'] , df.loc[i, 'IQR1_Source'])
+
+            # Handle High Line updates (when a low tail happens)
+            if high_tail[i-1]:
+                latest_high_tail_value = df.loc[i, 'IQR3_Source']
+
+        
+            if low_tail[i] and latest_high_tail_value is not None:
+                df.loc[i, 'High Line'] = latest_high_tail_value
+
+                
+            elif low_tail[i] and latest_high_tail_value is None:
+                df.loc[i, 'High Line'] = df.loc[i, 'IQR3_Source']
+
+            else:
+                df.loc[i, 'High Line'] = np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
+                
+            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
+            df.loc[i, 'High Line'] = np.maximum(df.loc[i, 'High Line'] , df.loc[i, 'IQR3_Source'])
+
+        
+        # Condition to check if the Low value is below the Low Line or High value is above the High Line
+        low_below_base = df['Low'] < df['Low Line']
+        high_above_base = df['High'] > df['High Line']
+
+
+        self._bid_baseline = df['Low Line'].iloc[-1]
+        self._ask_baseline = df['High Line'].iloc[-1]
+
+        return df
+
+    def on_tick(self):
+        #Calculate garch every so many seconds
+        if self.create_garch_timestamp<= self.current_timestamp:
+                ### Call Garch Test
+                df = call_kraken_ohlc_data(720, market,  1440)    
+                ohlc_calc_df = get_ohlc_calculations(df)
+
+                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                #self.log_with_clock(logging.INFO, msg_gv)
+                self.target_profitability = max(self.min_profitability, self.current_vola)
+                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+
+        if self.create_timestamp <= self.current_timestamp:
+            self.cancel_all_orders()
+
+            proposal: List[OrderCandidate] = self.create_proposal()
+            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+            self.place_orders(proposal_adjusted)
+            self.create_timestamp = self.order_refresh_time + self.current_timestamp
+
+            
+
+        
+        # Update the timestamp model 
+        if self.current_timestamp - self.last_time_reported > self.report_interval:
+            self.last_time_reported = self.current_timestamp
+
+        
 
 
 
@@ -938,65 +1206,65 @@ class SimplePMM(ScriptStrategyBase):
     #     # self.log_with_clock(logging.INFO, msg_gv)
     #     return self._last_trade_price
 
-    def call_garch_model(self):
-        sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-        self._bid_baseline = (sold_baseline)
-        self._ask_baseline = (bought_baseline)
+    # def call_garch_model(self):
+    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
+    #     self._bid_baseline = (sold_baseline)
+    #     self._ask_baseline = (bought_baseline)
 
-        # Retrieve the log returns from the DataFrame
-        log_returns = log_returns_list##self.log_returns
+    #     # Retrieve the log returns from the DataFrame
+    #     log_returns = log_returns_list##self.log_returns
 
-        # Ensure log_returns is a one-dimensional pd.Series
-        if isinstance(log_returns, list):
-            log_returns = pd.Series(log_returns)
+    #     # Ensure log_returns is a one-dimensional pd.Series
+    #     if isinstance(log_returns, list):
+    #         log_returns = pd.Series(log_returns)
 
-        # Convert to numeric, forcing any errors to NaN
-        log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
+    #     # Convert to numeric, forcing any errors to NaN
+    #     log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
 
-        # Remove any NaN or infinite values from log_returns
-        log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
+    #     # Remove any NaN or infinite values from log_returns
+    #     log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
 
 
-        # Fit GARCH model to log returns
-        current_variance = []
-        current_volatility = []
-        length = 0
-        # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
+    #     # Fit GARCH model to log returns
+    #     current_variance = []
+    #     current_volatility = []
+    #     length = 0
+    #     # Define the GARCH model with automatic rescaling
+    #     model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
 
-        # Fit the model
-        model_fit = model.fit(disp="off")
-        msg_gv = (f"GARCH  { model_fit.summary()}")
-        self.log_with_clock(logging.INFO, msg_gv)
+    #     # Fit the model
+    #     model_fit = model.fit(disp="off")
+    #     msg_gv = (f"GARCH  { model_fit.summary()}")
+    #     self.log_with_clock(logging.INFO, msg_gv)
         
-        # Adjust Volatility to Decimal Percent values 
-        volatility = model_fit.conditional_volatility / 100 
+    #     # Adjust Volatility to Decimal Percent values 
+    #     volatility = model_fit.conditional_volatility / 100 
 
-        length = len(model_fit.conditional_volatility)
+    #     length = len(model_fit.conditional_volatility)
 
     
-        # Convert current_volatility to a pandas Series to apply rolling
-        current_volatility_series = pd.Series(volatility)
+    #     # Convert current_volatility to a pandas Series to apply rolling
+    #     current_volatility_series = pd.Series(volatility)
 
-        # Define the rolling window size (square root of length)
-        window = int(np.round(np.sqrt(len(current_volatility_series))))
+    #     # Define the rolling window size (square root of length)
+    #     window = int(np.round(np.sqrt(len(current_volatility_series))))
 
-        # Apply the rolling window to smooth volatility
-        rolling_volatility = current_volatility_series#.rolling(window=window).mean()
+    #     # Apply the rolling window to smooth volatility
+    #     rolling_volatility = current_volatility_series#.rolling(window=window).mean()
 
-        # Rank the Volatility
-        self.max_vola = rolling_volatility.max()
-        min_vola = rolling_volatility.min()
-        self.current_vola = current_volatility_series.iloc[-1]
+    #     # Rank the Volatility
+    #     self.max_vola = rolling_volatility.max()
+    #     min_vola = rolling_volatility.min()
+    #     self.current_vola = current_volatility_series.iloc[-1]
 
-        # Prevent division by zero
-        if self.max_vola != min_vola:
-            self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
-        else:
-            self.volatility_rank = 1  # Handle constant volatility case
+    #     # Prevent division by zero
+    #     if self.max_vola != min_vola:
+    #         self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+    #     else:
+    #         self.volatility_rank = 1  # Handle constant volatility case
 
-        # msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
-        # self.log_with_clock(logging.INFO, msg)            
+    #     # msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
+    #     # self.log_with_clock(logging.INFO, msg)            
 
 
 
