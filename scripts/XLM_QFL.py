@@ -792,6 +792,7 @@ class SimplePMM(ScriptStrategyBase):
     def create_proposal(self) -> List[OrderCandidate]:
         time.sleep(10)
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
+        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
 
         # Save Values for Status use without recalculating them over and over again
         self.bid_percent = optimal_bid_percent
@@ -815,10 +816,10 @@ class SimplePMM(ScriptStrategyBase):
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
         order_counter = []
-        if order_size_bid >= minimum_size:
+        if (order_size_bid >= minimum_size) and (maker_base_balance >= minimum_size):
             order_counter.append(buy_order)
 
-        if order_size_ask >= minimum_size:
+        if (order_size_ask >= minimum_size) and (quote_balance_in_base >= minimum_size):
             order_counter.append(sell_order)
 
         # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
