@@ -816,14 +816,14 @@ class SimplePMM(ScriptStrategyBase):
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
         order_counter = []
-        if (order_size_bid >= minimum_size) and (quote_balance_in_base  >= minimum_size):
+        if (order_size_bid >= minimum_size): # and (quote_balance_in_base  >= minimum_size)
             order_counter.append(buy_order)
         else:
             # Print message about order size. 
             msg = ( f" Quote Balance |{quote_balance_in_base}| below minimum_size for buy order |{minimum_size}| " )
             self.log_with_clock(logging.INFO, msg)
 
-        if (order_size_ask >= minimum_size) and (maker_base_balance >= minimum_size):
+        if (order_size_ask >= minimum_size) : # and (maker_base_balance >= minimum_size)
             order_counter.append(sell_order)
         else:
             # Print message about order size. 
