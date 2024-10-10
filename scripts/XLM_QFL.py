@@ -38,7 +38,7 @@ from Kraken_Calculations import BuyTrades, SellTrades
 
 
 class KrakenAPI:
-    def __init__(self, symbol, start_timestamp, end_timestamp=None):
+    def __init__(self, symbol, start_timestamp=None, end_timestamp=None):
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
         self.data = []
@@ -511,6 +511,7 @@ class SimplePMM(ScriptStrategyBase):
     exchange = "kraken"
     base_asset = "XLM"
     quote_asset = "EUR"
+    history_market = 'XXLMZEUR'
 
     #Maximum amount of orders  Bid + Ask
     maximum_orders = 170
@@ -756,9 +757,10 @@ class SimplePMM(ScriptStrategyBase):
     def on_tick(self):
         #Calculate garch every so many seconds
         if self.create_garch_timestamp<= self.current_timestamp:
-                ### Call Garch Test
-                df = KrakenAPI().call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
-                ohlc_calc_df = KrakenAPI().get_ohlc_calculations(df)
+                ### Call Historical Calculations
+                kraken_api = KrakenAPI(history_market)
+                df = kraken_api.call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
+                ohlc_calc_df = kraken_api.get_ohlc_calculations(df)
 
                 #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
                 #self.log_with_clock(logging.INFO, msg_gv)
