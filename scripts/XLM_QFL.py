@@ -1172,21 +1172,32 @@ class SimplePMM(ScriptStrategyBase):
 
 
         minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
-        order_size_bid = quote_balancing_volume
-        order_size_ask = base_balancing_volume
-        # order_size_bid = max(quote_balancing_volume, minimum_size)
-        # order_size_ask = max(base_balancing_volume, minimum_size)
-        # if quote_balancing_volume < minimum_size * Decimal(0.5) :
-        #     msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
-        #     self.log_with_clock(logging.INFO, msg_b) 
-        # else:
-        #     order_size_bid = np.maximum(quote_balancing_volume , minimum_size )
+        order_size_bid = max(quote_balancing_volume, minimum_size)
+        order_size_ask = max(base_balancing_volume, minimum_size)
 
-        # if base_balancing_volume < minimum_size * Decimal(0.5) :
-        #     msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
-        #     self.log_with_clock(logging.INFO, msg_a)  
-        # else:
-        #     order_size_ask = np.maximum(base_balancing_volume , minimum_size )
+        if quote_balancing_volume < minimum_size  :
+            order_size_bid = quote_balancing_volume
+            msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
+            self.log_with_clock(logging.INFO, msg_b) 
+        elif quote_balance_in_base < minimum_size:
+            order_size_bid = quote_balancing_volume
+
+            msg_b = (f"Not Enough Quote Balance for trade {quote_balance_in_base:8f}")
+            self.log_with_clock(logging.INFO, msg_b) 
+        else:
+            order_size_bid = np.maximum(quote_balancing_volume , minimum_size )
+
+        if base_balancing_volume < minimum_size  :
+            order_size_ask = base_balancing_volume
+            msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
+            self.log_with_clock(logging.INFO, msg_a)  
+        elif  maker_base_balance < minimum_size:
+            order_size_ask = base_balancing_volume
+
+            msg_a = (f"Not Enough Base Balance for trade {maker_base_balance:8f}")
+            self.log_with_clock(logging.INFO, msg_a)  
+        else:
+            order_size_ask = np.maximum(base_balancing_volume , minimum_size )
 
         order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid)
         order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask)
