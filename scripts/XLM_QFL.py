@@ -757,8 +757,8 @@ class SimplePMM(ScriptStrategyBase):
         #Calculate garch every so many seconds
         if self.create_garch_timestamp<= self.current_timestamp:
                 ### Call Garch Test
-                df = KrakenAPI.call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
-                ohlc_calc_df = KrakenAPI.get_ohlc_calculations(df)
+                df = KrakenAPI().call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
+                ohlc_calc_df = KrakenAPI().get_ohlc_calculations(df)
 
                 #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
                 #self.log_with_clock(logging.INFO, msg_gv)
