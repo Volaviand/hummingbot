@@ -518,7 +518,6 @@ class SimplePMM(ScriptStrategyBase):
 
         # Rank the Volatility
         #init vol rank
-        self.volatility_rank = 1
 
         self.max_vola = df['Volatility'].iloc[-rolling_period:].max()
         min_vola = df['Volatility'].iloc[-rolling_period:].max()
