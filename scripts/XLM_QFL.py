@@ -1142,16 +1142,16 @@ class SimplePMM(ScriptStrategyBase):
             base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
             quote_balancing_volume =  abs(minimum_size) * Decimal.exp(-self.order_shape_factor * q) 
             # Ensure base balancing volume does not exceed the amount needed to balance
-            if quote_balancing_volume > total_imbalance:
-                quote_balancing_volume = total_imbalance
+            # if quote_balancing_volume > total_imbalance:
+            #     quote_balancing_volume = total_imbalance
 
         elif q < 0 :
             base_balancing_volume = abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q)
             quote_balancing_volume = total_imbalance ##abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
 
             # Ensure base balancing volume does not exceed the amount needed to balance
-            if base_balancing_volume > total_imbalance:
-                base_balancing_volume = total_imbalance
+            # if base_balancing_volume > total_imbalance:
+            #     base_balancing_volume = total_imbalance
          
         else :
             ## Adjust this logic just for one sided entries :: if you are completely sold out, then you should not have the capability to sell in the first place. 
