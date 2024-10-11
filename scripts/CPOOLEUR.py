@@ -316,7 +316,7 @@ class SimplePMM(ScriptStrategyBase):
 
         self.trade_position_text = ""
 
-    def get_ohlc_calculations(self, df):
+    def get_ohlc_calculations(self, df, rolling_period=72):
         df = df
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
@@ -374,15 +374,15 @@ class SimplePMM(ScriptStrategyBase):
 
         # Edit Volume for calculations
         df['Volume'] = pd.to_numeric(df['Volume'])
-        rolling_period = 72
+        # rolling_period = 72
         
-        IQR3_vola = df['Volatility'].quantile(0.75)
-        vola_median = df['Volatility'].quantile(0.50)
-        IQR1_vola = df['Volatility'].quantile(0.25)
+        # Extent of tail capturing, currently 0.8413, 0.1587 for 1 Standard deviation around median
+        IQR3_vola = df['Volatility'].quantile(0.8413) # rolling(window=rolling_period).
+        vola_median = df['Volatility'].quantile(0.50) # rolling(window=rolling_period).
+        IQR1_vola = df['Volatility'].quantile(0.1587) # rolling(window=rolling_period).
         
-        # Originally used 75 and 25 for IQR, but changed to > 1 STD estimates instead for extreme tails
         IQR3_Source = df['High'].rolling(window=rolling_period).quantile(0.8413)
-        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587) 
+        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587)   
         
         # Assign these values to the entire DataFrame in new columns
         df['IQR3_vola'] = IQR3_vola
