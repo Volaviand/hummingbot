@@ -161,7 +161,7 @@ class KrakenAPI:
             time.sleep(1)
 
         return self.data
-    def call_kraken_ohlc_data(self, hist_days = 365, market = 'XXLMZEUR', interval = 1440):
+    def call_kraken_ohlc_data(self, hist_days = 720, market = 'XXLMZEUR', interval = 60):
         # Calculate the timestamp for hist_days ago
         since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
         since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
@@ -761,7 +761,7 @@ class SimplePMM(ScriptStrategyBase):
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
                 kraken_api = KrakenAPI(self.history_market)
-                df = kraken_api.call_kraken_ohlc_data(720, 'XXLMZEUR',  1440)    
+                df = kraken_api.call_kraken_ohlc_data(720, 'XXLMZEUR',  60)    
                 ohlc_calc_df = self.get_ohlc_calculations(df)
 
                 #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")

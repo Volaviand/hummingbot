@@ -1066,15 +1066,15 @@ class SimplePMM(ScriptStrategyBase):
         ask_volume_cdf_value = Decimal(self.bought_volume_depth) #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
-        bid_depth_difference = abs(bid_volume_cdf_value - self.min_order_size_bid)
-        ask_depth_difference = abs(ask_volume_cdf_value - self.min_order_size_ask)
+        bid_depth_difference = abs(bid_volume_cdf_value )
+        ask_depth_difference = abs(ask_volume_cdf_value )
         
         # Determine the strength ( size ) of volume by how much you want to balance
         if q > 0:
             bid_depth = bid_volume_cdf_value
-            ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value - (Decimal(ask_depth_difference) * q) )
+            ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
         elif q < 0:
-            bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value - abs(Decimal(bid_depth_difference) * q) )
+            bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
             ask_depth = ask_volume_cdf_value
         else:
             bid_depth = bid_volume_cdf_value
