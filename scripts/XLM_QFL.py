@@ -103,7 +103,7 @@ class KrakenAPI:
             
             # Define parameters
             params = {
-                'pair': self.symbol,  # Asset pair (e.g., 'XBTUSD' for Bitcoin/USD)
+                'pair': self.symbol,  # Asset pair (e.g., 'XBTEUR' for Bitcoin/EUR)
                 'interval': interval,     # Time frame in minutes (1440 = 1 day)
                 'since': since        # Unix timestamp for fetching data since a specific time
             }
@@ -185,129 +185,6 @@ class KrakenAPI:
 
 
 
-# def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
-#     # Calculate the timestamp for 1 day ago
-#     since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
-#     since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
-
-#     # Calculate the timestamp for now
-#     now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
-#     # print(now_timestamp)
-
-#     # Initialize Kraken API object with your symbol and start timestamp
-#     api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
-#     trades = api.get_trades_since()
-
-#     # Convert to DataFrame
-#     kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
-
-#     #Convert values to numerics
-#     kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
-#     kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce').fillna(0)
-    
-#     # Calculate log returns
-#     kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
-
-#     # Drop any NaN values created due to shifting
-#     kdf.dropna(subset=['Log_Returns'], inplace=True)
-
-#     # Save log returns to a list
-#     log_returns_list = kdf['Log_Returns'].tolist()
-
-
-#     # Create separate lists for buys and sells
-#     buy_trades = []
-#     sell_trades = []
-
-
-#     # Initialize the total volumes
-#     total_buy_volume = 0
-#     total_sell_volume = 0
-
-#     # Separate buys and sells and track volumes
-#     for index, row in kdf.iterrows():
-#         if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
-#             # Add buy trade with actual volume
-#             buy_trades.append(row)
-#             total_buy_volume += row['Volume']
-#             # Add corresponding sell trade with zero volume if needed
-#             sell_trade = row.copy()
-#             sell_trade['Volume'] = 0
-#             sell_trades.append(sell_trade)
-#         elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
-#             # Add sell trade with actual volume
-#             sell_trades.append(row)
-#             total_sell_volume += row['Volume']
-#             # Add corresponding buy trade with zero volume if needed
-#             buy_trade = row.copy()
-#             buy_trade['Volume'] = 0
-#             buy_trades.append(buy_trade)
-            
-#     # Convert buy_trades and sell_trades to DataFrames for further analysis
-#     buy_trades_df = pd.DataFrame(buy_trades)
-#     sell_trades_df = pd.DataFrame(sell_trades)
-
-
-
-#     kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
-
-#     # Ensure the 'Timestamp' column is retained and converted to datetime if needed
-#     buy_trades_df['Timestamp'] = pd.to_datetime(buy_trades_df['Timestamp'], unit='s')
-#     sell_trades_df['Timestamp'] = pd.to_datetime(sell_trades_df['Timestamp'], unit='s')
-
-#     # Sort DataFrames by Timestamp if you want them ordered
-#     buy_trades_df = buy_trades_df.sort_values(by='Timestamp')
-#     sell_trades_df = sell_trades_df.sort_values(by='Timestamp')
-
-
-
-
-#     # Calculate percentiles, excluding zeros
-#     nonzero_buy_volumes = buy_trades_df[buy_trades_df['Volume'] > 0]['Volume']
-#     nonzero_sell_volumes = sell_trades_df[sell_trades_df['Volume'] > 0]['Volume']
-
-#     # Find the percentile depth of buy and sell volumes
-#     percentile = 50
-#     bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
-#     sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
-
-#     # Calculate the percentile window
-#     percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
-
-#     # Function to calculate the baseline percentile for sell trades
-#     def calculate_sold_baseline(row, percentile):
-#         # Get the relevant prices from sell_trades_df within the window
-#         relevant_prices = sell_trades_df['Price'][(sell_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
-#         return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
-
-#     # Function to calculate the baseline percentile for buy trades
-#     def calculate_bought_baseline(row, percentile):
-#         # Get the relevant prices from buy_trades_df within the window
-#         relevant_prices = buy_trades_df['Price'][(buy_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
-#         return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
-
-
-#     # Define the desired percentile values
-#     sell_percentile = 25  # You can change this to any value
-#     buy_percentile =  75  # You can change this to any value
-
-#     # Apply the functions to create new columns in kdf with variable percentiles
-#     kdf['sold_baseline'] = kdf.apply(lambda row: calculate_sold_baseline(row, sell_percentile), axis=1)
-#     kdf['bought_baseline'] = kdf.apply(lambda row: calculate_bought_baseline(row, buy_percentile), axis=1)
-
-#     sold_baseline = kdf['sold_baseline'].iloc[-1]
-#     bought_baseline = kdf['bought_baseline'].iloc[-1]
-
-#     # Drop the 'Blank' column
-#     kdf.drop('Blank', axis=1, inplace=True)
-
-
-#     # Check for any missing values and fill or drop them if necessary
-#     kdf.dropna(inplace=True)
-
-#     return sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth
-
-
 
 class SimplePMM(ScriptStrategyBase):
     """
@@ -329,7 +206,12 @@ class SimplePMM(ScriptStrategyBase):
 
 
     #order_refresh_time = 30
+    quote_order_amount = Decimal(3.5)
     order_amount = Decimal(40)
+    min_order_size_bid = Decimal(0)
+    min_order_size_ask = Decimal(0)
+
+
     create_timestamp = 0
     create_garch_timestamp = 0
     trading_pair = "XLM-EUR"
@@ -607,7 +489,7 @@ class SimplePMM(ScriptStrategyBase):
 
         return df
 
-    def call_trade_history(self, file_name='trades_XLM.csv'):
+    def call_trade_history(self, file_name='trades_CPOOL.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
         # Start with default values
@@ -616,8 +498,16 @@ class SimplePMM(ScriptStrategyBase):
 
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
+        # Check if the CSV file exists
+        if not os.path.isfile(csv_file_path):
+            # Return zeros on the class variables
+            self.b_be = 0
+            self.s_be = 0
+            self.pnl = 0
+            self.n_v = 0
+            # Return zeros if the file doesn't exist
+            return 0, 0, 0, 0        # Read the CSV file into a Pandas DataFrame
 
-        # Read the CSV file into a Pandas DataFrame
         df = pd.read_csv(csv_file_path)
 
 
@@ -810,21 +700,21 @@ class SimplePMM(ScriptStrategyBase):
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
 
-        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
+        # minimum_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
         order_counter = []
-        if (order_size_bid >= minimum_size): # and (quote_balance_in_base  >= minimum_size)
+        if (order_size_bid >= self.min_order_size_bid): # and (quote_balance_in_base  >= minimum_size)
             order_counter.append(buy_order)
         else:
             # Print message about order size. 
-            msg = ( f" Quote Balance |{order_size_bid}| below minimum_size for buy order |{minimum_size}| " )
+            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for buy order |{self.min_order_size_bid}| " )
             self.log_with_clock(logging.INFO, msg)
 
-        if (order_size_ask >= minimum_size) : # and (maker_base_balance >= minimum_size)
+        if (order_size_ask >= self.min_order_size_ask) : # and (maker_base_balance >= minimum_size)
             order_counter.append(sell_order)
         else:
             # Print message about order size. 
-            msg = ( f" Base Balance |{order_size_ask}| below minimum_size for buy order |{minimum_size}| " )
+            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for buy order |{self.min_order_size_ask}| " )
             self.log_with_clock(logging.INFO, msg)
 
         # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
@@ -1037,28 +927,21 @@ class SimplePMM(ScriptStrategyBase):
         '''Find the bid/ask VWAP of a set price for market depth positioning.'''
         q, _, _, _,_, _, _ = self.get_current_positions()
 
-        # Create an instance of Trades (Market Trades, don't confuse with Limit)
-        # buy_trades_instance = BuyTrades('XXLMZEUR')
-        # sell_trades_instance = SellTrades('XXLMZEUR')
-        # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
-        # Data points are in trades collected
-        # target_percentile = 25
-        # window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
         bid_volume_cdf_value = Decimal(self.sold_volume_depth) #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
         ask_volume_cdf_value = Decimal(self.bought_volume_depth) #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
-        bid_depth_difference = abs(bid_volume_cdf_value - self.order_amount)
-        ask_depth_difference = abs(ask_volume_cdf_value - self.order_amount)
+        bid_depth_difference = abs(bid_volume_cdf_value )
+        ask_depth_difference = abs(ask_volume_cdf_value )
         
         # Determine the strength ( size ) of volume by how much you want to balance
         if q > 0:
             bid_depth = bid_volume_cdf_value
-            ask_depth = max(self.order_amount, ask_volume_cdf_value - (Decimal(ask_depth_difference) * q) )
+            ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
         elif q < 0:
-            bid_depth = max(self.order_amount, bid_volume_cdf_value - abs(Decimal(bid_depth_difference) * q) )
+            bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
             ask_depth = ask_volume_cdf_value
         else:
             bid_depth = bid_volume_cdf_value
@@ -1109,7 +992,7 @@ class SimplePMM(ScriptStrategyBase):
         ### For Entry Size to have /10 (/2 for) orders on each side of the bid/ask
         ### In terms of Maker Base asset
         entry_size_by_percentage = (total_balance_in_base * self.inv_target_percent) / maximum_number_of_orders 
-        minimum_size = max(self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount), entry_size_by_percentage)
+        # minimum_size = max(self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount), entry_size_by_percentage)
 
 
 
@@ -1137,19 +1020,19 @@ class SimplePMM(ScriptStrategyBase):
         if q > 0 :
             #If base is overbought, I want to sell more Quote to balance it
             base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
-            quote_balancing_volume =  max ( minimum_size, abs(minimum_size) * Decimal.exp(-self.order_shape_factor * q) )
+            quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
-            base_balancing_volume = max( minimum_size, abs(minimum_size) *  Decimal.exp(-self.order_shape_factor * q))
+            base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
             quote_balancing_volume = total_imbalance ##abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
 
 
          
         else :
             ## Adjust this logic just for one sided entries :: if you are completely sold out, then you should not have the capability to sell in the first place. 
-            base_balancing_volume = minimum_size
-            quote_balancing_volume = minimum_size
+            base_balancing_volume = self.min_order_size_bid
+            quote_balancing_volume = self.min_order_size_ask
 
 
 
@@ -1159,40 +1042,52 @@ class SimplePMM(ScriptStrategyBase):
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
     
-    def percentage_order_size(self):
+    def percentage_order_size(self, bid_op, ask_op):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
+        self.min_order_size_bid = max(self.quote_order_amount /  bid_op , self.order_amount)
+        self.min_order_size_ask = max(self.quote_order_amount / ask_op , self.order_amount)
 
+        self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
+        self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_ask)
 
-        minimum_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
-        order_size_bid = max(quote_balancing_volume, minimum_size)
-        order_size_ask = max(base_balancing_volume, minimum_size)
+        order_size_bid = max(quote_balancing_volume, self.min_order_size_bid)
+        order_size_ask = max(base_balancing_volume, self.min_order_size_ask)
+        
+        # msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} ")
+        # self.log_with_clock(logging.INFO, msg_debug) 
 
-        if quote_balancing_volume < minimum_size  :
-            order_size_bid = quote_balancing_volume
-            msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
-            self.log_with_clock(logging.INFO, msg_b) 
-        elif quote_balance_in_base < minimum_size:
+        # msg_debug = (f"quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
+        # self.log_with_clock(logging.INFO, msg_debug) 
+
+        # msg_debug = (f"order_size_bid {order_size_bid} |order_size_ask{order_size_ask} ")
+        # self.log_with_clock(logging.INFO, msg_debug) 
+
+        # if quote_balancing_volume < self.min_order_size_bid  :
+        #     order_size_bid = quote_balancing_volume
+        #     msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
+        #     self.log_with_clock(logging.INFO, msg_b) 
+        if quote_balance_in_base < self.min_order_size_bid:
             order_size_bid = quote_balancing_volume
 
             msg_b = (f"Not Enough Quote Balance for trade {quote_balance_in_base:8f}")
             self.log_with_clock(logging.INFO, msg_b) 
         else:
-            order_size_bid = np.maximum(quote_balancing_volume , minimum_size )
+            order_size_bid = max(quote_balancing_volume , self.min_order_size_bid )
 
 
 
-        if base_balancing_volume < minimum_size  :
-            order_size_ask = base_balancing_volume
-            msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
-            self.log_with_clock(logging.INFO, msg_a)  
-        elif  maker_base_balance < minimum_size:
+        # if base_balancing_volume < self.min_order_size_ask  :
+        #     order_size_ask = base_balancing_volume
+        #     msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
+        #     self.log_with_clock(logging.INFO, msg_a)  
+        if  maker_base_balance < self.min_order_size_ask:
             order_size_ask = base_balancing_volume
 
             msg_a = (f"Not Enough Base Balance for trade {maker_base_balance:8f}")
             self.log_with_clock(logging.INFO, msg_a)  
         else:
-            order_size_ask = np.maximum(base_balancing_volume , minimum_size )
+            order_size_ask = max(base_balancing_volume , self.min_order_size_ask )
 
         order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid)
         order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask)
@@ -1415,7 +1310,6 @@ class SimplePMM(ScriptStrategyBase):
 
     def optimal_bid_ask_spread(self):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
-        order_size_bid, order_size_ask = self.percentage_order_size()
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         bp,sp = self.determine_log_multipliers()
 
@@ -1507,21 +1401,21 @@ class SimplePMM(ScriptStrategyBase):
         price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
 
         if q > 0:
-            optimal_bid_price = min(deepest_bid, optimal_bid_price, price_above_bid)
-            optimal_ask_price = max(top_ask_price, optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)
         if q < 0:
-            optimal_bid_price = min(top_bid_price, optimal_bid_price, price_above_bid)
-            optimal_ask_price = max(deepest_ask, optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)
         if q == 0:
-            optimal_bid_price = min(deepest_bid, optimal_bid_price, price_above_bid)
-            optimal_ask_price = max(deepest_ask, optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)
 
 
         if optimal_bid_price <= 0 :
             msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0.")
             self.log_with_clock(logging.INFO, msg_2)
 
-            
+
 
         # Apply quantum adjustments for final prices
         optimal_bid_price = (floor(optimal_bid_price / bid_price_quantum)) * bid_price_quantum
@@ -1529,6 +1423,8 @@ class SimplePMM(ScriptStrategyBase):
 
         optimal_bid_percent = ((bid_reservation_price - optimal_bid_price) / bid_reservation_price) * 100
         optimal_ask_percent = ((optimal_ask_price - ask_reservation_price) / ask_reservation_price) * 100
+
+        order_size_bid, order_size_ask = self.percentage_order_size(optimal_bid_price, optimal_ask_price)
 
         
         return optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent
