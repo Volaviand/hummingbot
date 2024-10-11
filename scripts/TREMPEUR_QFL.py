@@ -624,8 +624,16 @@ class SimplePMM(ScriptStrategyBase):
 
         # Specify the path to your CSV file
         csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
+        # Check if the CSV file exists
+        if not os.path.isfile(csv_file_path):
+            # Return zeros on the class variables
+            self.b_be = 0
+            self.s_be = 0
+            self.pnl = 0
+            self.n_v = 0
+            # Return zeros if the file doesn't exist
+            return 0, 0, 0, 0        # Read the CSV file into a Pandas DataFrame
 
-        # Read the CSV file into a Pandas DataFrame
         df = pd.read_csv(csv_file_path)
 
 
