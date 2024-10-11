@@ -1153,11 +1153,11 @@ class SimplePMM(ScriptStrategyBase):
         if q > 0 :
             #If base is overbought, I want to sell more Quote to balance it
             base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
-            quote_balancing_volume =  max ( self.min_order_size_ask, abs(self.min_order_size_ask) * Decimal.exp(-self.order_shape_factor * q) )
+            quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
-            base_balancing_volume = max( self.min_order_size_bid, abs(self.min_order_size_bid) *  Decimal.exp(-self.order_shape_factor * q))
+            base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
             quote_balancing_volume = total_imbalance ##abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
 
 
@@ -1178,8 +1178,8 @@ class SimplePMM(ScriptStrategyBase):
     def percentage_order_size(self, bid_op, ask_op):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        self.min_order_size_bid = self.quote_order_amount /  bid_op 
-        self.min_order_size_ask = self.quote_order_amount / ask_op
+        self.min_order_size_bid = max(self.quote_order_amount /  bid_op , self.order_amount)
+        self.min_order_size_ask = max(self.quote_order_amount / ask_op , self.order_amount)
 
         self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
         self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_ask)
