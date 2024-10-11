@@ -564,7 +564,7 @@ class SimplePMM(ScriptStrategyBase):
             # Handle Low Line updates (when a high tail happens)
             # Hidden Line for each Low Event
             if low_tail[i-1]:
-                latest_low_tail_value = df.loc[i, 'IQR1_Source']
+                latest_low_tail_value = df.loc[i, 'Low']
 
             # If High Tail and there is a last low value, use it.
             if high_tail[i] and latest_low_tail_value is not None:
@@ -583,7 +583,7 @@ class SimplePMM(ScriptStrategyBase):
 
             # Handle High Line updates (when a low tail happens)
             if high_tail[i-1]:
-                latest_high_tail_value = df.loc[i, 'IQR3_Source']
+                latest_high_tail_value = df.loc[i, 'High']
 
         
             if low_tail[i] and latest_high_tail_value is not None:
