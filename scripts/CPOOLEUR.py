@@ -1056,18 +1056,18 @@ class SimplePMM(ScriptStrategyBase):
         
         msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} ")
         self.log_with_clock(logging.INFO, msg_debug) 
-        
+
         msg_debug = (f"quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
         self.log_with_clock(logging.INFO, msg_debug) 
 
         msg_debug = (f"order_size_bid {order_size_bid} |order_size_ask{order_size_ask} ")
         self.log_with_clock(logging.INFO, msg_debug) 
 
-        if quote_balancing_volume < self.min_order_size_bid  :
-            order_size_bid = quote_balancing_volume
-            msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
-            self.log_with_clock(logging.INFO, msg_b) 
-        elif quote_balance_in_base < self.min_order_size_bid:
+        # if quote_balancing_volume < self.min_order_size_bid  :
+        #     order_size_bid = quote_balancing_volume
+        #     msg_b = (f"Order Size Bid is too small for trade {order_size_bid:8f}")
+        #     self.log_with_clock(logging.INFO, msg_b) 
+        if quote_balance_in_base < self.min_order_size_bid:
             order_size_bid = quote_balancing_volume
 
             msg_b = (f"Not Enough Quote Balance for trade {quote_balance_in_base:8f}")
@@ -1077,11 +1077,11 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        if base_balancing_volume < self.min_order_size_ask  :
-            order_size_ask = base_balancing_volume
-            msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
-            self.log_with_clock(logging.INFO, msg_a)  
-        elif  maker_base_balance < self.min_order_size_ask:
+        # if base_balancing_volume < self.min_order_size_ask  :
+        #     order_size_ask = base_balancing_volume
+        #     msg_a = (f"Order Size Ask is too small for trade {order_size_ask:8f}")
+        #     self.log_with_clock(logging.INFO, msg_a)  
+        if  maker_base_balance < self.min_order_size_ask:
             order_size_ask = base_balancing_volume
 
             msg_a = (f"Not Enough Base Balance for trade {maker_base_balance:8f}")
