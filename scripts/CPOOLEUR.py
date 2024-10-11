@@ -678,7 +678,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def create_proposal(self) -> List[OrderCandidate]:
         time.sleep(10)
-        # _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
         # Save Values for Status use without recalculating them over and over again
@@ -1054,6 +1054,8 @@ class SimplePMM(ScriptStrategyBase):
         order_size_bid = max(quote_balancing_volume, self.min_order_size_bid)
         order_size_ask = max(base_balancing_volume, self.min_order_size_ask)
         
+        msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} | quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
+        self.log_with_clock(logging.INFO, msg_debug) 
 
         if quote_balancing_volume < self.min_order_size_bid  :
             order_size_bid = quote_balancing_volume
