@@ -708,14 +708,14 @@ class SimplePMM(ScriptStrategyBase):
             order_counter.append(buy_order)
         else:
             # Print message about order size. 
-            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for buy order |{self.min_order_size_bid}| " )
+            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| " )
             self.log_with_clock(logging.INFO, msg)
 
         if (order_size_ask >= self.min_order_size_ask) : # and (maker_base_balance >= minimum_size)
             order_counter.append(sell_order)
         else:
             # Print message about order size. 
-            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for buy order |{self.min_order_size_ask}| " )
+            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| " )
             self.log_with_clock(logging.INFO, msg)
 
         # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
@@ -1071,7 +1071,7 @@ class SimplePMM(ScriptStrategyBase):
         if quote_balance_in_base < self.min_order_size_bid:
             order_size_bid = quote_balancing_volume
 
-            msg_b = (f"Not Enough Quote Balance for trade {quote_balance_in_base:8f}")
+            msg_b = (f"Not Enough Balance for bid trade {quote_balance_in_base:8f}")
             self.log_with_clock(logging.INFO, msg_b) 
         else:
             order_size_bid = max(quote_balancing_volume , self.min_order_size_bid )
@@ -1085,7 +1085,7 @@ class SimplePMM(ScriptStrategyBase):
         if  maker_base_balance < self.min_order_size_ask:
             order_size_ask = base_balancing_volume
 
-            msg_a = (f"Not Enough Base Balance for trade {maker_base_balance:8f}")
+            msg_a = (f"Not Enough Balance for ask trade {maker_base_balance:8f}")
             self.log_with_clock(logging.INFO, msg_a)  
         else:
             order_size_ask = max(base_balancing_volume , self.min_order_size_ask )
