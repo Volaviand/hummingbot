@@ -447,7 +447,7 @@ class SimplePMM(ScriptStrategyBase):
         log_returns_series = pd.Series(log_returns)
         
         # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
+        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True)
 
         # Fit the model
         model_fit = model.fit(disp="off")
@@ -492,16 +492,17 @@ class SimplePMM(ScriptStrategyBase):
 
         # Edit Volume for calculations
         df['Volume'] = pd.to_numeric(df['Volume'])
-        rolling_period = 365
+        rolling_period = 72
         
-        IQR3_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.75)
-        vola_median = df['Volatility'].rolling(window=rolling_period).quantile(0.50)
-        IQR1_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.25)
+        IQR3_vola = df['Volatility'].quantile(0.75)
+        vola_median = df['Volatility'].quantile(0.50)
+        IQR1_vola = df['Volatility'].quantile(0.25)
         
-        IQR3_Source = df['High'].rolling(window=3).quantile(0.75)
-        IQR1_Source = df['Low'].rolling(window=3).quantile(0.25)    # Assign these values to the entire DataFrame in new columns
-
+        # Originally used 75 and 25 for IQR, but changed to > 1 STD estimates instead for extreme tails
+        IQR3_Source = df['High'].rolling(window=rolling_period).quantile(0.8413)
+        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587) 
         
+        # Assign these values to the entire DataFrame in new columns
         df['IQR3_vola'] = IQR3_vola
         df['Vola_Median'] = vola_median
         df['IQR1_vola'] = IQR1_vola
@@ -552,8 +553,8 @@ class SimplePMM(ScriptStrategyBase):
         # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
         df['Low Line'] = np.nan
         df['High Line'] = np.nan
-        df.loc[0, 'Low Line'] = df.loc[0, 'IQR1_Source']  # Start Low Line with the first value of IQR1_Source
-        df.loc[0, 'High Line'] = df.loc[0, 'IQR3_Source']  # Start High Line with the first value of IQR3_Source
+        df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
+        df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
         
         # Iterate through each row and update the Low Line and High Line
         for i in range(1, len(df)):
@@ -564,7 +565,7 @@ class SimplePMM(ScriptStrategyBase):
             # Handle Low Line updates (when a high tail happens)
             # Hidden Line for each Low Event
             if low_tail[i-1]:
-                latest_low_tail_value = df.loc[i, 'Low']
+                latest_low_tail_value = df.loc[i-1, 'Low']
 
             # If High Tail and there is a last low value, use it.
             if high_tail[i] and latest_low_tail_value is not None:
@@ -572,18 +573,18 @@ class SimplePMM(ScriptStrategyBase):
 
             # If a High Tail and there is no last value, make one
             elif high_tail[i] and latest_low_tail_value is None:
-                df.loc[i, 'Low Line'] = df.loc[i, 'IQR1_Source']
+                df.loc[i, 'Low Line'] = df.loc[i, 'Low']
 
                 
             else:
-                df.loc[i, 'Low Line'] = np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
+                df.loc[i, 'Low Line'] = previous_low_line #np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
 
             # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
             df.loc[i, 'Low Line'] = np.minimum(df.loc[i, 'Low Line'] , df.loc[i, 'IQR1_Source'])
 
             # Handle High Line updates (when a low tail happens)
             if high_tail[i-1]:
-                latest_high_tail_value = df.loc[i, 'High']
+                latest_high_tail_value = df.loc[i-1, 'High']
 
         
             if low_tail[i] and latest_high_tail_value is not None:
@@ -591,19 +592,15 @@ class SimplePMM(ScriptStrategyBase):
 
                 
             elif low_tail[i] and latest_high_tail_value is None:
-                df.loc[i, 'High Line'] = df.loc[i, 'IQR3_Source']
+                df.loc[i, 'High Line'] = df.loc[i, 'High']
 
             else:
-                df.loc[i, 'High Line'] = np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
+                df.loc[i, 'High Line'] =previous_high_line # np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
                 
             # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
             df.loc[i, 'High Line'] = np.maximum(df.loc[i, 'High Line'] , df.loc[i, 'IQR3_Source'])
 
         
-        # Condition to check if the Low value is below the Low Line or High value is above the High Line
-        low_below_base = df['Low'] < df['Low Line']
-        high_above_base = df['High'] > df['High Line']
-
 
         self._bid_baseline = df['Low Line'].iloc[-1]
         self._ask_baseline = df['High Line'].iloc[-1]
