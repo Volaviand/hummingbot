@@ -707,14 +707,14 @@ class SimplePMM(ScriptStrategyBase):
             order_counter.append(buy_order)
         else:
             # Print message about order size. 
-            msg = ( f" Quote Balance |{order_size_bid}| below minimum_size for buy order |{self.min_order_size_bid}| " )
+            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for buy order |{self.min_order_size_bid}| " )
             self.log_with_clock(logging.INFO, msg)
 
         if (order_size_ask >= self.min_order_size_ask) : # and (maker_base_balance >= minimum_size)
             order_counter.append(sell_order)
         else:
             # Print message about order size. 
-            msg = ( f" Base Balance |{order_size_ask}| below minimum_size for buy order |{self.min_order_size_ask}| " )
+            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for buy order |{self.min_order_size_ask}| " )
             self.log_with_clock(logging.INFO, msg)
 
         # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
@@ -1054,7 +1054,13 @@ class SimplePMM(ScriptStrategyBase):
         order_size_bid = max(quote_balancing_volume, self.min_order_size_bid)
         order_size_ask = max(base_balancing_volume, self.min_order_size_ask)
         
-        msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} | quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
+        msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} ")
+        self.log_with_clock(logging.INFO, msg_debug) 
+        
+        msg_debug = (f"quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
+        self.log_with_clock(logging.INFO, msg_debug) 
+
+        msg_debug = (f"order_size_bid {order_size_bid} |order_size_ask{order_size_ask} ")
         self.log_with_clock(logging.INFO, msg_debug) 
 
         if quote_balancing_volume < self.min_order_size_bid  :
@@ -1067,7 +1073,7 @@ class SimplePMM(ScriptStrategyBase):
             msg_b = (f"Not Enough Quote Balance for trade {quote_balance_in_base:8f}")
             self.log_with_clock(logging.INFO, msg_b) 
         else:
-            order_size_bid = np.maximum(quote_balancing_volume , self.min_order_size_bid )
+            order_size_bid = max(quote_balancing_volume , self.min_order_size_bid )
 
 
 
@@ -1081,7 +1087,7 @@ class SimplePMM(ScriptStrategyBase):
             msg_a = (f"Not Enough Base Balance for trade {maker_base_balance:8f}")
             self.log_with_clock(logging.INFO, msg_a)  
         else:
-            order_size_ask = np.maximum(base_balancing_volume , self.min_order_size_ask )
+            order_size_ask = max(base_balancing_volume , self.min_order_size_ask )
 
         order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_bid)
         order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size_ask)
