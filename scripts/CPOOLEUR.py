@@ -1054,14 +1054,14 @@ class SimplePMM(ScriptStrategyBase):
         order_size_bid = max(quote_balancing_volume, self.min_order_size_bid)
         order_size_ask = max(base_balancing_volume, self.min_order_size_ask)
         
-        msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} ")
-        self.log_with_clock(logging.INFO, msg_debug) 
+        # msg_debug = (f"self.min_order_size_bid{self.min_order_size_bid} | self.min_order_size_ask{self.min_order_size_ask} ")
+        # self.log_with_clock(logging.INFO, msg_debug) 
 
-        msg_debug = (f"quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
-        self.log_with_clock(logging.INFO, msg_debug) 
+        # msg_debug = (f"quote_balancing_volume{quote_balancing_volume} |base_balancing_volume {base_balancing_volume} ")
+        # self.log_with_clock(logging.INFO, msg_debug) 
 
-        msg_debug = (f"order_size_bid {order_size_bid} |order_size_ask{order_size_ask} ")
-        self.log_with_clock(logging.INFO, msg_debug) 
+        # msg_debug = (f"order_size_bid {order_size_bid} |order_size_ask{order_size_ask} ")
+        # self.log_with_clock(logging.INFO, msg_debug) 
 
         # if quote_balancing_volume < self.min_order_size_bid  :
         #     order_size_bid = quote_balancing_volume
