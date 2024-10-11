@@ -161,7 +161,7 @@ class KrakenAPI:
             time.sleep(1)
 
         return self.data
-    def call_kraken_ohlc_data(self, hist_days = 365, market = 'CPOOLEUR', interval = 1440):
+    def call_kraken_ohlc_data(self, hist_days = 720, market = 'CPOOLEUR', interval = 60):
         # Calculate the timestamp for hist_days ago
         since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
         since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
@@ -183,129 +183,6 @@ class KrakenAPI:
         return df
 
 
-
-
-# def call_kraken_data(hist_days = 3, market = 'XXLMZEUR'):
-#     # Calculate the timestamp for 1 day ago
-#     since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
-#     since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
-
-#     # Calculate the timestamp for now
-#     now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
-#     # print(now_timestamp)
-
-#     # Initialize Kraken API object with your symbol and start timestamp
-#     api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
-#     trades = api.get_trades_since()
-
-#     # Convert to DataFrame
-#     kdf = pd.DataFrame(trades, columns=["Price", "Volume", "Timestamp", "Buy/Sell", "Blank", "Market/Limit", "TradeNumber"])
-
-#     #Convert values to numerics
-#     kdf['Price'] = pd.to_numeric(kdf['Price'], errors='coerce')
-#     kdf['Volume'] = pd.to_numeric(kdf['Volume'], errors='coerce').fillna(0)
-    
-#     # Calculate log returns
-#     kdf['Log_Returns'] = np.log(kdf['Price'] / kdf['Price'].shift(1))
-
-#     # Drop any NaN values created due to shifting
-#     kdf.dropna(subset=['Log_Returns'], inplace=True)
-
-#     # Save log returns to a list
-#     log_returns_list = kdf['Log_Returns'].tolist()
-
-
-#     # Create separate lists for buys and sells
-#     buy_trades = []
-#     sell_trades = []
-
-
-#     # Initialize the total volumes
-#     total_buy_volume = 0
-#     total_sell_volume = 0
-
-#     # Separate buys and sells and track volumes
-#     for index, row in kdf.iterrows():
-#         if row['Buy/Sell'] == 'b':  # Assuming 'b' indicates buy
-#             # Add buy trade with actual volume
-#             buy_trades.append(row)
-#             total_buy_volume += row['Volume']
-#             # Add corresponding sell trade with zero volume if needed
-#             sell_trade = row.copy()
-#             sell_trade['Volume'] = 0
-#             sell_trades.append(sell_trade)
-#         elif row['Buy/Sell'] == 's':  # Assuming 's' indicates sell
-#             # Add sell trade with actual volume
-#             sell_trades.append(row)
-#             total_sell_volume += row['Volume']
-#             # Add corresponding buy trade with zero volume if needed
-#             buy_trade = row.copy()
-#             buy_trade['Volume'] = 0
-#             buy_trades.append(buy_trade)
-            
-#     # Convert buy_trades and sell_trades to DataFrames for further analysis
-#     buy_trades_df = pd.DataFrame(buy_trades)
-#     sell_trades_df = pd.DataFrame(sell_trades)
-
-
-
-#     kdf['Timestamp'] = pd.to_datetime(kdf['Timestamp'], unit='s')
-
-#     # Ensure the 'Timestamp' column is retained and converted to datetime if needed
-#     buy_trades_df['Timestamp'] = pd.to_datetime(buy_trades_df['Timestamp'], unit='s')
-#     sell_trades_df['Timestamp'] = pd.to_datetime(sell_trades_df['Timestamp'], unit='s')
-
-#     # Sort DataFrames by Timestamp if you want them ordered
-#     buy_trades_df = buy_trades_df.sort_values(by='Timestamp')
-#     sell_trades_df = sell_trades_df.sort_values(by='Timestamp')
-
-
-
-
-#     # Calculate percentiles, excluding zeros
-#     nonzero_buy_volumes = buy_trades_df[buy_trades_df['Volume'] > 0]['Volume']
-#     nonzero_sell_volumes = sell_trades_df[sell_trades_df['Volume'] > 0]['Volume']
-
-#     # Find the percentile depth of buy and sell volumes
-#     percentile = 50
-#     bought_volume_depth = np.percentile(nonzero_buy_volumes, percentile) if not nonzero_buy_volumes.empty else 0
-#     sold_volume_depth = np.percentile(nonzero_sell_volumes, percentile) if not nonzero_sell_volumes.empty else 0
-
-#     # Calculate the percentile window
-#     percentile_window = int(np.round(np.sqrt(len(kdf['Price']))))
-
-#     # Function to calculate the baseline percentile for sell trades
-#     def calculate_sold_baseline(row, percentile):
-#         # Get the relevant prices from sell_trades_df within the window
-#         relevant_prices = sell_trades_df['Price'][(sell_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
-#         return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
-
-#     # Function to calculate the baseline percentile for buy trades
-#     def calculate_bought_baseline(row, percentile):
-#         # Get the relevant prices from buy_trades_df within the window
-#         relevant_prices = buy_trades_df['Price'][(buy_trades_df['Timestamp'] <= row['Timestamp'])]#.tail(percentile_window)
-#         return np.percentile(relevant_prices, percentile) if not relevant_prices.empty else np.nan  # Return NaN if no relevant prices
-
-
-#     # Define the desired percentile values
-#     sell_percentile = 25  # You can change this to any value
-#     buy_percentile =  75  # You can change this to any value
-
-#     # Apply the functions to create new columns in kdf with variable percentiles
-#     kdf['sold_baseline'] = kdf.apply(lambda row: calculate_sold_baseline(row, sell_percentile), axis=1)
-#     kdf['bought_baseline'] = kdf.apply(lambda row: calculate_bought_baseline(row, buy_percentile), axis=1)
-
-#     sold_baseline = kdf['sold_baseline'].iloc[-1]
-#     bought_baseline = kdf['bought_baseline'].iloc[-1]
-
-#     # Drop the 'Blank' column
-#     kdf.drop('Blank', axis=1, inplace=True)
-
-
-#     # Check for any missing values and fill or drop them if necessary
-#     kdf.dropna(inplace=True)
-
-#     return sold_baseline, bought_baseline, log_returns_list, bought_volume_depth, sold_volume_depth
 
 
 
@@ -452,7 +329,7 @@ class SimplePMM(ScriptStrategyBase):
         log_returns_series = pd.Series(log_returns)
         
         # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
+        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True)
 
         # Fit the model
         model_fit = model.fit(disp="off")
@@ -497,16 +374,17 @@ class SimplePMM(ScriptStrategyBase):
 
         # Edit Volume for calculations
         df['Volume'] = pd.to_numeric(df['Volume'])
-        rolling_period = 365
+        rolling_period = 72
         
-        IQR3_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.75)
-        vola_median = df['Volatility'].rolling(window=rolling_period).quantile(0.50)
-        IQR1_vola = df['Volatility'].rolling(window=rolling_period).quantile(0.25)
+        IQR3_vola = df['Volatility'].quantile(0.75)
+        vola_median = df['Volatility'].quantile(0.50)
+        IQR1_vola = df['Volatility'].quantile(0.25)
         
-        IQR3_Source = df['High'].rolling(window=3).quantile(0.75)
-        IQR1_Source = df['Low'].rolling(window=3).quantile(0.25)    # Assign these values to the entire DataFrame in new columns
-
+        # Originally used 75 and 25 for IQR, but changed to > 1 STD estimates instead for extreme tails
+        IQR3_Source = df['High'].rolling(window=rolling_period).quantile(0.8413)
+        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587) 
         
+        # Assign these values to the entire DataFrame in new columns
         df['IQR3_vola'] = IQR3_vola
         df['Vola_Median'] = vola_median
         df['IQR1_vola'] = IQR1_vola
@@ -557,8 +435,8 @@ class SimplePMM(ScriptStrategyBase):
         # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
         df['Low Line'] = np.nan
         df['High Line'] = np.nan
-        df.loc[0, 'Low Line'] = df.loc[0, 'IQR1_Source']  # Start Low Line with the first value of IQR1_Source
-        df.loc[0, 'High Line'] = df.loc[0, 'IQR3_Source']  # Start High Line with the first value of IQR3_Source
+        df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
+        df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
         
         # Iterate through each row and update the Low Line and High Line
         for i in range(1, len(df)):
@@ -569,7 +447,7 @@ class SimplePMM(ScriptStrategyBase):
             # Handle Low Line updates (when a high tail happens)
             # Hidden Line for each Low Event
             if low_tail[i-1]:
-                latest_low_tail_value = df.loc[i, 'IQR1_Source']
+                latest_low_tail_value = df.loc[i-1, 'Low']
 
             # If High Tail and there is a last low value, use it.
             if high_tail[i] and latest_low_tail_value is not None:
@@ -577,18 +455,18 @@ class SimplePMM(ScriptStrategyBase):
 
             # If a High Tail and there is no last value, make one
             elif high_tail[i] and latest_low_tail_value is None:
-                df.loc[i, 'Low Line'] = df.loc[i, 'IQR1_Source']
+                df.loc[i, 'Low Line'] = df.loc[i, 'Low']
 
                 
             else:
-                df.loc[i, 'Low Line'] = np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
+                df.loc[i, 'Low Line'] = previous_low_line #np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
 
             # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
             df.loc[i, 'Low Line'] = np.minimum(df.loc[i, 'Low Line'] , df.loc[i, 'IQR1_Source'])
 
             # Handle High Line updates (when a low tail happens)
             if high_tail[i-1]:
-                latest_high_tail_value = df.loc[i, 'IQR3_Source']
+                latest_high_tail_value = df.loc[i-1, 'High']
 
         
             if low_tail[i] and latest_high_tail_value is not None:
@@ -596,19 +474,15 @@ class SimplePMM(ScriptStrategyBase):
 
                 
             elif low_tail[i] and latest_high_tail_value is None:
-                df.loc[i, 'High Line'] = df.loc[i, 'IQR3_Source']
+                df.loc[i, 'High Line'] = df.loc[i, 'High']
 
             else:
-                df.loc[i, 'High Line'] = np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
+                df.loc[i, 'High Line'] =previous_high_line # np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
                 
             # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
             df.loc[i, 'High Line'] = np.maximum(df.loc[i, 'High Line'] , df.loc[i, 'IQR3_Source'])
 
         
-        # Condition to check if the Low value is below the Low Line or High value is above the High Line
-        low_below_base = df['Low'] < df['Low Line']
-        high_above_base = df['High'] > df['High Line']
-
 
         self._bid_baseline = df['Low Line'].iloc[-1]
         self._ask_baseline = df['High Line'].iloc[-1]
@@ -1053,13 +927,6 @@ class SimplePMM(ScriptStrategyBase):
         '''Find the bid/ask VWAP of a set price for market depth positioning.'''
         q, _, _, _,_, _, _ = self.get_current_positions()
 
-        # Create an instance of Trades (Market Trades, don't confuse with Limit)
-        # buy_trades_instance = BuyTrades('XXLMZEUR')
-        # sell_trades_instance = SellTrades('XXLMZEUR')
-        # Assuming you want to calculate the 97.5th percentile CDF of buy volumes within the last {window_size} data points
-        # Data points are in trades collected
-        # target_percentile = 25
-        # window_size = 6000
 
         # Call the method (Market Buy into ask, Sell into bid)
         bid_volume_cdf_value = Decimal(self.sold_volume_depth) #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
