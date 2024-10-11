@@ -329,7 +329,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
     #order_refresh_time = 30
-    quote_order_amount = Decimal(1.0)
+    quote_order_amount = Decimal(5.0)
     # order_amount = Decimal(40)
     min_order_size_bid = Decimal(0)
     min_order_size_ask = Decimal(0)
