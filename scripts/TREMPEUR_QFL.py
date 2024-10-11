@@ -1181,8 +1181,8 @@ class SimplePMM(ScriptStrategyBase):
         self.min_order_size_bid = self.quote_order_amount /  bid_op 
         self.min_order_size_ask = self.quote_order_amount / ask_op
 
-        self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, min_order_size_bid)
-        self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, min_order_size_ask)
+        self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
+        self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_ask)
 
         order_size_bid = max(quote_balancing_volume, self.min_order_size_bid)
         order_size_ask = max(base_balancing_volume, self.min_order_size_ask)
