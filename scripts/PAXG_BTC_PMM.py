@@ -161,7 +161,7 @@ class KrakenAPI:
             time.sleep(1)
 
         return self.data
-    def call_kraken_ohlc_data(self, hist_days = 720, market = 'CPOOLEUR', interval = 60):
+    def call_kraken_ohlc_data(self, hist_days = 720, market = 'PAXGXBT', interval = 60):
         # Calculate the timestamp for hist_days ago
         since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
         since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
