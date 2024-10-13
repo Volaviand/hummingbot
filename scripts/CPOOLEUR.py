@@ -936,8 +936,8 @@ class SimplePMM(ScriptStrategyBase):
         # bid_depth_difference = abs(bid_volume_cdf_value )
         # ask_depth_difference = abs(ask_volume_cdf_value )
         
-        bid_depth = order_size_bid
-        ask_depth = order_size_ask
+        bid_depth = max(0, order_size_bid)
+        ask_depth = max(0,order_size_ask)
         # Determine the strength ( size ) of volume by how much you want to balance
         # if q > 0:
         #     bid_depth = bid_volume_cdf_value
