@@ -750,7 +750,7 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = False
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOOL')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
 
 
 
@@ -1209,6 +1209,15 @@ class SimplePMM(ScriptStrategyBase):
         is_sell_net = net_value < 0
         is_neutral_net = net_value == 0 
 
+
+        # Adjust Breakeven for 2nd half of fees (Move BE bid up, Move BE ask down the opposite side fee amount)
+        breakeven_buy_price =  Decimal(breakeven_buy_price) * (Decimal(1.0) + Decimal(self.fee_percent))
+        breakeven_sell_price = Decimal(breakeven_sell_price) * (Decimal(1.0) - Decimal(self.fee_percent))
+        
+        # Quantize Price
+        breakeven_buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_buy_price)
+        breakeven_sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_sell_price)
+
          # There is no data, Use baselines
         if not is_buy_data and not is_sell_data:
             self.trade_position_text = "No Trades, Use Baseline"
@@ -1243,14 +1252,11 @@ class SimplePMM(ScriptStrategyBase):
                 s_ask = self._last_sell_price # breakeven_sell_price
 
 
-        ## Incorporate 2nd half of fees for more accurate breakeven
-        s_bid = Decimal(s_bid) * (Decimal(1.0) + Decimal(self.fee_percent))
-
+        ## Convert to Decimal
+        s_bid = Decimal(s_bid)
+        s_ask = Decimal(s_ask)
+        # Quantize price
         s_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_bid)
-
-        ## Incorporate 2nd half of fees for more accurate breakeven
-        s_ask = Decimal(s_ask) * (Decimal(1.0) - Decimal(self.fee_percent))
-
         s_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, s_ask)
 
             # It doesn't make sense to use mid_price_variance because its units would be absolute price units ^2, yet that side of the equation is subtracted
