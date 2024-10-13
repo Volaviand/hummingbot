@@ -1369,10 +1369,27 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
+
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOOL')
+
+        is_buy_data = breakeven_buy_price > 0
+        is_sell_data = breakeven_sell_price > 0
+
+        is_buy_net = net_value > 0
+        is_sell_net = net_value < 0
+        is_neutral_net = net_value == 0 
     
         ## Optimal Spread in comparison to the min profit wanted
-        min_profit_bid =  bid_reservation_price * bp
-        min_profit_ask = ask_reservation_price * sp
+        if is_neutral_net:
+            min_profit_bid = bid_reservation_price
+            min_profit_ask = ask_reservation_price
+        else:
+            min_profit_bid =  bid_reservation_price * bp
+            min_profit_ask = ask_reservation_price * sp
+
+
+
+
 
         # Spread calculation price vs the minimum profit price for entries
         optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
