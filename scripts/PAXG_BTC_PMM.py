@@ -859,6 +859,10 @@ class SimplePMM(ScriptStrategyBase):
 
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
+
+        # Bypass with manual numbers for now
+        bp = Decimal(0.950)
+        sp = Decimal(1.050)
         return bp, sp
 
 
@@ -937,18 +941,20 @@ class SimplePMM(ScriptStrategyBase):
         ask_depth_difference = abs(ask_volume_cdf_value )
         
         # Determine the strength ( size ) of volume by how much you want to balance
-        if q > 0:
-            bid_depth = bid_volume_cdf_value
-            ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
-        elif q < 0:
-            bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
-            ask_depth = ask_volume_cdf_value
-        else:
-            bid_depth = bid_volume_cdf_value
-            ask_depth = ask_volume_cdf_value
+        # if q > 0:
+        #     bid_depth = bid_volume_cdf_value
+        #     ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
+        # elif q < 0:
+        #     bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
+        #     ask_depth = ask_volume_cdf_value
+        # else:
+        #     bid_depth = bid_volume_cdf_value
+        #     ask_depth = ask_volume_cdf_value
 
-        self.b_d = bid_depth
-        self.a_d = ask_depth
+        bid_depth = self.order_amount
+        ask_depth = self.order_amount
+        self.b_d = bid_depth # bid_depth
+        self.a_d = ask_depth # ask_depth
         # msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
         # self.log_with_clock(logging.INFO, msg_q)
 
@@ -1375,10 +1381,27 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
+
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+
+        is_buy_data = breakeven_buy_price > 0
+        is_sell_data = breakeven_sell_price > 0
+
+        is_buy_net = net_value > 0
+        is_sell_net = net_value < 0
+        is_neutral_net = net_value == 0 
     
         ## Optimal Spread in comparison to the min profit wanted
-        min_profit_bid =  bid_reservation_price * bp
-        min_profit_ask = ask_reservation_price * sp
+        if not is_buy_data and not is_sell_data:
+            min_profit_bid = bid_reservation_price
+            min_profit_ask = ask_reservation_price
+        else:
+            min_profit_bid =  bid_reservation_price * bp
+            min_profit_ask = ask_reservation_price * sp
+
+
+
+
 
         # Spread calculation price vs the minimum profit price for entries
         optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
@@ -1407,14 +1430,14 @@ class SimplePMM(ScriptStrategyBase):
         price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
 
         if q > 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
         if q < 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
         if q == 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
 
 
         if optimal_bid_price <= 0 :
