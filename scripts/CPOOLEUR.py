@@ -316,7 +316,7 @@ class SimplePMM(ScriptStrategyBase):
 
         self.trade_position_text = ""
 
-    def get_ohlc_calculations(self, df, rolling_period=72):
+    def get_ohlc_calculations(self, df, rolling_period=4):
         df = df
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
