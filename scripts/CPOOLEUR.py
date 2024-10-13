@@ -489,7 +489,7 @@ class SimplePMM(ScriptStrategyBase):
 
         return df
 
-    def call_trade_history(self, file_name='trades_CPOOL.csv'):
+    def call_trade_history(self, file_name='trades_CPOO.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
         # Start with default values
@@ -750,7 +750,7 @@ class SimplePMM(ScriptStrategyBase):
         self.initialize_flag = False
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOOL')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
 
 
 
@@ -1192,7 +1192,7 @@ class SimplePMM(ScriptStrategyBase):
         
         #self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOOL')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
 
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
@@ -1372,7 +1372,7 @@ class SimplePMM(ScriptStrategyBase):
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOOL')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
 
         is_buy_data = breakeven_buy_price > 0
         is_sell_data = breakeven_sell_price > 0
