@@ -923,29 +923,31 @@ class SimplePMM(ScriptStrategyBase):
         top_ask_price = self.connectors[self.exchange].get_price(self.trading_pair, True) 
         return top_bid_price, top_ask_price
     
-    def get_vwap_bid_ask(self):
+    def get_vwap_bid_ask(self, order_size_bid, order_size_ask):
         '''Find the bid/ask VWAP of a set price for market depth positioning.'''
-        q, _, _, _,_, _, _ = self.get_current_positions()
+        # q, _, _, _,_, _, _ = self.get_current_positions()
 
 
         # Call the method (Market Buy into ask, Sell into bid)
-        bid_volume_cdf_value = Decimal(self.sold_volume_depth) #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
-        ask_volume_cdf_value = Decimal(self.bought_volume_depth) #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
+        # bid_volume_cdf_value = Decimal(self.sold_volume_depth) #Decimal(sell_trades_instance.get_volume_cdf(target_percentile, window_size))
+        # ask_volume_cdf_value = Decimal(self.bought_volume_depth) #Decimal(buy_trades_instance.get_volume_cdf(target_percentile, window_size))
 
 
-        bid_depth_difference = abs(bid_volume_cdf_value )
-        ask_depth_difference = abs(ask_volume_cdf_value )
+        # bid_depth_difference = abs(bid_volume_cdf_value )
+        # ask_depth_difference = abs(ask_volume_cdf_value )
         
+        bid_depth = order_size_bid
+        ask_depth = order_size_ask
         # Determine the strength ( size ) of volume by how much you want to balance
-        if q > 0:
-            bid_depth = bid_volume_cdf_value
-            ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
-        elif q < 0:
-            bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
-            ask_depth = ask_volume_cdf_value
-        else:
-            bid_depth = bid_volume_cdf_value
-            ask_depth = ask_volume_cdf_value
+        # if q > 0:
+        #     bid_depth = bid_volume_cdf_value
+        #     ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
+        # elif q < 0:
+        #     bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
+        #     ask_depth = ask_volume_cdf_value
+        # else:
+        #     bid_depth = bid_volume_cdf_value
+        #     ask_depth = ask_volume_cdf_value
 
         self.b_d = bid_depth
         self.a_d = ask_depth
@@ -1397,10 +1399,7 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
-        vwap_bid, vwap_ask = self.get_vwap_bid_ask()
 
-        deepest_bid = min(vwap_bid, top_bid_price)
-        deepest_ask = max(vwap_ask, top_ask_price)
 
 
         # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
@@ -1428,10 +1427,22 @@ class SimplePMM(ScriptStrategyBase):
             optimal_ask_price = max( optimal_ask_price, price_below_ask)
 
 
+
+
+        order_size_bid, order_size_ask = self.percentage_order_size(optimal_bid_price, optimal_ask_price)
+
+        # Depth analysis levels based on order size. 
+        vwap_bid, vwap_ask = self.get_vwap_bid_ask(order_size_bid, order_size_ask)
+
+        deepest_bid = min(vwap_bid, top_bid_price)
+        deepest_ask = max(vwap_ask, top_ask_price) 
+
+        optimal_bid_price = min(optimal_bid_price, deepest_bid)
+        optimal_ask_price - max(optimal_ask_price, deepest_ask)
+
         if optimal_bid_price <= 0 :
             msg_2 = (f"Error ::: Optimal Bid Price @ {optimal_bid_price} below 0.")
             self.log_with_clock(logging.INFO, msg_2)
-
 
 
         # Apply quantum adjustments for final prices
@@ -1441,7 +1452,4 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_percent = ((bid_reservation_price - optimal_bid_price) / bid_reservation_price) * 100
         optimal_ask_percent = ((optimal_ask_price - ask_reservation_price) / ask_reservation_price) * 100
 
-        order_size_bid, order_size_ask = self.percentage_order_size(optimal_bid_price, optimal_ask_price)
-
-        
         return optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent
