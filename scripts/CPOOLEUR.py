@@ -937,18 +937,20 @@ class SimplePMM(ScriptStrategyBase):
         ask_depth_difference = abs(ask_volume_cdf_value )
         
         # Determine the strength ( size ) of volume by how much you want to balance
-        if q > 0:
-            bid_depth = bid_volume_cdf_value
-            ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
-        elif q < 0:
-            bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
-            ask_depth = ask_volume_cdf_value
-        else:
-            bid_depth = bid_volume_cdf_value
-            ask_depth = ask_volume_cdf_value
+        # if q > 0:
+        #     bid_depth = bid_volume_cdf_value
+        #     ask_depth = max(self.min_order_size_bid, ask_volume_cdf_value) 
+        # elif q < 0:
+        #     bid_depth = max(self.min_order_size_ask, bid_volume_cdf_value ) 
+        #     ask_depth = ask_volume_cdf_value
+        # else:
+        #     bid_depth = bid_volume_cdf_value
+        #     ask_depth = ask_volume_cdf_value
 
-        self.b_d = bid_depth
-        self.a_d = ask_depth
+        bid_depth = self.order_amount
+        ask_depth = self.order_amount
+        self.b_d = bid_depth # bid_depth
+        self.a_d = ask_depth # ask_depth
         # msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
         # self.log_with_clock(logging.INFO, msg_q)
 
@@ -1418,14 +1420,14 @@ class SimplePMM(ScriptStrategyBase):
         price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
 
         if q > 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
         if q < 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
         if q == 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
 
 
         if optimal_bid_price <= 0 :
