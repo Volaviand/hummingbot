@@ -203,7 +203,14 @@ class SimplePMM(ScriptStrategyBase):
     # _order_refresh_tolerance_pct = 0.0301
 
 
+    ## Trade Halting Process
 
+    #Flag to avoid trading unless a cycle is complete
+    trade_in_progress = False
+
+    wait_after_fill_timestamp = 0
+    wait_after_cancel_timestamp = 0
+    fill_cooldown_duration = 10
 
     #order_refresh_time = 30
     quote_order_amount = Decimal(6.0)
@@ -275,8 +282,6 @@ class SimplePMM(ScriptStrategyBase):
         # Trade History Timestamp
         # self.last_trade_timestamp = 1726652280000
 
-        ## Initialize Trading Flag for use 
-        self.initialize_flag = True
 
         self._bid_baseline = None
         self._ask_baseline = None
@@ -316,7 +321,10 @@ class SimplePMM(ScriptStrategyBase):
 
         self.trade_position_text = ""
 
-    def get_ohlc_calculations(self, df, rolling_period=4):
+
+
+
+    def get_ohlc_calculations(self, df, rolling_period=72):
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
         df['Low'] =pd.to_numeric(df['Low'])
@@ -419,6 +427,8 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+        
+
         ## Boolean Values for plotting areas;:
         # Initialize flags and trackers before the loop
         latest_low_tail_value = None  # Store the most recent low tail value
@@ -485,11 +495,11 @@ class SimplePMM(ScriptStrategyBase):
 
         df['Mid Line'] = (df['High Line'] + df['Low Line']) / 2
 
-        self._bid_baseline = df['Mid Line'].iloc[-1]  # df['Low Line'].iloc[-1]
-        self._ask_baseline = df['Mid Line'].iloc[-1] # df['High Line'].iloc[-1]
+        self._bid_baseline = df['Low Line'].iloc[-1]
+        self._ask_baseline = df['High Line'].iloc[-1]
         return df
 
-    def call_trade_history(self, file_name='trades_CPOO.csv'):
+    def call_trade_history(self, file_name='trades_PAXG_BTC.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
         # Start with default values
@@ -648,7 +658,7 @@ class SimplePMM(ScriptStrategyBase):
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
                 kraken_api = KrakenAPI(self.history_market)
-                df = kraken_api.call_kraken_ohlc_data(720, 'CPOOLEUR',  60)    
+                df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT',  60)    
                 ohlc_calc_df = self.get_ohlc_calculations(df)
 
                 #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
@@ -656,15 +666,17 @@ class SimplePMM(ScriptStrategyBase):
                 self.target_profitability = max(self.min_profitability, self.current_vola)
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
-        if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
-
-            proposal: List[OrderCandidate] = self.create_proposal()
-            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-            self.place_orders(proposal_adjusted)
-            self.create_timestamp = self.order_refresh_time + self.current_timestamp
-
-            
+        # Ensure enough time has passed since the last order fill before placing new orders
+        if self.current_timestamp >= self.wait_after_fill_timestamp and \
+            self.current_timestamp >= self.wait_after_cancel_timestamp:
+            if self.create_timestamp <= self.current_timestamp:
+                if not self.trade_in_progress:
+                    proposal: List[OrderCandidate] = self.create_proposal()
+                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                    self.place_orders(proposal_adjusted)
+                else:
+                    self.cancel_all_orders()
+                self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
         
         # Update the timestamp model 
@@ -676,8 +688,13 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
     def create_proposal(self) -> List[OrderCandidate]:
-        time.sleep(10)
+        # Flag the start of a trade Execution
+        self.trade_in_progress = True
+
+        # time.sleep(10)
+
         bp, sp = self.determine_log_multipliers()
         # Fetch balances and optimal bid/ask prices
         _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
@@ -697,8 +714,8 @@ class SimplePMM(ScriptStrategyBase):
         num_levels = 3  # e.g., 3 buy and 3 sell levels
         
         # Multiplier values for buy and sell price adjustments
-        buy_multiplier = Decimal(0.96) #bp  # Reduce buy price by bp%
-        sell_multiplier = Decimal(1.04) #sp  # Increase sell price by sp%
+        buy_multiplier = bp  # Reduce buy price by bp%
+        sell_multiplier = sp  # Increase sell price by sp%
         
         # Store orders
         order_counter = []
@@ -740,7 +757,9 @@ class SimplePMM(ScriptStrategyBase):
         return proposal_adjusted
 
     def place_orders(self, proposal: List[OrderCandidate]) -> None:
+
         for order in proposal:
+
             self.place_order(connector_name=self.exchange, order=order)
 
     def place_order(self, connector_name: str, order: OrderCandidate):
@@ -755,26 +774,35 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
+        self.wait_after_cancel_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
+
+        # time.sleep(10)
+        # Reset the Trade Cycle Execution
+        self.trade_in_progress = False
+
 
     def did_fill_order(self, event: OrderFilledEvent):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
 
 
-        self.initialize_flag = False
-
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
 
 
 
         self.fee_percent = Decimal(self.fee_percent)
         
+
         # Print log
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
+        # Set a delay before placing new orders after a fill
+        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
 
-        time.sleep(10)
+        # time.sleep(10)
+        #Reset the Trade Cycle Execution
+        self.trade_in_progress = False
 
 
     ##########################
