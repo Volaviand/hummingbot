@@ -756,6 +756,11 @@ class SimplePMM(ScriptStrategyBase):
             for order in self.get_active_orders(connector_name=self.exchange):
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
+    def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
+        with self.order_lock:
+            proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
+            return proposal_adjusted
+
     def did_fill_order(self, event: OrderFilledEvent):
         with self.order_lock:
             # Update positions, prices, and logs after the order is filled
