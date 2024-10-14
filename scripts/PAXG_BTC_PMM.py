@@ -212,8 +212,10 @@ class SimplePMM(ScriptStrategyBase):
     trade_in_progress = False
 
     wait_after_fill_timestamp = 0
-    wait_after_cancel_timestamp = 0
     fill_cooldown_duration = 5
+
+    wait_after_cancel_timestamp = 0
+    cancel_cooldown_duration = 1
 
 
     quote_order_amount = Decimal(0.0001)
@@ -777,7 +779,7 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
-        self.wait_after_cancel_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
+        self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
 
         # time.sleep(10)
         # Reset the Trade Cycle Execution
