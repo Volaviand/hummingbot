@@ -671,17 +671,23 @@ class SimplePMM(ScriptStrategyBase):
             df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT', 60)    
             ohlc_calc_df = self.get_ohlc_calculations(df)
 
+            # Set target profitability
             self.target_profitability = max(self.min_profitability, self.current_vola)
+
+            # Update the next GARCH calculation timestamp
             self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
-        # Handle orders every so often
+        # Handle orders only after GARCH calculations have been updated
         if self.create_timestamp <= self.current_timestamp:
-            asyncio.ensure_future(self.handle_orders())
-            self.create_timestamp = self.order_refresh_time + self.current_timestamp
+            # Ensure GARCH calculations are complete before handling orders
+            if self.create_garch_timestamp <= self.current_timestamp:
+                asyncio.ensure_future(self.handle_orders())
+                self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
         # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
             self.last_time_reported = self.current_timestamp
+
 
         
 
