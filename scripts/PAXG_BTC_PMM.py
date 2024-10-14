@@ -649,10 +649,18 @@ class SimplePMM(ScriptStrategyBase):
 
 
     async def handle_orders(self):
+        print("Cancelling all orders...")
         await self.cancel_all_orders()
 
+        print("Creating proposal...")
         proposal: List[OrderCandidate] = await self.create_proposal()
+        
+        print(f"Proposal created: {proposal}")
+
+        print("Adjusting proposal to budget...")
         proposal_adjusted: List[OrderCandidate] = await self.adjust_proposal_to_budget(proposal)
+
+        print("Placing orders...")
         await self.place_orders(proposal_adjusted)
 
     def on_tick(self):
