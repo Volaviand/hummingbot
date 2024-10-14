@@ -13,10 +13,6 @@ import time
 import datetime
 import datetime as dt
 
-# Lock activities before placing new orders etc. 
-import asyncio
-import threading
-
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
 from hummingbot.core.event.events import OrderFilledEvent
@@ -400,8 +396,7 @@ class SimplePMM(ScriptStrategyBase):
 
         df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
 
-        # Create a lock object to synchronize critical sections
-        self.order_lock = asyncio.Lock()
+
 
         # Rank the Volatility
         #init vol rank
@@ -648,37 +643,30 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    async def handle_orders(self):
-        print("Cancelling all orders...")
-        await self.cancel_all_orders()
-
-        print("Creating proposal...")
-        proposal: List[OrderCandidate] = await self.create_proposal()
-        
-        print(f"Proposal created: {proposal}")
-
-        print("Adjusting proposal to budget...")
-        proposal_adjusted: List[OrderCandidate] = await self.adjust_proposal_to_budget(proposal)
-
-        print("Placing orders...")
-        await self.place_orders(proposal_adjusted)
-
     def on_tick(self):
-        # Calculate GARCH every so many seconds
+        #Calculate garch every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
-            # Call Historical Calculations
-            kraken_api = KrakenAPI(self.history_market)
-            df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT', 60)    
-            ohlc_calc_df = self.get_ohlc_calculations(df)
+                ### Call Historical Calculations
+                kraken_api = KrakenAPI(self.history_market)
+                df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT',  60)    
+                ohlc_calc_df = self.get_ohlc_calculations(df)
 
-            self.target_profitability = max(self.min_profitability, self.current_vola)
-            self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
+                #self.log_with_clock(logging.INFO, msg_gv)
+                self.target_profitability = max(self.min_profitability, self.current_vola)
+                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
-        # Handle orders every so often
-        if self.create_timestamp <= self.current_timestamp and df is not None:
-            asyncio.ensure_future(self.handle_orders())
+        if self.create_timestamp <= self.current_timestamp:
+            self.cancel_all_orders()
+
+            proposal: List[OrderCandidate] = self.create_proposal()
+            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+            self.place_orders(proposal_adjusted)
             self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
+            
+
+        
         # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
             self.last_time_reported = self.current_timestamp
@@ -688,86 +676,92 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-
-
     def create_proposal(self) -> List[OrderCandidate]:
-    # async with self.order_lock:
-        # await asyncio.sleep(10)  # Non-blocking sleep
-        # Fetch current positions asynchronously
-        _, _, _, _, _, maker_base_balance, quote_balance_in_base =  self.get_current_positions()
-        # Fetch optimal prices and order sizes synchronously or asynchronously, depending on your implementation
-        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+        time.sleep(10)
+        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
 
-        buy_price = optimal_bid_price
-        sell_price = optimal_ask_price
+        # Save Values for Status use without recalculating them over and over again
+        self.bid_percent = optimal_bid_percent
+        self.ask_percent = optimal_ask_percent
+        self.b_r_p = bid_reservation_price
+        self.a_r_p = ask_reservation_price
 
-        order_counter = []
+        buy_price = optimal_bid_price 
+        sell_price = optimal_ask_price 
 
-        # Check and create buy order
+
         if buy_price <= bid_reservation_price:
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
-            order_counter.append(buy_order)
+                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+           
 
-        # Check and create sell order
         if sell_price >= ask_reservation_price:
             sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-            order_counter.append(sell_order)
 
-        return order_counter
+        # minimum_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
 
-    async def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
-        async with self.order_lock:
-            # Adjust the proposal according to the budget asynchronously
-            proposal_adjusted = await asyncio.to_thread(
-                self.connectors[self.exchange].budget_checker.adjust_candidates, proposal, all_or_none=True
-            )
-            return proposal_adjusted
-
-    async def place_orders(self, proposal: List[OrderCandidate]) -> None:
-        async with self.order_lock:
-            # Place orders concurrently using asyncio.gather
-            tasks = [self.place_order(self.exchange, order) for order in proposal]
-            await asyncio.gather(*tasks)
-
-    async def place_order(self, connector_name: str, order: OrderCandidate):
-        if order.order_side == TradeType.SELL:
-            # Ensure these are awaitable asynchronous calls
-            await self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                            order_type=order.order_type, price=order.price)
-        elif order.order_side == TradeType.BUY:
-            await self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                           order_type=order.order_type, price=order.price)
-
-    async def cancel_all_orders(self):
-        async with self.order_lock:
-            active_orders = await self.get_active_orders(connector_name=self.exchange)  # Ensure getting orders is async
-            tasks = [self.cancel(self.exchange, order.trading_pair, order.client_order_id) for order in active_orders]
-            await asyncio.gather(*tasks)  # Cancel all orders asynchronously
-
-    async def did_fill_order(self, event: OrderFilledEvent):
-        async with self.order_lock:
-            # Update positions, prices, and logs after the order is filled
-            t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = await asyncio.to_thread(self.reservation_price)
-            self.initialize_flag = False
-
-            # Update trade history and logs
-            breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = await asyncio.to_thread(self.call_trade_history, 'trades_PAXG_BTC')
-            self.fee_percent = Decimal(self.fee_percent)
-
-            # Log order fill event
-            msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
+        order_counter = []
+        if (order_size_bid >= self.min_order_size_bid): # and (quote_balance_in_base  >= minimum_size)
+            order_counter.append(buy_order)
+        else:
+            # Print message about order size. 
+            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| " )
             self.log_with_clock(logging.INFO, msg)
-            self.notify_hb_app_with_timestamp(msg)
 
-            # Cancel existing orders and place new ones based on updated state
-            await self.cancel_all_orders()
-            new_proposal = await self.create_proposal()
-            adjusted_proposal = await self.adjust_proposal_to_budget(new_proposal)
-            await self.place_orders(adjusted_proposal)
-            await asyncio.sleep(10)  # Non-blocking sleep after a fill
+        if (order_size_ask >= self.min_order_size_ask) : # and (maker_base_balance >= minimum_size)
+            order_counter.append(sell_order)
+        else:
+            # Print message about order size. 
+            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| " )
+            self.log_with_clock(logging.INFO, msg)
 
+        # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
+        # self.log_with_clock(logging.INFO, msg)
+
+        return order_counter #[buy_order , sell_order]
+
+    def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
+        proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
+        return proposal_adjusted
+
+    def place_orders(self, proposal: List[OrderCandidate]) -> None:
+        for order in proposal:
+            self.place_order(connector_name=self.exchange, order=order)
+
+    def place_order(self, connector_name: str, order: OrderCandidate):
+        if order.order_side == TradeType.SELL:
+            self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                      order_type=order.order_type, price=order.price)
+        elif order.order_side == TradeType.BUY:
+            self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                     order_type=order.order_type, price=order.price)
+
+    def cancel_all_orders(self):
+        for order in self.get_active_orders(connector_name=self.exchange):
+            self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+
+
+    def did_fill_order(self, event: OrderFilledEvent):
+        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
+
+
+        self.initialize_flag = False
+
+        # Update Trade CSV after a trade completes
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+
+
+
+        self.fee_percent = Decimal(self.fee_percent)
+        
+        # Print log
+        msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
+        self.log_with_clock(logging.INFO, msg)
+        self.notify_hb_app_with_timestamp(msg)
+
+        time.sleep(10)
 
 
     ##########################
