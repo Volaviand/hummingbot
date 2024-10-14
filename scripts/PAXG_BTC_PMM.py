@@ -1312,7 +1312,6 @@ class SimplePMM(ScriptStrategyBase):
 
         ask_reservation_price = (s_ask) - (ask_reservation_adjustment)
         ask_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_reservation_price)
-        print(f"S BID after res {bid_reservation_price}, ask {ask_reservation_price}")
 
 
         
@@ -1402,6 +1401,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+        print(f"S BID after bp {min_profit_bid}, ask {min_profit_ask}")
 
 
         # Spread calculation price vs the minimum profit price for entries
