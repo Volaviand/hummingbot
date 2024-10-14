@@ -15,11 +15,12 @@ import datetime as dt
 
 # Lock activities before placing new orders etc. 
 import asyncio
+import threading
 
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
 from hummingbot.core.event.events import OrderFilledEvent
-from hummingbot.strategy.script_strategy_base_async import ScriptStrategyBase
+from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
 
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
@@ -647,30 +648,29 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    async def on_tick(self):
-        #Calculate garch every so many seconds
+    async def handle_orders(self):
+        await self.cancel_all_orders()
+
+        proposal: List[OrderCandidate] = await self.create_proposal()
+        proposal_adjusted: List[OrderCandidate] = await self.adjust_proposal_to_budget(proposal)
+        await self.place_orders(proposal_adjusted)
+
+    def on_tick(self):
+        # Calculate GARCH every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
-                ### Call Historical Calculations
-                kraken_api = KrakenAPI(self.history_market)
-                df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT',  60)    
-                ohlc_calc_df = self.get_ohlc_calculations(df)
+            # Call Historical Calculations
+            kraken_api = KrakenAPI(self.history_market)
+            df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT', 60)    
+            ohlc_calc_df = self.get_ohlc_calculations(df)
 
-                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-                #self.log_with_clock(logging.INFO, msg_gv)
-                self.target_profitability = max(self.min_profitability, self.current_vola)
-                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+            self.target_profitability = max(self.min_profitability, self.current_vola)
+            self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
+        # Handle orders every so often
         if self.create_timestamp <= self.current_timestamp:
-            await self.cancel_all_orders()
-
-            proposal: List[OrderCandidate] = await self.create_proposal()
-            proposal_adjusted: List[OrderCandidate] = await self.adjust_proposal_to_budget(proposal)
-            await self.place_orders(proposal_adjusted)
+            asyncio.ensure_future(self.handle_orders())
             self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
-            
-
-        
         # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
             self.last_time_reported = self.current_timestamp
