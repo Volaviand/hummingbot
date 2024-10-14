@@ -440,8 +440,15 @@ class SimplePMM(ScriptStrategyBase):
         # Iterate through each row and update the Low Line and High Line
         for i in range(1, len(df)):
             # Get the previous Low and High Line values
-            previous_low_line = df.loc[i-1, 'Low Line']
-            previous_high_line = df.loc[i-1, 'High Line']
+            if latest_low_tail_value is not None:
+                previous_low_line = np.minimum(df.loc[i-1, 'Low Line'], latest_low_tail_value)
+            else:
+                previous_low_line = df.loc[i-1, 'Low Line']
+                
+            if latest_high_tail_value is not None:
+                previous_high_line = np.maximum(df.loc[i-1, 'High Line'], latest_high_tail_value)
+            else:
+                previous_high_line = df.loc[i-1, 'High Line']
             
             # Handle Low Line updates (when a high tail happens)
             if low_tail[i-1]:
