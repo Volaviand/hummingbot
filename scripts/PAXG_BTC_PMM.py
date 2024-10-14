@@ -399,7 +399,8 @@ class SimplePMM(ScriptStrategyBase):
 
         df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
 
-
+        # Create a lock object to synchronize critical sections
+        self.order_lock = Lock()
 
         # Rank the Volatility
         #init vol rank
@@ -679,10 +680,10 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    # Create a lock object to synchronize critical sections
-    order_lock = Lock()
+
 
     def create_proposal(self) -> List[OrderCandidate]:
+        
         # Introduce a delay to mitigate immediate reordering
         # time.sleep(10)
 
@@ -701,7 +702,7 @@ class SimplePMM(ScriptStrategyBase):
         sell_price = optimal_ask_price 
 
         # Use a lock to ensure order placement happens without interference
-        with order_lock:
+        with self.order_lock:
             order_counter = []
             
             if buy_price <= bid_reservation_price:
@@ -735,14 +736,14 @@ class SimplePMM(ScriptStrategyBase):
             return order_counter
 
     def place_orders(self, proposal: List[OrderCandidate]) -> None:
-        with order_lock:
+        with self.order_lock:
             for order in proposal:
                 self.place_order(connector_name=self.exchange, order=order)
             # Sleep briefly to avoid double placements during high-frequency events
             time.sleep(2)
 
     def place_order(self, connector_name: str, order: OrderCandidate):
-        with order_lock:
+        with self.order_lock:
             if order.order_side == TradeType.SELL:
                 self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
                         order_type=order.order_type, price=order.price)
@@ -751,12 +752,12 @@ class SimplePMM(ScriptStrategyBase):
                         order_type=order.order_type, price=order.price)
 
     def cancel_all_orders(self):
-        with order_lock:
+        with self.order_lock:
             for order in self.get_active_orders(connector_name=self.exchange):
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
     def did_fill_order(self, event: OrderFilledEvent):
-        with order_lock:
+        with self.order_lock:
             # Update positions, prices, and logs after the order is filled
             t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
             self.initialize_flag = False
