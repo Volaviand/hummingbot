@@ -477,7 +477,9 @@ class SimplePMM(ScriptStrategyBase):
 
 
         df['Mid Line'] = (df['High Line'] + df['Low Line']) / 2
-
+        
+        self._bid_baseline = df['Low Line'].iloc[-1]
+        self._ask_baseline = df['High Line'].iloc[-1]
         return df
 
     def call_trade_history(self, file_name='trades_PAXG_BTC.csv'):
