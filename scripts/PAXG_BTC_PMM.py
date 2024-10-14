@@ -14,7 +14,7 @@ import datetime
 import datetime as dt
 
 # Lock activities before placing new orders etc. 
-from threading import Lock
+import asyncio
 
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
@@ -400,7 +400,7 @@ class SimplePMM(ScriptStrategyBase):
         df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
 
         # Create a lock object to synchronize critical sections
-        self.order_lock = Lock()
+        self.order_lock = asyncio.Lock()
 
         # Rank the Volatility
         #init vol rank
@@ -682,87 +682,51 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    def create_proposal(self) -> List[OrderCandidate]:
-        
-        # Introduce a delay to mitigate immediate reordering
-        # time.sleep(10)
+    async def create_proposal(self) -> List[OrderCandidate]:
+            async with self.order_lock:
+                await asyncio.sleep(10)  # Non-blocking sleep
+                _, _, _, _, _, maker_base_balance, quote_balance_in_base = await self.get_current_positions()
+                optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
-        # Fetch current balances and prices
-        _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+                buy_price = optimal_bid_price 
+                sell_price = optimal_ask_price 
 
-        # Save key values for later use
-        self.bid_percent = optimal_bid_percent
-        self.ask_percent = optimal_ask_percent
-        self.b_r_p = bid_reservation_price
-        self.a_r_p = ask_reservation_price
+                if buy_price <= bid_reservation_price:
+                    buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                            order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
 
-        # Initialize buy and sell prices
-        buy_price = optimal_bid_price 
-        sell_price = optimal_ask_price 
+                if sell_price >= ask_reservation_price:
+                    sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                                order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
 
-        # Use a lock to ensure order placement happens without interference
-        with self.order_lock:
-            order_counter = []
-            
-            if buy_price <= bid_reservation_price:
-                buy_order = OrderCandidate(
-                    trading_pair=self.trading_pair,
-                    is_maker=True,
-                    order_type=OrderType.LIMIT,
-                    order_side=TradeType.BUY,
-                    amount=Decimal(order_size_bid),
-                    price=buy_price
-                )
+                order_counter = []
                 if order_size_bid >= self.min_order_size_bid:
                     order_counter.append(buy_order)
-                else:
-                    self.log_with_clock(logging.INFO, f" order_size_bid |{order_size_bid}| below minimum size |{self.min_order_size_bid}| ")
-
-            if sell_price >= ask_reservation_price:
-                sell_order = OrderCandidate(
-                    trading_pair=self.trading_pair,
-                    is_maker=True,
-                    order_type=OrderType.LIMIT,
-                    order_side=TradeType.SELL,
-                    amount=Decimal(order_size_ask),
-                    price=sell_price
-                )
                 if order_size_ask >= self.min_order_size_ask:
                     order_counter.append(sell_order)
-                else:
-                    self.log_with_clock(logging.INFO, f" order_size_ask |{order_size_ask}| below minimum size |{self.min_order_size_ask}| ")
 
-            return order_counter
+                return order_counter
 
-    def place_orders(self, proposal: List[OrderCandidate]) -> None:
-        with self.order_lock:
-            for order in proposal:
-                self.place_order(connector_name=self.exchange, order=order)
-            # Sleep briefly to avoid double placements during high-frequency events
-            time.sleep(2)
+        async def place_orders(self, proposal: List[OrderCandidate]) -> None:
+            async with self.order_lock:
+                tasks = [self.place_order(self.exchange, order) for order in proposal]
+                await asyncio.gather(*tasks)  # Place orders concurrently
 
-    def place_order(self, connector_name: str, order: OrderCandidate):
-        with self.order_lock:
+        async def place_order(self, connector_name: str, order: OrderCandidate):
             if order.order_side == TradeType.SELL:
-                self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                        order_type=order.order_type, price=order.price)
+                await self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                                order_type=order.order_type, price=order.price)
             elif order.order_side == TradeType.BUY:
-                self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                        order_type=order.order_type, price=order.price)
+                await self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                            order_type=order.order_type, price=order.price)
 
-    def cancel_all_orders(self):
-        with self.order_lock:
-            for order in self.get_active_orders(connector_name=self.exchange):
-                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-
-    def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
+    async def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         with self.order_lock:
             proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
             return proposal_adjusted
 
-    def did_fill_order(self, event: OrderFilledEvent):
-        with self.order_lock:
+    async def did_fill_order(self, event: OrderFilledEvent):
+        async with self.order_lock:
             # Update positions, prices, and logs after the order is filled
             t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
             self.initialize_flag = False
@@ -776,14 +740,14 @@ class SimplePMM(ScriptStrategyBase):
             self.log_with_clock(logging.INFO, msg)
             self.notify_hb_app_with_timestamp(msg)
 
-            # Brief delay to allow order book to update before placing new orders
-            time.sleep(10)
+
 
             # Cancel existing orders and place new ones based on updated state
             self.cancel_all_orders()
             new_proposal = self.create_proposal()
             adjusted_proposal = self.adjust_proposal_to_budget(new_proposal)
             self.place_orders(adjusted_proposal)
+            await asyncio.sleep(10)  # Non-blocking sleep after a fill
 
 
     ##########################
