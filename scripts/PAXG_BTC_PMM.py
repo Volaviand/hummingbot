@@ -317,7 +317,6 @@ class SimplePMM(ScriptStrategyBase):
         self.trade_position_text = ""
 
     def get_ohlc_calculations(self, df, rolling_period=72):
-        df = df
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
         df['Low'] =pd.to_numeric(df['Low'])
@@ -440,52 +439,44 @@ class SimplePMM(ScriptStrategyBase):
         
         # Iterate through each row and update the Low Line and High Line
         for i in range(1, len(df)):
-            # Get the previous Low and High Line values, if NaN, use current IQR1_Source or IQR3_Source
-            previous_low_line = df.loc[i-1, 'Low Line'] # if not np.isnan(df.loc[i-1, 'Low Line']) else df.loc[i-1, 'IQR1_Source']
-            previous_high_line = df.loc[i-1, 'High Line'] # if not np.isnan(df.loc[i-1, 'High Line']) else df.loc[i-1, 'IQR3_Source']
+            # Get the previous Low and High Line values
+            previous_low_line = df.loc[i-1, 'Low Line']
+            previous_high_line = df.loc[i-1, 'High Line']
             
             # Handle Low Line updates (when a high tail happens)
-            # Hidden Line for each Low Event
             if low_tail[i-1]:
-                latest_low_tail_value = df.loc[i-1, 'Low']
-
+                latest_low_tail_value = np.minimum(df.loc[i-1, 'Low'], df.loc[i, 'Low'])
+        
             # If High Tail and there is a last low value, use it.
             if high_tail[i] and latest_low_tail_value is not None:
                 df.loc[i, 'Low Line'] = latest_low_tail_value
-
-            # If a High Tail and there is no last value, make one
+        
+            # If High Tail and there is no last low tail value, use the lowest low up to that point
             elif high_tail[i] and latest_low_tail_value is None:
-                df.loc[i, 'Low Line'] = df.loc[i, 'Low']
-
-                
+                # Get the minimum Low value up to this point (from 0 to i)
+                df.loc[i, 'Low Line'] = df.loc[:i, 'Low'].min()
+        
             else:
-                df.loc[i, 'Low Line'] = previous_low_line #np.minimum(previous_low_line,  np.minimum(df.loc[i, 'Low'], df.loc[i, 'IQR1_Source']))
-
-            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
-            df.loc[i, 'Low Line'] = np.minimum(df.loc[i, 'Low Line'] , df.loc[i, 'IQR1_Source'])
-
+                df.loc[i, 'Low Line'] = previous_low_line
+        
             # Handle High Line updates (when a low tail happens)
             if high_tail[i-1]:
-                latest_high_tail_value = df.loc[i-1, 'High']
-
+                latest_high_tail_value = np.maximum(df.loc[i-1, 'High'], df.loc[i, 'High'])
         
+            # If Low Tail and there is a last high value, use it.
             if low_tail[i] and latest_high_tail_value is not None:
                 df.loc[i, 'High Line'] = latest_high_tail_value
-
-                
-            elif low_tail[i] and latest_high_tail_value is None:
-                df.loc[i, 'High Line'] = df.loc[i, 'High']
-
-            else:
-                df.loc[i, 'High Line'] =previous_high_line # np.maximum(previous_high_line, np.maximum(df.loc[i, 'High'], df.loc[i, 'IQR3_Source']))
-                
-            # Temporary Bypass of issue. very rarely, line would be greater than opposite side. 
-            df.loc[i, 'High Line'] = np.maximum(df.loc[i, 'High Line'] , df.loc[i, 'IQR3_Source'])
-
         
+            # If Low Tail and there is no last high tail value, use the highest high up to that point
+            elif low_tail[i] and latest_high_tail_value is None:
+                # Get the maximum High value up to this point (from 0 to i)
+                df.loc[i, 'High Line'] = df.loc[:i, 'High'].max()
+        
+            else:
+                df.loc[i, 'High Line'] = previous_high_line
 
-        self._bid_baseline = df['Low Line'].iloc[-1]
-        self._ask_baseline = df['High Line'].iloc[-1]
+
+        df['Mid Line'] = (df['High Line'] + df['Low Line']) / 2
 
         return df
 
