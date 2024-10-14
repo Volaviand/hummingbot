@@ -720,7 +720,7 @@ class SimplePMM(ScriptStrategyBase):
             # Adjust sell price and create sell order
             if sell_price >= ask_reservation_price:
                 # Calculate adjusted order size to keep the same dollar value
-                adjusted_order_size_ask = order_size_ask * (optimal_ask_price / sell_price)
+                adjusted_order_size_ask = max(self.min_order_size_ask,  order_size_ask * (optimal_ask_price / sell_price))
                 sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                             order_side=TradeType.SELL, amount=Decimal(adjusted_order_size_ask), price=sell_price)
                 if adjusted_order_size_ask >= self.min_order_size_ask:
