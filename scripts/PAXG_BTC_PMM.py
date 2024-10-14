@@ -671,7 +671,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.current_timestamp >= self.wait_after_fill_timestamp:
-            if self.current_timestamp > = self.wait_after_cancel_timestamp:
+            if self.current_timestamp >= self.wait_after_cancel_timestamp:
                 if self.create_timestamp <= self.current_timestamp:
                     if not self.trade_in_progress:
                         proposal: List[OrderCandidate] = self.create_proposal()
