@@ -1257,7 +1257,7 @@ class SimplePMM(ScriptStrategyBase):
                 s_bid = self._last_buy_price # breakeven_buy_price
                 s_ask = self._last_sell_price # breakeven_sell_price
 
-
+        print(f"S BID before res {s_bid}, ask {s_ask}")
         ## Convert to Decimal
         s_bid = Decimal(s_bid)
         s_ask = Decimal(s_ask)
@@ -1312,6 +1312,7 @@ class SimplePMM(ScriptStrategyBase):
 
         ask_reservation_price = (s_ask) - (ask_reservation_adjustment)
         ask_reservation_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, ask_reservation_price)
+        print(f"S BID after res {bid_reservation_price}, ask {ask_reservation_price}")
 
 
         
