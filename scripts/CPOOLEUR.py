@@ -701,7 +701,7 @@ class SimplePMM(ScriptStrategyBase):
         print(s.getvalue())
 
         # Optionally save to a file
-        with open('profiling_results.txt', 'w') as f:
+        with open('profiling_results.txt', 'a') as f:
             f.write(s.getvalue())
 
 
