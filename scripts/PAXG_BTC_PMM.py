@@ -1387,9 +1387,7 @@ class SimplePMM(ScriptStrategyBase):
         is_buy_data = breakeven_buy_price > 0
         is_sell_data = breakeven_sell_price > 0
 
-        is_buy_net = net_value > 0
-        is_sell_net = net_value < 0
-        is_neutral_net = net_value == 0 
+
     
         ## Optimal Spread in comparison to the min profit wanted
         # if not is_buy_data and not is_sell_data:
