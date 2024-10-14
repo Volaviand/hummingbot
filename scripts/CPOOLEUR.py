@@ -1064,13 +1064,14 @@ class SimplePMM(ScriptStrategyBase):
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
         if q > 0 :
-            #If base is overbought, I want to sell more Quote to balance it
+            # In order to balance the base, I want to sell more of ask to balance it
             base_balancing_volume =   abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #total_imbalance
             quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
             base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
+            # In order to balance the Quote, I want to buy more of bid to balance it
             quote_balancing_volume =  abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q)  #total_imbalance
 
 
