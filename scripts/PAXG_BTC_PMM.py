@@ -206,6 +206,16 @@ class SimplePMM(ScriptStrategyBase):
 
 
     #order_refresh_time = 30
+    ## Trade Halting Process
+
+    #Flag to avoid trading unless a cycle is complete
+    trade_in_progress = False
+
+    wait_after_fill_timestamp = 0
+    wait_after_cancel_timestamp = 0
+    fill_cooldown_duration = 10
+
+
     quote_order_amount = Decimal(0.0001)
     order_amount = Decimal(0.002)
     min_order_size_bid = Decimal(0)
@@ -275,8 +285,6 @@ class SimplePMM(ScriptStrategyBase):
         # Trade History Timestamp
         # self.last_trade_timestamp = 1726652280000
 
-        ## Initialize Trading Flag for use 
-        self.initialize_flag = True
 
         self._bid_baseline = None
         self._ask_baseline = None
@@ -315,6 +323,9 @@ class SimplePMM(ScriptStrategyBase):
         self._last_sell_price = 0
 
         self.trade_position_text = ""
+
+
+
 
     def get_ohlc_calculations(self, df, rolling_period=72):
         df['Open'] = pd.to_numeric(df['Open'])
@@ -418,6 +429,8 @@ class SimplePMM(ScriptStrategyBase):
         # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
 
 
+
+        
 
         ## Boolean Values for plotting areas;:
         # Initialize flags and trackers before the loop
@@ -656,13 +669,17 @@ class SimplePMM(ScriptStrategyBase):
                 self.target_profitability = max(self.min_profitability, self.current_vola)
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
-        if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
-
-            proposal: List[OrderCandidate] = self.create_proposal()
-            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-            self.place_orders(proposal_adjusted)
-            self.create_timestamp = self.order_refresh_time + self.current_timestamp
+        # Ensure enough time has passed since the last order fill before placing new orders
+        if self.current_timestamp >= self.wait_after_fill_timestamp:
+            if self.current_timestamp > = self.wait_after_cancel_timestamp:
+                if self.create_timestamp <= self.current_timestamp:
+                    if not self.trade_in_progress:
+                        proposal: List[OrderCandidate] = self.create_proposal()
+                        proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                        self.place_orders(proposal_adjusted)
+                    else:
+                        self.cancel_all_orders()
+                    self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
             
 
@@ -676,10 +693,17 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
     def create_proposal(self) -> List[OrderCandidate]:
-        time.sleep(10)
-        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
+        # Flag the start of a trade Execution
+        self.trade_in_progress = True
+
+        # time.sleep(10)
+
+        bp, sp = self.determine_log_multipliers()
+        # Fetch balances and optimal bid/ask prices
+        _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
         # Save Values for Status use without recalculating them over and over again
         self.bid_percent = optimal_bid_percent
@@ -687,47 +711,60 @@ class SimplePMM(ScriptStrategyBase):
         self.b_r_p = bid_reservation_price
         self.a_r_p = ask_reservation_price
 
+        # Initial prices
         buy_price = optimal_bid_price 
-        sell_price = optimal_ask_price 
+        sell_price = optimal_ask_price
 
-
-        if buy_price <= bid_reservation_price:
-            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
-           
-
-        if sell_price >= ask_reservation_price:
-            sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-
-        # minimum_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
-
+        # Number of levels to create (customizable)
+        num_levels = 3  # e.g., 3 buy and 3 sell levels
+        
+        # Multiplier values for buy and sell price adjustments
+        buy_multiplier = bp  # Reduce buy price by bp%
+        sell_multiplier = sp  # Increase sell price by sp%
+        
+        # Store orders
         order_counter = []
-        if (order_size_bid >= self.min_order_size_bid): # and (quote_balance_in_base  >= minimum_size)
-            order_counter.append(buy_order)
-        else:
-            # Print message about order size. 
-            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| " )
-            self.log_with_clock(logging.INFO, msg)
 
-        if (order_size_ask >= self.min_order_size_ask) : # and (maker_base_balance >= minimum_size)
-            order_counter.append(sell_order)
-        else:
-            # Print message about order size. 
-            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| " )
-            self.log_with_clock(logging.INFO, msg)
+        # Loop through each level
+        for level in range(num_levels):
+            # Adjust buy price and create buy order
+            if buy_price <= bid_reservation_price:
+                # Calculate adjusted order size to keep the same dollar value
+                adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
+                buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                        order_side=TradeType.BUY, amount=Decimal(adjusted_order_size_bid), price=buy_price)
+                if adjusted_order_size_bid >= self.min_order_size_bid:
+                    order_counter.append(buy_order)
+                else:
+                    msg = (f" order_size_bid |{adjusted_order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
+                    self.log_with_clock(logging.INFO, msg)
+            
+            # Adjust sell price and create sell order
+            if sell_price >= ask_reservation_price:
+                # Calculate adjusted order size to keep the same dollar value
+                adjusted_order_size_ask = order_size_ask * (optimal_ask_price / sell_price)
+                sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                            order_side=TradeType.SELL, amount=Decimal(adjusted_order_size_ask), price=sell_price)
+                if adjusted_order_size_ask >= self.min_order_size_ask:
+                    order_counter.append(sell_order)
+                else:
+                    msg = (f" order_size_ask |{adjusted_order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
+                    self.log_with_clock(logging.INFO, msg)
+            
+            # Update prices for the next level
+            buy_price *= buy_multiplier
+            sell_price *= sell_multiplier
 
-        # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
-        # self.log_with_clock(logging.INFO, msg)
-
-        return order_counter #[buy_order , sell_order]
+        return order_counter
 
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
         return proposal_adjusted
 
     def place_orders(self, proposal: List[OrderCandidate]) -> None:
+
         for order in proposal:
+
             self.place_order(connector_name=self.exchange, order=order)
 
     def place_order(self, connector_name: str, order: OrderCandidate):
@@ -742,12 +779,16 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
+        self.wait_after_cancel_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
+
+        # time.sleep(10)
+        # Reset the Trade Cycle Execution
+        self.trade_in_progress = False
+
 
     def did_fill_order(self, event: OrderFilledEvent):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
 
-
-        self.initialize_flag = False
 
         # Update Trade CSV after a trade completes
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
@@ -756,12 +797,17 @@ class SimplePMM(ScriptStrategyBase):
 
         self.fee_percent = Decimal(self.fee_percent)
         
+
         # Print log
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
+        # Set a delay before placing new orders after a fill
+        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
 
-        time.sleep(10)
+        # time.sleep(10)
+        #Reset the Trade Cycle Execution
+        self.trade_in_progress = False
 
 
     ##########################
@@ -1101,93 +1147,7 @@ class SimplePMM(ScriptStrategyBase):
 
         return order_size_bid, order_size_ask
     
-    # def get_midprice(self):
-    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-
-    #     if self._last_trade_price == None :
-    #         if self.initialize_flag == True:
-    #             # Fetch midprice only during initialization
-    #             if self._last_trade_price is None:
-
-    #                 ## If I have to manually restart the bot mid trade, this is the last traded price. 
-    #                 manual_price = 0.087009
-                    
-    #                 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
-
-    #                 # Ensure midprice is not None before converting and assigning
-    #                 if manual_price is not None:
-    #                     self._last_trade_price = (manual_price)
-
-    #                 self.initialize_flag = False  # Set flag to prevent further updates with midprice
-
-    #     else:
-    #         self._last_trade_price = self._last_trade_price
-
-    #     self._bid_baseline = (sold_baseline)
-    #     self._ask_baseline = (bought_baseline)
-    #     # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
-    #     # self.log_with_clock(logging.INFO, msg_gv)
-    #     return self._last_trade_price
-
-    # def call_garch_model(self):
-    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-    #     self._bid_baseline = (sold_baseline)
-    #     self._ask_baseline = (bought_baseline)
-
-    #     # Retrieve the log returns from the DataFrame
-    #     log_returns = log_returns_list##self.log_returns
-
-    #     # Ensure log_returns is a one-dimensional pd.Series
-    #     if isinstance(log_returns, list):
-    #         log_returns = pd.Series(log_returns)
-
-    #     # Convert to numeric, forcing any errors to NaN
-    #     log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
-
-    #     # Remove any NaN or infinite values from log_returns
-    #     log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
-
-
-    #     # Fit GARCH model to log returns
-    #     current_variance = []
-    #     current_volatility = []
-    #     length = 0
-    #     # Define the GARCH model with automatic rescaling
-    #     model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
-
-    #     # Fit the model
-    #     model_fit = model.fit(disp="off")
-    #     msg_gv = (f"GARCH  { model_fit.summary()}")
-    #     self.log_with_clock(logging.INFO, msg_gv)
-        
-    #     # Adjust Volatility to Decimal Percent values 
-    #     volatility = model_fit.conditional_volatility / 100 
-
-    #     length = len(model_fit.conditional_volatility)
-
-    
-    #     # Convert current_volatility to a pandas Series to apply rolling
-    #     current_volatility_series = pd.Series(volatility)
-
-    #     # Define the rolling window size (square root of length)
-    #     window = int(np.round(np.sqrt(len(current_volatility_series))))
-
-    #     # Apply the rolling window to smooth volatility
-    #     rolling_volatility = current_volatility_series#.rolling(window=window).mean()
-
-    #     # Rank the Volatility
-    #     self.max_vola = rolling_volatility.max()
-    #     min_vola = rolling_volatility.min()
-    #     self.current_vola = current_volatility_series.iloc[-1]
-
-    #     # Prevent division by zero
-    #     if self.max_vola != min_vola:
-    #         self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
-    #     else:
-    #         self.volatility_rank = 1  # Handle constant volatility case
-
-    #     # msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
-    #     # self.log_with_clock(logging.INFO, msg)            
+       
 
 
 
