@@ -707,18 +707,18 @@ class SimplePMM(ScriptStrategyBase):
 
                 return order_counter
 
-        async def place_orders(self, proposal: List[OrderCandidate]) -> None:
-            async with self.order_lock:
-                tasks = [self.place_order(self.exchange, order) for order in proposal]
-                await asyncio.gather(*tasks)  # Place orders concurrently
+    async def place_orders(self, proposal: List[OrderCandidate]) -> None:
+        async with self.order_lock:
+            tasks = [self.place_order(self.exchange, order) for order in proposal]
+            await asyncio.gather(*tasks)  # Place orders concurrently
 
-        async def place_order(self, connector_name: str, order: OrderCandidate):
-            if order.order_side == TradeType.SELL:
-                await self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                                order_type=order.order_type, price=order.price)
-            elif order.order_side == TradeType.BUY:
-                await self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+    async def place_order(self, connector_name: str, order: OrderCandidate):
+        if order.order_side == TradeType.SELL:
+            await self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
                             order_type=order.order_type, price=order.price)
+        elif order.order_side == TradeType.BUY:
+            await self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                        order_type=order.order_type, price=order.price)
 
     async def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         with self.order_lock:
