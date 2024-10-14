@@ -707,6 +707,11 @@ class SimplePMM(ScriptStrategyBase):
 
                 return order_counter
 
+    async def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
+        with self.order_lock:
+            proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
+            return proposal_adjusted
+
     async def place_orders(self, proposal: List[OrderCandidate]) -> None:
         async with self.order_lock:
             tasks = [self.place_order(self.exchange, order) for order in proposal]
@@ -720,10 +725,11 @@ class SimplePMM(ScriptStrategyBase):
             await self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
                         order_type=order.order_type, price=order.price)
 
-    async def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
-        with self.order_lock:
-            proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
-            return proposal_adjusted
+
+    async def cancel_all_orders(self):
+        async with self.order_lock:
+            for order in self.get_active_orders(connector_name=self.exchange):
+                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
     async def did_fill_order(self, event: OrderFilledEvent):
         async with self.order_lock:
