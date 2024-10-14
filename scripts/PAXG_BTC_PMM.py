@@ -690,32 +690,32 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    async def create_proposal(self) -> List[OrderCandidate]:
-        async with self.order_lock:
-            # await asyncio.sleep(10)  # Non-blocking sleep
-            # Fetch current positions asynchronously
-            _, _, _, _, _, maker_base_balance, quote_balance_in_base = await self.get_current_positions()
-            # Fetch optimal prices and order sizes synchronously or asynchronously, depending on your implementation
-            optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+    def create_proposal(self) -> List[OrderCandidate]:
+    # async with self.order_lock:
+        # await asyncio.sleep(10)  # Non-blocking sleep
+        # Fetch current positions asynchronously
+        _, _, _, _, _, maker_base_balance, quote_balance_in_base =  self.get_current_positions()
+        # Fetch optimal prices and order sizes synchronously or asynchronously, depending on your implementation
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
-            buy_price = optimal_bid_price
-            sell_price = optimal_ask_price
+        buy_price = optimal_bid_price
+        sell_price = optimal_ask_price
 
-            order_counter = []
+        order_counter = []
 
-            # Check and create buy order
-            if buy_price <= bid_reservation_price:
-                buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                           order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
-                order_counter.append(buy_order)
+        # Check and create buy order
+        if buy_price <= bid_reservation_price:
+            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+            order_counter.append(buy_order)
 
-            # Check and create sell order
-            if sell_price >= ask_reservation_price:
-                sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-                order_counter.append(sell_order)
+        # Check and create sell order
+        if sell_price >= ask_reservation_price:
+            sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                        order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
+            order_counter.append(sell_order)
 
-            return order_counter
+        return order_counter
 
     async def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         async with self.order_lock:
