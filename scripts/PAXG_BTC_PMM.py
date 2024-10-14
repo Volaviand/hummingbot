@@ -672,16 +672,16 @@ class SimplePMM(ScriptStrategyBase):
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
         # Ensure enough time has passed since the last order fill before placing new orders
-        if self.current_timestamp >= self.wait_after_fill_timestamp and \
-            self.current_timestamp >= self.wait_after_cancel_timestamp:
-            if self.create_timestamp <= self.current_timestamp:
-                if not self.trade_in_progress:
-                    proposal: List[OrderCandidate] = self.create_proposal()
-                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-                    self.place_orders(proposal_adjusted)
-                else:
-                    self.cancel_all_orders()
-                self.create_timestamp = self.order_refresh_time + self.current_timestamp
+        if self.create_timestamp <= self.current_timestamp and \
+        self.current_timestamp >= self.wait_after_fill_timestamp and \
+        self.current_timestamp >= self.wait_after_cancel_timestamp:
+            if not self.trade_in_progress:
+                proposal: List[OrderCandidate] = self.create_proposal()
+                proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                self.place_orders(proposal_adjusted)
+            else:
+                self.cancel_all_orders()
+            self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
         
         # Update the timestamp model 
