@@ -690,8 +690,8 @@ class SimplePMM(ScriptStrategyBase):
         num_levels = 3  # e.g., 3 buy and 3 sell levels
         
         # Multiplier values for buy and sell price adjustments
-        buy_multiplier = bp  # Reduce buy price by bp%
-        sell_multiplier = sp  # Increase sell price by sp%
+        buy_multiplier = Decimal(0.96) #bp  # Reduce buy price by bp%
+        sell_multiplier = Decimal(1.04) #sp  # Increase sell price by sp%
         
         # Store orders
         order_counter = []
@@ -700,22 +700,26 @@ class SimplePMM(ScriptStrategyBase):
         for level in range(num_levels):
             # Adjust buy price and create buy order
             if buy_price <= bid_reservation_price:
+                # Calculate adjusted order size to keep the same dollar value
+                adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
                 buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
-                if order_size_bid >= self.min_order_size_bid:
+                                        order_side=TradeType.BUY, amount=Decimal(adjusted_order_size_bid), price=buy_price)
+                if adjusted_order_size_bid >= self.min_order_size_bid:
                     order_counter.append(buy_order)
                 else:
-                    msg = (f" order_size_bid |{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
+                    msg = (f" order_size_bid |{adjusted_order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Adjust sell price and create sell order
             if sell_price >= ask_reservation_price:
+                # Calculate adjusted order size to keep the same dollar value
+                adjusted_order_size_ask = order_size_ask * (optimal_ask_price / sell_price)
                 sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-                if order_size_ask >= self.min_order_size_ask:
+                                            order_side=TradeType.SELL, amount=Decimal(adjusted_order_size_ask), price=sell_price)
+                if adjusted_order_size_ask >= self.min_order_size_ask:
                     order_counter.append(sell_order)
                 else:
-                    msg = (f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
+                    msg = (f" order_size_ask |{adjusted_order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Update prices for the next level
