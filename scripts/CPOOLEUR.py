@@ -36,6 +36,9 @@ import csv
 sys.path.append('/home/tyler/quant/API_call_tests/')
 from Kraken_Calculations import BuyTrades, SellTrades
 
+import cProfile
+import pstats
+import io
 
 class KrakenAPI:
     def __init__(self, symbol, start_timestamp=None, end_timestamp=None):
@@ -654,6 +657,9 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def on_tick(self):
+            # Start profiling
+        profiler = cProfile.Profile()
+        profiler.enable()
         #Calculate garch every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
@@ -682,8 +688,21 @@ class SimplePMM(ScriptStrategyBase):
         # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
             self.last_time_reported = self.current_timestamp
-
         
+        # Stop profiling
+        profiler.disable()
+        # Save the profiling results to a string buffer
+        s = io.StringIO()
+        sortby = pstats.SortKey.CUMULATIVE  # Sort by cumulative time
+        ps = pstats.Stats(profiler, stream=s).sort_stats(sortby)
+        ps.print_stats()
+
+        # Print the profiling results to the console
+        print(s.getvalue())
+
+        # Optionally save to a file
+        with open('profiling_results.txt', 'w') as f:
+            f.write(s.getvalue())
 
 
 
