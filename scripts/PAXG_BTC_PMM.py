@@ -689,8 +689,7 @@ class SimplePMM(ScriptStrategyBase):
 
         buy_price = optimal_bid_price 
         sell_price = optimal_ask_price 
-        num_placed = 2
-        for ord in range(0,ord):
+
 
         if buy_price <= bid_reservation_price:
             buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
