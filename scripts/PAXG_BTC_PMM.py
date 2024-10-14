@@ -13,6 +13,9 @@ import time
 import datetime
 import datetime as dt
 
+# Lock activities before placing new orders etc. 
+from threading import Lock
+
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
 from hummingbot.core.event.events import OrderFilledEvent
@@ -676,92 +679,105 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    def create_proposal(self) -> List[OrderCandidate]:
-        time.sleep(10)
-        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent= self.optimal_bid_ask_spread()
+    # Create a lock object to synchronize critical sections
+    order_lock = Lock()
 
-        # Save Values for Status use without recalculating them over and over again
+    def create_proposal(self) -> List[OrderCandidate]:
+        # Introduce a delay to mitigate immediate reordering
+        # time.sleep(10)
+
+        # Fetch current balances and prices
+        _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+
+        # Save key values for later use
         self.bid_percent = optimal_bid_percent
         self.ask_percent = optimal_ask_percent
         self.b_r_p = bid_reservation_price
         self.a_r_p = ask_reservation_price
 
+        # Initialize buy and sell prices
         buy_price = optimal_bid_price 
         sell_price = optimal_ask_price 
 
+        # Use a lock to ensure order placement happens without interference
+        with order_lock:
+            order_counter = []
+            
+            if buy_price <= bid_reservation_price:
+                buy_order = OrderCandidate(
+                    trading_pair=self.trading_pair,
+                    is_maker=True,
+                    order_type=OrderType.LIMIT,
+                    order_side=TradeType.BUY,
+                    amount=Decimal(order_size_bid),
+                    price=buy_price
+                )
+                if order_size_bid >= self.min_order_size_bid:
+                    order_counter.append(buy_order)
+                else:
+                    self.log_with_clock(logging.INFO, f" order_size_bid |{order_size_bid}| below minimum size |{self.min_order_size_bid}| ")
 
-        if buy_price <= bid_reservation_price:
-            buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                    order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
-           
+            if sell_price >= ask_reservation_price:
+                sell_order = OrderCandidate(
+                    trading_pair=self.trading_pair,
+                    is_maker=True,
+                    order_type=OrderType.LIMIT,
+                    order_side=TradeType.SELL,
+                    amount=Decimal(order_size_ask),
+                    price=sell_price
+                )
+                if order_size_ask >= self.min_order_size_ask:
+                    order_counter.append(sell_order)
+                else:
+                    self.log_with_clock(logging.INFO, f" order_size_ask |{order_size_ask}| below minimum size |{self.min_order_size_ask}| ")
 
-        if sell_price >= ask_reservation_price:
-            sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-
-        # minimum_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount)
-
-        order_counter = []
-        if (order_size_bid >= self.min_order_size_bid): # and (quote_balance_in_base  >= minimum_size)
-            order_counter.append(buy_order)
-        else:
-            # Print message about order size. 
-            msg = ( f" order_size_bid|{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| " )
-            self.log_with_clock(logging.INFO, msg)
-
-        if (order_size_ask >= self.min_order_size_ask) : # and (maker_base_balance >= minimum_size)
-            order_counter.append(sell_order)
-        else:
-            # Print message about order size. 
-            msg = ( f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| " )
-            self.log_with_clock(logging.INFO, msg)
-
-        # msg = (f"order_counter :: {order_counter} , minimum_size :: {minimum_size} , order_size_bid :: {order_size_bid} , order_size_ask :: {order_size_ask}")
-        # self.log_with_clock(logging.INFO, msg)
-
-        return order_counter #[buy_order , sell_order]
-
-    def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
-        proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
-        return proposal_adjusted
+            return order_counter
 
     def place_orders(self, proposal: List[OrderCandidate]) -> None:
-        for order in proposal:
-            self.place_order(connector_name=self.exchange, order=order)
+        with order_lock:
+            for order in proposal:
+                self.place_order(connector_name=self.exchange, order=order)
+            # Sleep briefly to avoid double placements during high-frequency events
+            time.sleep(2)
 
     def place_order(self, connector_name: str, order: OrderCandidate):
-        if order.order_side == TradeType.SELL:
-            self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                      order_type=order.order_type, price=order.price)
-        elif order.order_side == TradeType.BUY:
-            self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
-                     order_type=order.order_type, price=order.price)
+        with order_lock:
+            if order.order_side == TradeType.SELL:
+                self.sell(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                        order_type=order.order_type, price=order.price)
+            elif order.order_side == TradeType.BUY:
+                self.buy(connector_name=connector_name, trading_pair=order.trading_pair, amount=order.amount,
+                        order_type=order.order_type, price=order.price)
 
     def cancel_all_orders(self):
-        for order in self.get_active_orders(connector_name=self.exchange):
-            self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-
+        with order_lock:
+            for order in self.get_active_orders(connector_name=self.exchange):
+                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
     def did_fill_order(self, event: OrderFilledEvent):
-        t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
+        with order_lock:
+            # Update positions, prices, and logs after the order is filled
+            t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
+            self.initialize_flag = False
 
+            # Update trade history and logs
+            breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+            self.fee_percent = Decimal(self.fee_percent)
 
-        self.initialize_flag = False
+            # Log order fill event
+            msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
+            self.log_with_clock(logging.INFO, msg)
+            self.notify_hb_app_with_timestamp(msg)
 
-        # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+            # Brief delay to allow order book to update before placing new orders
+            time.sleep(10)
 
-
-
-        self.fee_percent = Decimal(self.fee_percent)
-        
-        # Print log
-        msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
-        self.log_with_clock(logging.INFO, msg)
-        self.notify_hb_app_with_timestamp(msg)
-
-        time.sleep(10)
+            # Cancel existing orders and place new ones based on updated state
+            self.cancel_all_orders()
+            new_proposal = self.create_proposal()
+            adjusted_proposal = self.adjust_proposal_to_budget(new_proposal)
+            self.place_orders(adjusted_proposal)
 
 
     ##########################
