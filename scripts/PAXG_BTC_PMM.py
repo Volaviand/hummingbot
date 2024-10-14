@@ -681,8 +681,6 @@ class SimplePMM(ScriptStrategyBase):
                         self.cancel_all_orders()
                     self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
-            
-
         
         # Update the timestamp model 
         if self.current_timestamp - self.last_time_reported > self.report_interval:
