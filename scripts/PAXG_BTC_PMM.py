@@ -647,7 +647,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    def on_tick(self):
+    async def on_tick(self):
         #Calculate garch every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
@@ -661,11 +661,11 @@ class SimplePMM(ScriptStrategyBase):
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
         if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
+            await self.cancel_all_orders()
 
-            proposal: List[OrderCandidate] = self.create_proposal()
-            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-            self.place_orders(proposal_adjusted)
+            proposal: List[OrderCandidate] = await self.create_proposal()
+            proposal_adjusted: List[OrderCandidate] = await self.adjust_proposal_to_budget(proposal)
+            await self.place_orders(proposal_adjusted)
             self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
             
