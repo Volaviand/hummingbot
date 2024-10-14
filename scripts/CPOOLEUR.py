@@ -324,7 +324,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-    def get_ohlc_calculations(self, df, rolling_period=72):
+    def get_ohlc_calculations(self, df, rolling_period=12):
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
         df['Low'] =pd.to_numeric(df['Low'])
@@ -499,7 +499,7 @@ class SimplePMM(ScriptStrategyBase):
         self._ask_baseline = df['High Line'].iloc[-1]
         return df
 
-    def call_trade_history(self, file_name='trades_PAXG_BTC.csv'):
+    def call_trade_history(self, file_name='trades_CPOO.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
         
         # Start with default values
@@ -658,7 +658,7 @@ class SimplePMM(ScriptStrategyBase):
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
                 kraken_api = KrakenAPI(self.history_market)
-                df = kraken_api.call_kraken_ohlc_data(720, 'PAXGXBT',  60)    
+                df = kraken_api.call_kraken_ohlc_data(720, 'CPOOLEUR',  60)    
                 ohlc_calc_df = self.get_ohlc_calculations(df)
 
                 #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
@@ -786,7 +786,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
 
 
 
@@ -900,6 +900,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
+        # Bypass with manual numbers for now
+        bp = Decimal(0.950)
+        sp = Decimal(1.050)
         return bp, sp
 
 
@@ -1062,13 +1065,13 @@ class SimplePMM(ScriptStrategyBase):
         #to market overcorrection
         if q > 0 :
             #If base is overbought, I want to sell more Quote to balance it
-            base_balancing_volume =  total_imbalance ##abs(minimum_size) *  Decimal.exp(self.order_shape_factor * q)
+            base_balancing_volume =   abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #total_imbalance
             quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
             base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
-            quote_balancing_volume = total_imbalance ##abs(minimum_size) * Decimal.exp(self.order_shape_factor * q) 
+            quote_balancing_volume =  abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q)  #total_imbalance
 
 
          
