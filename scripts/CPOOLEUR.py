@@ -906,59 +906,6 @@ class SimplePMM(ScriptStrategyBase):
         return bp, sp
 
 
-
-
-            ### OLD METHOD
-            ### Now using CSV for more precise trade information
-            ######################xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    # def determine_log_breakeven_levels(self):
-        # bp,sp = self.determine_log_multipliers()
-        # buy_counter_adjusted = self.buy_counter - 1
-        # sell_counter_adjusted = self.sell_counter - 1
-
-        # additive_buy = 0
-        # additive_sell = 0
-        
-        # avg_buy_mult = 1
-        # avg_sell_mult = 1
-
-        # buy_breakeven_mult = 1
-        # sell_breakeven_mult = 1
-
-        # #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
-        # if buy_counter_adjusted > 0:
-        #     for i in range(1, buy_counter_adjusted + 1):
-        #         if i == 1 : # First trade has no initial price drop
-        #             additive_buy = 1 + self.fee_percent
-        #         elif i > 1 :   # Next trades decay log wise
-        #             additive_buy += bp**(i-1) + self.fee_percent
-        #     # Find the avg percent of all trades        
-        #     avg_buy_mult = (additive_buy) / (buy_counter_adjusted)
-        #     # Divide the average price by the lowest price to get your multiplier for breakeven
-        #     buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
-        # else:
-        #     additive_buy = 0
-        #     avg_buy_mult = 1
-        #     buy_breakeven_mult = 1
-
-        # if sell_counter_adjusted > 0:
-        #     for i in range(1, sell_counter_adjusted + 1):
-        #         if i == 1: # First trade has no initial price drop
-        #             additive_sell = 1 - self.fee_percent
-        #         elif i > 1:  # Next trades decay log wise
-        #             additive_sell += sp**(i-1) - self.fee_percent
-        #     # Find the avg percent of all trades        
-        #     avg_sell_mult = additive_sell / sell_counter_adjusted
-        #     # Divide the average price by the highest price to get your multiplier for breakeven
-        #     sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
-
-        # else:
-        #     additive_sell = 0
-        #     avg_sell_mult = 1
-        #     sell_breakeven_mult = 1
-
-
-        # return buy_breakeven_mult, sell_breakeven_mult
         
 
     def get_current_top_bid_ask(self):
