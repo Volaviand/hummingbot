@@ -1401,12 +1401,12 @@ class SimplePMM(ScriptStrategyBase):
         is_neutral_net = net_value == 0 
     
         ## Optimal Spread in comparison to the min profit wanted
-        if not is_buy_data and not is_sell_data:
-            min_profit_bid = bid_reservation_price
-            min_profit_ask = ask_reservation_price
-        else:
-            min_profit_bid =  bid_reservation_price * bp
-            min_profit_ask = ask_reservation_price * sp
+        # if not is_buy_data and not is_sell_data:
+        #     min_profit_bid = bid_reservation_price
+        #     min_profit_ask = ask_reservation_price
+        # else:
+        min_profit_bid =  bid_reservation_price * bp
+        min_profit_ask = ask_reservation_price * sp
 
 
 
