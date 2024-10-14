@@ -19,7 +19,7 @@ import asyncio
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
 from hummingbot.core.event.events import OrderFilledEvent
-from hummingbot.strategy.script_strategy_base import ScriptStrategyBase_async
+from hummingbot.strategy.script_strategy_base_async import ScriptStrategyBase
 
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
