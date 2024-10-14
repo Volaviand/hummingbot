@@ -210,7 +210,7 @@ class SimplePMM(ScriptStrategyBase):
 
     wait_after_fill_timestamp = 0
     wait_after_cancel_timestamp = 0
-    fill_cooldown_duration = 10
+    fill_cooldown_duration = 5
 
     #order_refresh_time = 30
     quote_order_amount = Decimal(6.0)
