@@ -343,7 +343,7 @@ class SimplePMM(ScriptStrategyBase):
         log_returns_series = pd.Series(log_returns)
         
         # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True)
+        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True, dist="StudentsT")
 
         # Fit the model
         model_fit = model.fit(disp="off")
