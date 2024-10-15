@@ -782,9 +782,7 @@ class SimplePMM(ScriptStrategyBase):
 
         self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
 
-        # time.sleep(10)
-        # Reset the Trade Cycle Execution
-        self.trade_in_progress = False
+
 
 
     def did_fill_order(self, event: OrderFilledEvent):
@@ -806,9 +804,7 @@ class SimplePMM(ScriptStrategyBase):
         # Set a delay before placing new orders after a fill
         self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
 
-        # time.sleep(10)
-        #Reset the Trade Cycle Execution
-        self.trade_in_progress = False
+
 
 
     ##########################
