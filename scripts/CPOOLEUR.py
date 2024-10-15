@@ -684,6 +684,8 @@ class SimplePMM(ScriptStrategyBase):
         self.current_timestamp >= self.wait_after_fill_timestamp and \
         self.current_timestamp >= self.wait_after_cancel_timestamp:
             if not self.trade_in_progress:
+                # Flag the start of a trade Execution
+                self.trade_in_progress = True
                 proposal: List[OrderCandidate] = self.create_proposal()
                 proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
                 self.place_orders(proposal_adjusted)
@@ -717,10 +719,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def create_proposal(self) -> List[OrderCandidate]:
-        # Flag the start of a trade Execution
-        self.trade_in_progress = True
-
-        # time.sleep(10)
 
         bp, sp = self.determine_log_multipliers()
         # Fetch balances and optimal bid/ask prices
