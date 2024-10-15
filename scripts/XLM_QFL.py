@@ -789,7 +789,6 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
-        self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
 
 
 
@@ -810,8 +809,6 @@ class SimplePMM(ScriptStrategyBase):
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
-        # Set a delay before placing new orders after a fill
-        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
 
 
 
