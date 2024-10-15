@@ -220,8 +220,6 @@ class SimplePMM(ScriptStrategyBase):
     min_order_size_ask = Decimal(0)
 
 
-    create_timestamp = 0
-    create_garch_timestamp = 0
     trading_pair = "PAXG-BTC"
     exchange = "kraken"
     base_asset = "PAXG"
@@ -268,28 +266,25 @@ class SimplePMM(ScriptStrategyBase):
         max_refresh_time = 300
 
         # Generate a random integer between min and max using randint
-        self.order_refresh_time = 90 # random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 127 # random.randint(min_refresh_time, max_refresh_time)
         self.wait_after_fill_timestamp = 0
-        self.fill_cooldown_duration = 10
+        self.fill_cooldown_duration = 11
 
         self.wait_after_cancel_timestamp = 0
-        self.cancel_cooldown_duration = 10
+        self.cancel_cooldown_duration = 11
 
         self.garch_refresh_time = 600 
         self_last_garch_time_reported = 0
 
 
 
-        # Trade History Timestamp
-        # self.last_trade_timestamp = 1726652280000
 
 
         self._bid_baseline = None
         self._ask_baseline = None
 
         self.initialize_startprice_flag = True
-        # self.buy_counter = 2
-        # self.sell_counter = 1
+
 
 
         # Volume Depth Init
@@ -803,7 +798,7 @@ class SimplePMM(ScriptStrategyBase):
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
-        
+
         # Set a delay before placing new orders after a fill
         self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
 
