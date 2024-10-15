@@ -374,7 +374,7 @@ class SimplePMM(ScriptStrategyBase):
         secondary_model_fit = secondary_model.fit(disp="off")
 
         # Extract conditional volatility
-        secondary_volatility_rescaled = np.exp(secondary_model_fit.conditional_volatility) - 1
+        secondary_volatility_rescaled = secondary_model_fit.conditional_volatility
         
         # Convert the percent to decimal percent
         secondary_volatility = secondary_volatility_rescaled / 100 
