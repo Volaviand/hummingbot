@@ -677,6 +677,11 @@ class SimplePMM(ScriptStrategyBase):
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
 
+                # Update Timestamps
+                self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
+                self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
+
+
             # Open Orders if the halt timer is changed to False
             if not self.trade_in_progress:
                 # Flag the start of a trade Execution
@@ -780,7 +785,6 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
-        self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
 
 
 
@@ -802,7 +806,6 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
         # Set a delay before placing new orders after a fill
-        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
 
 
 
