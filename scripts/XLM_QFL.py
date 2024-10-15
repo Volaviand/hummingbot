@@ -222,8 +222,7 @@ class SimplePMM(ScriptStrategyBase):
     min_order_size_ask = Decimal(0)
 
 
-    create_timestamp = 0
-    create_garch_timestamp = 0
+
     trading_pair = "XLM-EUR"
     exchange = "kraken"
     base_asset = "XLM"
@@ -270,6 +269,9 @@ class SimplePMM(ScriptStrategyBase):
         min_refresh_time = 90
         max_refresh_time = 300
 
+
+        self.create_timestamp = 0
+        self.create_garch_timestamp = 0
         # Generate a random integer between min and max using randint
         self.order_refresh_time = 90 # random.randint(min_refresh_time, max_refresh_time)
         self.wait_after_fill_timestamp = 0
@@ -658,12 +660,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def on_tick(self):
-        ########## Profiling example to find time/speed of code
-        # Start profiling
-        # profiler = cProfile.Profile()
-        # profiler.enable()
-
-
         #Calculate garch every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
@@ -701,22 +697,6 @@ class SimplePMM(ScriptStrategyBase):
                     # Update Length of order open Timestamp
                     self.create_timestamp = self.order_refresh_time + self.current_timestamp
         
-        ########## Profiling example to find time/speed of code
-        # # Stop profiling
-        # profiler.disable()
-        # # Save the profiling results to a string buffer
-        # s = io.StringIO()
-        # sortby = pstats.SortKey.CUMULATIVE  # Sort by cumulative time
-        # ps = pstats.Stats(profiler, stream=s).sort_stats(sortby)
-        # ps.print_stats()
-
-        # # Print the profiling results to the console
-        # print(s.getvalue())
-
-        # # Optionally save to a file
-        # with open('profiling_results.txt', 'a') as f:
-        #     f.write(s.getvalue())
-
 
 
 
