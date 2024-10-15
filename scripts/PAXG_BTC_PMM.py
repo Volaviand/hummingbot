@@ -268,7 +268,7 @@ class SimplePMM(ScriptStrategyBase):
         max_refresh_time = 300
 
         # Generate a random integer between min and max using randint
-        self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 20 # random.randint(min_refresh_time, max_refresh_time)
         self.wait_after_fill_timestamp = 0
         self.fill_cooldown_duration = 10
 
@@ -682,16 +682,16 @@ class SimplePMM(ScriptStrategyBase):
                 self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
 
 
-            # Open Orders if the halt timer is changed to False
-            if not self.trade_in_progress:
-                # Flag the start of a trade Execution
-                self.trade_in_progress = True
-                proposal: List[OrderCandidate] = self.create_proposal()
-                proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-                self.place_orders(proposal_adjusted)
-                
-            # Update Length of order open Timestamp
-            self.create_timestamp = self.order_refresh_time + self.current_timestamp
+                # Open Orders if the halt timer is changed to False
+                if not self.trade_in_progress:
+                    # Flag the start of a trade Execution
+                    self.trade_in_progress = True
+                    proposal: List[OrderCandidate] = self.create_proposal()
+                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                    self.place_orders(proposal_adjusted)
+                    
+                # Update Length of order open Timestamp
+                self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
 
 
