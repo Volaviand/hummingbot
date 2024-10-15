@@ -694,8 +694,8 @@ class SimplePMM(ScriptStrategyBase):
             proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
             self.place_orders(proposal_adjusted)
             
-            # Update Length of order open Timestamp
-            self.create_timestamp = self.order_refresh_time + self.current_timestamp
+        # Update Length of order open Timestamp
+        self.create_timestamp = self.order_refresh_time + self.current_timestamp
         
         ########## Profiling example to find time/speed of code
         # # Stop profiling
