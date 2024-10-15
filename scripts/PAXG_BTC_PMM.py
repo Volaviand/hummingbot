@@ -262,20 +262,25 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
+        # Cooldown for how long an order stays in place. 
+        self.create_timestamp = 0
+
         min_refresh_time = 90
         max_refresh_time = 300
-
-        # Generate a random integer between min and max using randint
+        
         self.order_refresh_time = 127 # random.randint(min_refresh_time, max_refresh_time)
-        self.wait_after_fill_timestamp = 0
-        self.fill_cooldown_duration = 11
 
-        self.wait_after_cancel_timestamp = 0
-        self.cancel_cooldown_duration = 11
-
+        # Cooldown for Volatility calculations 
+        self.create_garch_timestamp = 0
         self.garch_refresh_time = 600 
         self_last_garch_time_reported = 0
 
+        # Cooldown after a fill
+        self.wait_after_fill_timestamp = 0
+        self.fill_cooldown_duration = 11
+        # Cooldown after cancelling orders
+        self.wait_after_cancel_timestamp = 0
+        self.cancel_cooldown_duration = 11
 
 
 
