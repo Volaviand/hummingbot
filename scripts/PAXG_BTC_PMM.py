@@ -283,8 +283,6 @@ class SimplePMM(ScriptStrategyBase):
         self.cancel_cooldown_duration = 11
 
 
-
-
         self._bid_baseline = None
         self._ask_baseline = None
 
