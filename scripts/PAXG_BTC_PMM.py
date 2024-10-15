@@ -212,10 +212,10 @@ class SimplePMM(ScriptStrategyBase):
     trade_in_progress = False
 
     wait_after_fill_timestamp = 0
-    fill_cooldown_duration = 5
+    fill_cooldown_duration = 10
 
     wait_after_cancel_timestamp = 0
-    cancel_cooldown_duration = 1
+    cancel_cooldown_duration = 10
 
 
     quote_order_amount = Decimal(0.0001)
@@ -253,8 +253,6 @@ class SimplePMM(ScriptStrategyBase):
 
     markets = {exchange: {trading_pair}}
 
-    report_interval = 60 * 60 * 6  # 6 hours
-
 
 
     ## Breakeven Initialization
@@ -275,8 +273,6 @@ class SimplePMM(ScriptStrategyBase):
 
         # Generate a random integer between min and max using randint
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
-
-        self.last_time_reported = 0
 
 
         self.garch_refresh_time = 600 
@@ -672,23 +668,27 @@ class SimplePMM(ScriptStrategyBase):
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
         # Ensure enough time has passed since the last order fill before placing new orders
-        if self.create_timestamp <= self.current_timestamp and \
-        self.current_timestamp >= self.wait_after_fill_timestamp and \
-        self.current_timestamp >= self.wait_after_cancel_timestamp:
-            if not self.trade_in_progress:
-                # Flag the start of a trade Execution
-                self.trade_in_progress = True
-                proposal: List[OrderCandidate] = self.create_proposal()
-                proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-                self.place_orders(proposal_adjusted)
-            else:
-                self.cancel_all_orders()
+        if self.create_timestamp <= self.current_timestamp:
+            self.cancel_all_orders()
+
+        # If there was a fill or cancel, this timer will halt new orders until timers are met   
+        if self.wait_after_fill_timestamp <= self.current_timestamp and \
+        self.wait_after_cancel_timestamp <= self.current_timestamp:
+            # Reset the Trade Cycle Execution After Timers End
+            self.trade_in_progress = False
+
+        # Open Orders if the halt timer is changed to False
+        if not self.trade_in_progress:
+            # Flag the start of a trade Execution
+            self.trade_in_progress = True
+            proposal: List[OrderCandidate] = self.create_proposal()
+            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+            self.place_orders(proposal_adjusted)
+            
+            # Update Length of order open Timestamp
             self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
-        
-        # Update the timestamp model 
-        if self.current_timestamp - self.last_time_reported > self.report_interval:
-            self.last_time_reported = self.current_timestamp
+
 
         
 
