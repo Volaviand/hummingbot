@@ -671,12 +671,16 @@ class SimplePMM(ScriptStrategyBase):
                 #self.log_with_clock(logging.INFO, msg_gv)
                 self.target_profitability = max(self.min_profitability, self.current_vola)
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
-        print(self.current_timestamp)
         print(self.create_timestamp)
+        print(self.current_timestamp)
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
 
+            print(self.wait_after_fill_timestamp)
+            print(self.current_timestamp)
+            print(self.wait_after_fill_timestamp)
+            print(self.current_timestamp)
             # If there was a fill or cancel, this timer will halt new orders until timers are met   
             if self.wait_after_fill_timestamp <= self.current_timestamp and \
             self.wait_after_cancel_timestamp <= self.current_timestamp:
