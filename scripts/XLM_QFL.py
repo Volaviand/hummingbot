@@ -671,7 +671,8 @@ class SimplePMM(ScriptStrategyBase):
                 #self.log_with_clock(logging.INFO, msg_gv)
                 self.target_profitability = max(self.min_profitability, self.current_vola)
                 self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
-
+        print(self.cuirrent_timestamp)
+        print(self.create_timestamp)
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
