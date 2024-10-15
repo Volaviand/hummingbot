@@ -677,7 +677,7 @@ class SimplePMM(ScriptStrategyBase):
                 # Update Timestamps
                 self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
                 self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
-                
+
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
 
@@ -692,8 +692,8 @@ class SimplePMM(ScriptStrategyBase):
                     proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
                     self.place_orders(proposal_adjusted)
                     
-                # Update Length of order open Timestamp
-                self.create_timestamp = self.order_refresh_time + self.current_timestamp
+                    # Update Length of order open Timestamp
+                    self.create_timestamp = self.order_refresh_time + self.current_timestamp
 
 
 
