@@ -669,11 +669,11 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
+            self.cancel_all_orders()
 
             # If there was a fill or cancel, this timer will halt new orders until timers are met   
             if self.wait_after_fill_timestamp <= self.current_timestamp and \
             self.wait_after_cancel_timestamp <= self.current_timestamp:
-                self.cancel_all_orders()
                 # Update Timestamps
                 self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time   # e.g., 10 seconds
                 self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
