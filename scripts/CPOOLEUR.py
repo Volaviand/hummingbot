@@ -684,7 +684,6 @@ class SimplePMM(ScriptStrategyBase):
             self.wait_after_cancel_timestamp <= self.current_timestamp:
                 # Update Timestamps
                 self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time   # e.g., 10 seconds
-                self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
 
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
@@ -825,7 +824,9 @@ class SimplePMM(ScriptStrategyBase):
         msg = (f"{event.trade_type.name} {round(event.amount, 2)} {event.trading_pair} {self.exchange} at {round(event.price, 2)}")
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
-
+        
+         # Set a delay before placing new orders after a fill
+        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
 
 
 
