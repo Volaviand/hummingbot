@@ -268,7 +268,7 @@ class SimplePMM(ScriptStrategyBase):
         max_refresh_time = 300
 
         # Generate a random integer between min and max using randint
-        self.order_refresh_time = 20 # random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 90 # random.randint(min_refresh_time, max_refresh_time)
         self.wait_after_fill_timestamp = 0
         self.fill_cooldown_duration = 10
 
@@ -680,9 +680,6 @@ class SimplePMM(ScriptStrategyBase):
 
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
-
-
-
 
                 # Open Orders if the halt timer is changed to False
                 if not self.trade_in_progress:

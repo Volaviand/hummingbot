@@ -270,7 +270,7 @@ class SimplePMM(ScriptStrategyBase):
         max_refresh_time = 300
 
         # Generate a random integer between min and max using randint
-        self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 90 # random.randint(min_refresh_time, max_refresh_time)
         self.wait_after_fill_timestamp = 0
         self.fill_cooldown_duration = 10
 
@@ -682,12 +682,14 @@ class SimplePMM(ScriptStrategyBase):
             # If there was a fill or cancel, this timer will halt new orders until timers are met   
             if self.wait_after_fill_timestamp <= self.current_timestamp and \
             self.wait_after_cancel_timestamp <= self.current_timestamp:
+                # Update Timestamps
+                self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time   # e.g., 10 seconds
+                self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
+
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
 
-                # Update Timestamps
-                self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
-                self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
+
 
 
                 # Open Orders if the halt timer is changed to False
@@ -698,8 +700,8 @@ class SimplePMM(ScriptStrategyBase):
                     proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
                     self.place_orders(proposal_adjusted)
                     
-                # Update Length of order open Timestamp
-                self.create_timestamp = self.order_refresh_time + self.current_timestamp
+                    # Update Length of order open Timestamp
+                    self.create_timestamp = self.order_refresh_time + self.current_timestamp
         
         ########## Profiling example to find time/speed of code
         # # Stop profiling
