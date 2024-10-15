@@ -738,7 +738,7 @@ class SimplePMM(ScriptStrategyBase):
         sell_price = optimal_ask_price
 
         # Number of levels to create (customizable)
-        num_levels = 3  # e.g., 3 buy and 3 sell levels
+        num_levels = 10  # e.g., 3 buy and 3 sell levels
         
         # Multiplier values for buy and sell price adjustments
         buy_multiplier = bp  # Reduce buy price by bp%
@@ -758,7 +758,7 @@ class SimplePMM(ScriptStrategyBase):
                 if adjusted_order_size_bid >= self.min_order_size_bid:
                     order_counter.append(buy_order)
                 else:
-                    msg = (f" order_size_bid |{adjusted_order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
+                    msg = (f"{level} order_size_bid |{adjusted_order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Adjust sell price and create sell order
@@ -770,7 +770,7 @@ class SimplePMM(ScriptStrategyBase):
                 if adjusted_order_size_ask >= self.min_order_size_ask:
                     order_counter.append(sell_order)
                 else:
-                    msg = (f" order_size_ask |{adjusted_order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
+                    msg = (f"{level} order_size_ask |{adjusted_order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Update prices for the next level
