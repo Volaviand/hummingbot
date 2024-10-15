@@ -213,11 +213,6 @@ class SimplePMM(ScriptStrategyBase):
     #Flag to avoid trading unless a cycle is complete
     trade_in_progress = False
 
-    wait_after_fill_timestamp = 0
-    fill_cooldown_duration = 10
-
-    wait_after_cancel_timestamp = 0
-    cancel_cooldown_duration = 10
 
     #order_refresh_time = 30
     quote_order_amount = Decimal(6.0)
@@ -276,7 +271,11 @@ class SimplePMM(ScriptStrategyBase):
 
         # Generate a random integer between min and max using randint
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
+        self.wait_after_fill_timestamp = 0
+        self.fill_cooldown_duration = 10
 
+        self.wait_after_cancel_timestamp = 0
+        self.cancel_cooldown_duration = 10
 
         self.garch_refresh_time = 600 
         self_last_garch_time_reported = 0
@@ -685,6 +684,11 @@ class SimplePMM(ScriptStrategyBase):
             self.wait_after_cancel_timestamp <= self.current_timestamp:
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
+
+                # Update Timestamps
+                self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration    # e.g., 10 seconds
+                self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration    # e.g., 10 seconds
+
 
             # Open Orders if the halt timer is changed to False
             if not self.trade_in_progress:

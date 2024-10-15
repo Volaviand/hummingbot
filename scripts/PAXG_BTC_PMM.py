@@ -264,8 +264,8 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
-        min_refresh_time = 10
-        max_refresh_time = 20
+        min_refresh_time = 90
+        max_refresh_time = 300
 
         # Generate a random integer between min and max using randint
         self.order_refresh_time = random.randint(min_refresh_time, max_refresh_time)
