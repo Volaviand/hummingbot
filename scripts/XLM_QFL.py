@@ -680,22 +680,22 @@ class SimplePMM(ScriptStrategyBase):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
 
-        # If there was a fill or cancel, this timer will halt new orders until timers are met   
-        if self.wait_after_fill_timestamp <= self.current_timestamp and \
-        self.wait_after_cancel_timestamp <= self.current_timestamp:
-            # Reset the Trade Cycle Execution After Timers End
-            self.trade_in_progress = False
+            # If there was a fill or cancel, this timer will halt new orders until timers are met   
+            if self.wait_after_fill_timestamp <= self.current_timestamp and \
+            self.wait_after_cancel_timestamp <= self.current_timestamp:
+                # Reset the Trade Cycle Execution After Timers End
+                self.trade_in_progress = False
 
-        # Open Orders if the halt timer is changed to False
-        if not self.trade_in_progress:
-            # Flag the start of a trade Execution
-            self.trade_in_progress = True
-            proposal: List[OrderCandidate] = self.create_proposal()
-            proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-            self.place_orders(proposal_adjusted)
-            
-        # Update Length of order open Timestamp
-        self.create_timestamp = self.order_refresh_time + self.current_timestamp
+            # Open Orders if the halt timer is changed to False
+            if not self.trade_in_progress:
+                # Flag the start of a trade Execution
+                self.trade_in_progress = True
+                proposal: List[OrderCandidate] = self.create_proposal()
+                proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                self.place_orders(proposal_adjusted)
+                
+            # Update Length of order open Timestamp
+            self.create_timestamp = self.order_refresh_time + self.current_timestamp
         
         ########## Profiling example to find time/speed of code
         # # Stop profiling
