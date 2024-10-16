@@ -877,7 +877,7 @@ class SimplePMM(ScriptStrategyBase):
             # Adjust sell price and create sell order
             if sell_price >= ask_reservation_price:
                 # Calculate adjusted order size to keep the same dollar value
-                adjusted_order_size_ask = order_size_ask * (optimal_ask_price / sell_price)
+                adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
                 #Quantize Size
                 adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
                 
