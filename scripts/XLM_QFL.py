@@ -287,6 +287,8 @@ class SimplePMM(ScriptStrategyBase):
         self.cancel_cooldown_duration = 11
 
 
+        self._bid_trailing_baseline = None
+        self._ask_trailing_baseline = None
 
         self._bid_baseline = None
         self._ask_baseline = None
@@ -601,8 +603,11 @@ class SimplePMM(ScriptStrategyBase):
 
         df['Mid Line'] = (df['Trailing High Line'] + df['Trailing Low Line']) / 2
 
-        self._bid_baseline = df['Trailing Low Line'].iloc[-1]
-        self._ask_baseline = df['Trailing High Line'].iloc[-1]
+        self._bid_trailing_baseline = df['Trailing Low Line'].iloc[-1]
+        self._ask_trailing_baseline = df['Trailing High Line'].iloc[-1]
+
+        self._bid_baseline = df['Low Line'].iloc[-1]
+        self._ask_baseline = df['High Line'].iloc[-1]
         return df
 
     def call_trade_history(self, file_name='trades_XLM.csv'):
@@ -977,6 +982,7 @@ class SimplePMM(ScriptStrategyBase):
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"LT /: Ask :: {self._last_sell_price:.8f} || Bid :: {self._last_buy_price:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
+        lines.extend([f"T_Bl /: Ask :: {self._ask_trailing_baseline} | Bid :: {self._bid_trailing_baseline}"])
         lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
         lines.extend([f"PT /: Ask(%) :: {self.ask_percent:.4f} | Bid(%) :: {self.bid_percent:.4f}"])
 
@@ -1268,6 +1274,9 @@ class SimplePMM(ScriptStrategyBase):
         breakeven_buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_buy_price)
         breakeven_sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_sell_price)
 
+        lowest_last_bid_trail = np.minimum(self._bid_trailing_baseline, self._last_buy_price)
+        highest_last_ask_trail = np.maximum(self._ask_trailing_baseline, self._last_sell_price)
+
          # There is no data, Use baselines
         if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
             self.trade_position_text = "No Trades, Use Baseline"
@@ -1277,29 +1286,29 @@ class SimplePMM(ScriptStrategyBase):
         # You have started a Buy Cycle, use Bid BE
         elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Buy Cycle"
-            s_bid = self._last_buy_price # breakeven_buy_price
+            s_bid = lowest_last_bid_trail 
             s_ask = breakeven_buy_price
         
         # You have started a Sell Cycle, use Ask BE
         elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Sell Cycle"
             s_bid = breakeven_sell_price
-            s_ask = self._last_sell_price # breakeven_sell_price
+            s_ask = highest_last_ask_trail 
 
         # You are mid trade, use net values to determine locations
         elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
             if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
                 self.trade_position_text = "Unfinished Buy Cycle"
-                s_bid = self._last_buy_price
+                s_bid = lowest_last_bid_trail
                 s_ask = breakeven_buy_price
             elif is_sell_net: # Mid Sell Trade, Sell Above BE, Buy for profit
                 self.trade_position_text = "Unfinished Sell Cycle"
                 s_bid = breakeven_sell_price
-                s_ask = self._last_sell_price
+                s_ask = highest_last_ask_trail
             elif is_neutral_net: # Price is perfectly neutral, use prospective levels
                 self.trade_position_text = "Neutral Cycle"
-                s_bid = self._last_buy_price # breakeven_buy_price
-                s_ask = self._last_sell_price # breakeven_sell_price
+                s_bid = self._last_buy_price 
+                s_ask = self._last_sell_price 
 
 
         ## Convert to Decimal
