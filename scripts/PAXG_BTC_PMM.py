@@ -36,6 +36,11 @@ import csv
 sys.path.append('/home/tyler/quant/API_call_tests/')
 from Kraken_Calculations import BuyTrades, SellTrades
 
+########## Profiling example to find time/speed of code
+
+# import cProfile
+# import pstats
+# import io
 
 class KrakenAPI:
     def __init__(self, symbol, start_timestamp=None, end_timestamp=None):
@@ -203,9 +208,6 @@ class SimplePMM(ScriptStrategyBase):
     # _order_refresh_tolerance_pct = 0.0301
 
 
-
-
-    #order_refresh_time = 30
     ## Trade Halting Process
 
     #Flag to avoid trading unless a cycle is complete
@@ -249,6 +251,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
     ## Breakeven Initialization
     ## Trading Fee for Round Trip side Limit
     fee_percent = 1 / 4 / 100  # Convert percentage to a fraction method
@@ -262,6 +265,7 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
+
         # Cooldown for how long an order stays in place. 
         self.create_timestamp = 0
 
@@ -274,7 +278,7 @@ class SimplePMM(ScriptStrategyBase):
         self.create_garch_timestamp = 0
         self.garch_refresh_time = 600 
         self_last_garch_time_reported = 0
-
+        
         # Cooldown after a fill
         self.wait_after_fill_timestamp = 0
         self.fill_cooldown_duration = 11
@@ -283,11 +287,13 @@ class SimplePMM(ScriptStrategyBase):
         self.cancel_cooldown_duration = 11
 
 
+
         self._bid_baseline = None
         self._ask_baseline = None
 
         self.initialize_startprice_flag = True
-
+        # self.buy_counter = 2
+        # self.sell_counter = 1
 
 
         # Volume Depth Init
@@ -635,6 +641,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # self._last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
+        # Flag a new trading cycle to make logic trade on baselines, regardless of net value
+        new_trade_cycle = False
+
         # Iterate through the trade history in reverse order
         for index, row in df.iterrows():
             trade_type = row['trade_type']
@@ -661,17 +670,20 @@ class SimplePMM(ScriptStrategyBase):
 
             # Detect crossover in net value (crossing zero)
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
-                # new_trade_cycle = True
+                new_trade_cycle = True
                 cycle_start_index = index  # Update to the most recent crossover index
                 # print(f"{cycle_start_index}=====================CROSS=============================")
+            else:
+                new_trade_cycle = False
 
         
-        # print(f"Cycle Starting Index = {cycle_start_index}")
-        # Filter out trades after the identified cycle start point
-        if cycle_start_index == 0:
-            filtered_df = df.iloc[cycle_start_index:]
-        else:
-            filtered_df = df.iloc[cycle_start_index + 1 :]
+        # # Filter out trades after the identified cycle start point
+        # if cycle_start_index == 0:
+        #     filtered_df = df.iloc[cycle_start_index:]
+        # else:
+        #     filtered_df = df.iloc[cycle_start_index + 1 :]
+        
+        filtered_df = df.iloc[cycle_start_index:]
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
@@ -754,6 +766,12 @@ class SimplePMM(ScriptStrategyBase):
 
 
     def on_tick(self):
+        ########## Profiling example to find time/speed of code
+        # Start profiling
+        # profiler = cProfile.Profile()
+        # profiler.enable()
+
+
         #Calculate garch every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
                 ### Call Historical Calculations
@@ -779,6 +797,9 @@ class SimplePMM(ScriptStrategyBase):
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
 
+
+
+
                 # Open Orders if the halt timer is changed to False
                 if not self.trade_in_progress:
                     # Flag the start of a trade Execution
@@ -789,19 +810,28 @@ class SimplePMM(ScriptStrategyBase):
                     
                     # Update Length of order open Timestamp
                     self.create_timestamp = self.order_refresh_time + self.current_timestamp
-
-
-
         
+        ########## Profiling example to find time/speed of code
+        # # Stop profiling
+        # profiler.disable()
+        # # Save the profiling results to a string buffer
+        # s = io.StringIO()
+        # sortby = pstats.SortKey.CUMULATIVE  # Sort by cumulative time
+        # ps = pstats.Stats(profiler, stream=s).sort_stats(sortby)
+        # ps.print_stats()
+
+        # # Print the profiling results to the console
+        # print(s.getvalue())
+
+        # # Optionally save to a file
+        # with open('profiling_results.txt', 'a') as f:
+        #     f.write(s.getvalue())
 
 
 
 
 
     def create_proposal(self) -> List[OrderCandidate]:
-
-
-        # time.sleep(10)
 
         bp, sp = self.determine_log_multipliers()
         # Fetch balances and optimal bid/ask prices
@@ -867,7 +897,6 @@ class SimplePMM(ScriptStrategyBase):
             buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, buy_price)
             sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, sell_price)
 
-
         return order_counter
 
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
@@ -896,12 +925,13 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+
     def did_fill_order(self, event: OrderFilledEvent):
         t, y_bid, y_ask, bid_volatility_in_base, ask_volatility_in_base, bid_reservation_price, ask_reservation_price = self.reservation_price()
 
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
 
 
@@ -913,9 +943,8 @@ class SimplePMM(ScriptStrategyBase):
         self.log_with_clock(logging.INFO, msg)
         self.notify_hb_app_with_timestamp(msg)
 
-        # Set a delay before placing new orders after a fill
+         # Set a delay before placing new orders after a fill
         self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
-
 
 
 
@@ -1022,59 +1051,6 @@ class SimplePMM(ScriptStrategyBase):
         return bp, sp
 
 
-
-
-            ### OLD METHOD
-            ### Now using CSV for more precise trade information
-            ######################xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    # def determine_log_breakeven_levels(self):
-        # bp,sp = self.determine_log_multipliers()
-        # buy_counter_adjusted = self.buy_counter - 1
-        # sell_counter_adjusted = self.sell_counter - 1
-
-        # additive_buy = 0
-        # additive_sell = 0
-        
-        # avg_buy_mult = 1
-        # avg_sell_mult = 1
-
-        # buy_breakeven_mult = 1
-        # sell_breakeven_mult = 1
-
-        # #Average the trade distance percentages(this assumes an even volume on every trade, can implement volume in the future)
-        # if buy_counter_adjusted > 0:
-        #     for i in range(1, buy_counter_adjusted + 1):
-        #         if i == 1 : # First trade has no initial price drop
-        #             additive_buy = 1 + self.fee_percent
-        #         elif i > 1 :   # Next trades decay log wise
-        #             additive_buy += bp**(i-1) + self.fee_percent
-        #     # Find the avg percent of all trades        
-        #     avg_buy_mult = (additive_buy) / (buy_counter_adjusted)
-        #     # Divide the average price by the lowest price to get your multiplier for breakeven
-        #     buy_breakeven_mult = avg_buy_mult / (bp**buy_counter_adjusted)
-        # else:
-        #     additive_buy = 0
-        #     avg_buy_mult = 1
-        #     buy_breakeven_mult = 1
-
-        # if sell_counter_adjusted > 0:
-        #     for i in range(1, sell_counter_adjusted + 1):
-        #         if i == 1: # First trade has no initial price drop
-        #             additive_sell = 1 - self.fee_percent
-        #         elif i > 1:  # Next trades decay log wise
-        #             additive_sell += sp**(i-1) - self.fee_percent
-        #     # Find the avg percent of all trades        
-        #     avg_sell_mult = additive_sell / sell_counter_adjusted
-        #     # Divide the average price by the highest price to get your multiplier for breakeven
-        #     sell_breakeven_mult = avg_sell_mult / (sp**sell_counter_adjusted)  
-
-        # else:
-        #     additive_sell = 0
-        #     avg_sell_mult = 1
-        #     sell_breakeven_mult = 1
-
-
-        # return buy_breakeven_mult, sell_breakeven_mult
         
 
     def get_current_top_bid_ask(self):
@@ -1180,13 +1156,14 @@ class SimplePMM(ScriptStrategyBase):
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
         if q > 0 :
-            #If base is overbought, I want to sell more Quote to balance it
+            # In order to balance the base, I want to sell more of ask to balance it
             base_balancing_volume =   abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #total_imbalance
             quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
             base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
+            # In order to balance the Quote, I want to buy more of bid to balance it
             quote_balancing_volume =  abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q)  #total_imbalance
 
 
@@ -1257,16 +1234,13 @@ class SimplePMM(ScriptStrategyBase):
 
         return order_size_bid, order_size_ask
     
-       
-
-
 
     def reservation_price(self):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         #self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
@@ -1289,31 +1263,31 @@ class SimplePMM(ScriptStrategyBase):
         # Adjust Breakeven for 2nd half of fees (Move BE bid up, Move BE ask down the opposite side fee amount)
         breakeven_buy_price =  Decimal(breakeven_buy_price) * (Decimal(1.0) + Decimal(self.fee_percent))
         breakeven_sell_price = Decimal(breakeven_sell_price) * (Decimal(1.0) - Decimal(self.fee_percent))
-        
+
         # Quantize Price
         breakeven_buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_buy_price)
         breakeven_sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_sell_price)
 
          # There is no data, Use baselines
-        if not is_buy_data and not is_sell_data:
+        if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
             self.trade_position_text = "No Trades, Use Baseline"
             s_bid = self._bid_baseline
             s_ask = self._ask_baseline
         
         # You have started a Buy Cycle, use Bid BE
-        elif is_buy_data and not is_sell_data:
+        elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Buy Cycle"
             s_bid = self._last_buy_price # breakeven_buy_price
             s_ask = breakeven_buy_price
         
         # You have started a Sell Cycle, use Ask BE
-        elif not is_buy_data and is_sell_data:
+        elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Sell Cycle"
             s_bid = breakeven_sell_price
             s_ask = self._last_sell_price # breakeven_sell_price
 
         # You are mid trade, use net values to determine locations
-        elif is_buy_data and is_sell_data:
+        elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
             if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
                 self.trade_position_text = "Unfinished Buy Cycle"
                 s_bid = self._last_buy_price
@@ -1327,7 +1301,7 @@ class SimplePMM(ScriptStrategyBase):
                 s_bid = self._last_buy_price # breakeven_buy_price
                 s_ask = self._last_sell_price # breakeven_sell_price
 
-        print(f"S BID before res {s_bid}, ask {s_ask}")
+
         ## Convert to Decimal
         s_bid = Decimal(s_bid)
         s_ask = Decimal(s_ask)
@@ -1452,12 +1426,14 @@ class SimplePMM(ScriptStrategyBase):
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
         is_buy_data = breakeven_buy_price > 0
         is_sell_data = breakeven_sell_price > 0
 
-
+        is_buy_net = net_value > 0
+        is_sell_net = net_value < 0
+        is_neutral_net = net_value == 0 
     
         ## Optimal Spread in comparison to the min profit wanted
         # if not is_buy_data and not is_sell_data:
@@ -1469,7 +1445,6 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        print(f"S BID after bp {min_profit_bid}, ask {min_profit_ask}")
 
 
         # Spread calculation price vs the minimum profit price for entries
