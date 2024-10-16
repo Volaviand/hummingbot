@@ -385,24 +385,27 @@ class SimplePMM(ScriptStrategyBase):
 
         # Edit Volume for calculations
         df['Volume'] = pd.to_numeric(df['Volume'])
-        # rolling_period = 72
-        
-        # Extent of tail capturing, currently 0.8413, 0.1587 for 1 Standard deviation around median
+        # rolling_period = 12
+
+        # update to use 1 standard deviations ( Spikes greater than 2 or 3 are rare *PANIC*)
         IQR3_vola = df['Volatility'].quantile(0.8413) # rolling(window=rolling_period).
         vola_median = df['Volatility'].quantile(0.50) # rolling(window=rolling_period).
         IQR1_vola = df['Volatility'].quantile(0.1587) # rolling(window=rolling_period).
+
         
         IQR3_Source = df['High'].rolling(window=rolling_period).quantile(0.8413)
-        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587)   
+        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587)    
         
         # Assign these values to the entire DataFrame in new columns
+
+        
         df['IQR3_vola'] = IQR3_vola
         df['Vola_Median'] = vola_median
         df['IQR1_vola'] = IQR1_vola
         df['IQR3_Source'] = IQR3_Source
         df['IQR1_Source'] = IQR1_Source
         
-        dt = 1  # np.sqrt(window)# / len(df['Volatility']))
+        dt = 1 
         
 
 
@@ -411,27 +414,28 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Rank the Volatility
-        #init vol rank
-
-        self.max_vola = df['Volatility'].iloc[-rolling_period:].max()
-        min_vola = df['Volatility'].iloc[-rolling_period:].min()
-        self.current_vola = df['Volatility'].iloc[-1]
-
+        max_vola = df['Volatility'].iloc[-rolling_period:].min()
+        min_vola = df['Volatility'].iloc[-rolling_period:].max()
 
         # Prevent division by zero
-        if self.max_vola != min_vola:
-            self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
+        if max_vola != min_vola:
+            df['volatility_rank'] = (df['Volatility'] - min_vola) / (max_vola - min_vola)
         else:
-            self.volatility_rank = 1  # Handle constant volatility case
-
-        df['volatility_rank'] = self.volatility_rank
+            df['volatility_rank'] = 1  # Handle constant volatility case
 
         # print(f"Max Volatility :: {max_vola}")
         # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
 
-
+        ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
+        q = 0.0
+        min_profit = 0.01
+        
+        df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
 
         
+        # Max volatility of the moment * Value of unbalance (q)
+        df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
+
 
         ## Boolean Values for plotting areas;:
         # Initialize flags and trackers before the loop
@@ -450,51 +454,132 @@ class SimplePMM(ScriptStrategyBase):
         df['High Line'] = np.nan
         df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
         df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
-        
+        ## Initialize
+        df['latest_high_tail_value'] = np.nan
+        df['latest_low_tail_value'] = np.nan
+        # previous_high_tail_value = np.nan
+        # previous_low_tail_value = np.nan
+
+        # Initialize indexers to keep track of when an event happened
+        last_low_indices = []
+        last_high_indices = []
         # Iterate through each row and update the Low Line and High Line
         for i in range(1, len(df)):
-            # Get the previous Low and High Line values
-            if latest_low_tail_value is not None:
-                previous_low_line = np.minimum(df.loc[i-1, 'Low Line'], latest_low_tail_value)
+        # Keep track of the last two indices for low_tail events
+            if low_tail[i]:
+                last_low_indices.append(i)
+                if len(last_low_indices) > 2:
+                    last_low_indices.pop(0)  # Maintain only the last 2 indices
+        
+            # Keep track of the last two indices for high_tail events
+            if high_tail[i]:
+                last_high_indices.append(i)
+                if len(last_high_indices) > 2:
+                    last_high_indices.pop(0)  # Maintain only the last 2 indices
+                    
+            # Initialize indexes based on # of events in the market
+            if len(last_low_indices) == 2:
+                previous_low_index = last_low_indices[0]
+                latest_low_index = last_low_indices[1]
+            elif len(last_low_indices) ==  1:
+                previous_low_index = last_low_indices[0]
+                latest_low_index = None
             else:
-                previous_low_line = df.loc[i-1, 'Low Line']
-                
-            if latest_high_tail_value is not None:
-                previous_high_line = np.maximum(df.loc[i-1, 'High Line'], latest_high_tail_value)
+                previous_low_index = None
+                latest_low_index = None
+        
+            if len(last_high_indices) == 2:
+                previous_high_index = last_high_indices[0]
+                latest_high_index = last_high_indices[1]
+            elif len(last_high_indices) ==  1:
+                previous_high_index = last_high_indices[0]
+                latest_high_index = None
             else:
-                previous_high_line = df.loc[i-1, 'High Line']
+                previous_high_index = None
+                latest_high_index = None
+
             
-            # Handle Low Line updates (when a high tail happens)
-            if low_tail[i-1]:
-                latest_low_tail_value = np.minimum(df.loc[i-1, 'Low'], df.loc[i, 'Low'])
-        
-            # If High Tail and there is a last low value, use it.
-            if high_tail[i] and latest_low_tail_value is not None:
-                df.loc[i, 'Low Line'] = latest_low_tail_value
-        
-            # If High Tail and there is no last low tail value, use the lowest low up to that point
-            elif high_tail[i] and latest_low_tail_value is None:
-                # Get the minimum Low value up to this point (from 0 to i)
-                df.loc[i, 'Low Line'] = df.loc[:i, 'Low'].min()
-        
+            #Find Values between points        
+            if previous_high_index is not None and latest_high_index is not None:
+                lowest_between = df.loc[previous_high_index: latest_high_index, 'Low'].min() 
+            elif previous_high_index is not None and latest_high_index is None:
+                lowest_between = df.loc[1: previous_high_index, 'Low'].min() 
             else:
-                df.loc[i, 'Low Line'] = previous_low_line
-        
-            # Handle High Line updates (when a low tail happens)
-            if high_tail[i-1]:
-                latest_high_tail_value = np.maximum(df.loc[i-1, 'High'], df.loc[i, 'High'])
-        
-            # If Low Tail and there is a last high value, use it.
-            if low_tail[i] and latest_high_tail_value is not None:
-                df.loc[i, 'High Line'] = latest_high_tail_value
-        
-            # If Low Tail and there is no last high tail value, use the highest high up to that point
-            elif low_tail[i] and latest_high_tail_value is None:
-                # Get the maximum High value up to this point (from 0 to i)
-                df.loc[i, 'High Line'] = df.loc[:i, 'High'].max()
-        
+                lowest_between = df.loc[1: i, 'Low'].min() 
+
+            
+            if previous_low_index is not None and latest_low_index is not None:
+                highest_between = df.loc[previous_low_index: latest_low_index, 'High'].max()
+            elif previous_low_index is not None and latest_low_index is None:
+                highest_between = df.loc[1: previous_low_index, 'High'].max()
             else:
-                df.loc[i, 'High Line'] = previous_high_line
+                highest_between = df.loc[1: i, 'High'].max()
+
+            # Find Values Consecutively. 
+            if latest_high_index is not None and latest_low_index is not None:
+                lowest_consecutive = df.loc[latest_high_index: latest_low_index, 'Low'].min() 
+                highest_consecutive = df.loc[latest_low_index: latest_high_index, 'High'].max()
+
+            
+            elif latest_high_index is not None and latest_low_index is None:
+                lowest_consecutive = df.loc[latest_high_index: i, 'Low'].min()
+                highest_consecutive = df.loc[1: latest_high_index, 'High'].max()
+
+            
+            elif latest_high_index is None and latest_low_index is not None:
+                lowest_consecutive = df.loc[1: latest_low_index, 'Low'].min()
+                highest_consecutive = df.loc[latest_low_index: i, 'High'].max()
+            else:
+                lowest_consecutive = df.loc[1: i, 'Low'].min() 
+                highest_consecutive = df.loc[1: i, 'High'].max()
+
+            # print(f'Prev Low Index {previous_low_index}')
+            # print(f'Latest high index {latest_high_index}')
+
+            # Handle High Line Location (A new low tail triggers a previous top): 
+            if low_tail[i]:
+                if previous_low_index is not None and latest_high_index is not None:
+                    # A new Top is formed from a bounce
+                    if previous_low_index < latest_high_index:
+                        df.loc[i, 'latest_high_tail_value'] = highest_between 
+                    # Trailing price downwards as it makes new Bases
+                    elif previous_low_index > latest_high_index:
+                        df.loc[i,'latest_low_tail_value'] = lowest_consecutive
+                    else:
+                        df.loc[i, 'latest_high_tail_value'] = np.maximum(highest_between, highest_consecutive)
+                else:
+                    df.loc[i, 'latest_high_tail_value'] = df.loc[1: i, 'Low'].min() 
+            else:
+                df.loc[i,'latest_high_tail_value'] = df.loc[i-1,'latest_high_tail_value']
+
+            if pd.isna(df.loc[i, 'latest_high_tail_value']):
+                    df.loc[i, 'latest_high_tail_value'] = df.loc[i-1, 'latest_high_tail_value']
+                
+            # Handle Low Line Location: (A new high tail triggers a previous base)
+            if high_tail[i]:
+                if previous_high_index is not None and latest_low_index is not None:
+                    # A new Base is formed from a bounce
+                    if previous_high_index < latest_low_index:
+                        df.loc[i,'latest_low_tail_value'] = lowest_between 
+                    # Trailing price upwards as it makes new Tops
+                    elif previous_high_index > latest_low_index:
+                        df.loc[i, 'latest_high_tail_value'] = highest_consecutive
+                    else:
+                        df.loc[i,'latest_low_tail_value'] = np.minimum(lowest_between, lowest_consecutive)
+                else:
+                    df.loc[i,'latest_low_tail_value'] = df.loc[1: i, 'Low'].min() 
+            else:
+                df.loc[i,'latest_low_tail_value'] = df.loc[i-1,'latest_low_tail_value']
+                
+            if pd.isna(df.loc[i, 'latest_low_tail_value']):
+                    df.loc[i, 'latest_low_tail_value'] = df.loc[i-1, 'latest_low_tail_value']
+            
+            # Update the DataFrame with the high and low tail values
+            df.loc[i, 'High Line'] = df.loc[i, 'latest_high_tail_value'] 
+            df.loc[i, 'Low Line'] = df.loc[i,'latest_low_tail_value']
+
+
+        df['Mid Line'] = (df['High Line'] + df['Low Line']) / 2
 
 
         df['Mid Line'] = (df['High Line'] + df['Low Line']) / 2
