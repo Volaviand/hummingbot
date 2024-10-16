@@ -280,7 +280,7 @@ class SimplePMM(ScriptStrategyBase):
         
         # Cooldown after a fill
         self.wait_after_fill_timestamp = 0
-        self.fill_cooldown_duration = 20
+        self.fill_cooldown_duration = 11
         # Cooldown after cancelling orders
         self.wait_after_cancel_timestamp = 0
         self.cancel_cooldown_duration = 11
