@@ -437,32 +437,76 @@ class SimplePMM(ScriptStrategyBase):
         df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
 
 
-        ## Boolean Values for plotting areas;:
-        # Initialize flags and trackers before the loop
-        latest_low_tail_value = None  # Store the most recent low tail value
-        latest_high_tail_value = None  # Store the most recent high tail value
-        # high_tail_flag = False  # Initially set to False
-        # low_tail_flag = False  # Initially set to False
-        
         # Create conditions for high and low tails
         high_volatility = df['Volatility'] > df['IQR3_vola']
         low_tail = (df['Low'] < df['IQR1_Source']) & high_volatility
         high_tail = (df['High'] > df['IQR3_Source']) & high_volatility
         
         # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
+
+        ## Initialize
+        df['Trailing High Line'] = np.nan
+        df['Trailing Low Line'] = np.nan
+        
         df['Low Line'] = np.nan
         df['High Line'] = np.nan
-        df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
-        df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
-        ## Initialize
-        df['latest_high_tail_value'] = np.nan
-        df['latest_low_tail_value'] = np.nan
-        # previous_high_tail_value = np.nan
-        # previous_low_tail_value = np.nan
+        # df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
+        # df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
 
+
+
+        def determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, trailing):
+                    # Initialize values to hold updated tails
+                    if trailing:
+                        new_high_tail_value = df.loc[i-1, 'Trailing High Line']
+                        new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
+                    else:
+                        new_high_tail_value = df.loc[i-1, 'High Line']
+                        new_low_tail_value = df.loc[i-1, 'Low Line']
+                    
+                    # Handle Low Line Location: (A new high tail triggers a previous base)
+                    if high_tail[i]:
+                        if previous_high_index is not None and latest_low_index is not None:
+                            # A new Base is formed from a bounce
+                            if previous_high_index < latest_low_index:
+                                new_low_tail_value = lowest_between 
+                            else:
+                                new_low_tail_value = np.minimum(lowest_between, lowest_consecutive)
+                                
+                                if trailing:
+                                    # Trailing price upwards as it makes new Tops
+                                    new_high_tail_value = np.maximum(new_high_tail_value, highest_consecutive)
+                        else:
+                            new_low_tail_value = df.loc[1: i, 'Low'].min()
+                    
+                    # Handle High Line Location (A new low tail triggers a previous top)
+                    if low_tail[i]:
+                        if previous_low_index is not None and latest_high_index is not None:
+                            # A new Top is formed from a bounce
+                            if previous_low_index < latest_high_index:
+                                new_high_tail_value = highest_between 
+                            else:
+                                new_high_tail_value = np.maximum(highest_between, highest_consecutive)
+                                
+                                if trailing:
+                                    # Trailing price downwards as it makes new Bases
+                                    new_low_tail_value = np.minimum(new_low_tail_value, lowest_consecutive)
+                        else:
+                            new_high_tail_value = df.loc[1: i, 'High'].max()
+                    
+                    # # Ensure no NaN values remain
+                    # if pd.isna(new_high_tail_value):
+                    #     new_high_tail_value = df.loc[i-1, 'Trailing High Line']
+                    # if pd.isna(new_low_tail_value):
+                    #     new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
+                        
+                    return new_high_tail_value, new_low_tail_value
+
+        
         # Initialize indexers to keep track of when an event happened
         last_low_indices = []
         last_high_indices = []
+
         # Iterate through each row and update the Low Line and High Line
         for i in range(1, len(df)):
         # Keep track of the last two indices for low_tail events
@@ -501,7 +545,8 @@ class SimplePMM(ScriptStrategyBase):
             
             #Find Values between points        
             if previous_high_index is not None and latest_high_index is not None:
-                lowest_between = df.loc[previous_high_index: latest_high_index, 'Low'].min() 
+                lowest_between = df.loc[np.minimum(previous_high_index,latest_high_index):\
+                np.maximum(previous_high_index,latest_high_index), 'Low'].min() 
             elif previous_high_index is not None and latest_high_index is None:
                 lowest_between = df.loc[1: previous_high_index, 'Low'].min() 
             else:
@@ -509,7 +554,8 @@ class SimplePMM(ScriptStrategyBase):
 
             
             if previous_low_index is not None and latest_low_index is not None:
-                highest_between = df.loc[previous_low_index: latest_low_index, 'High'].max()
+                highest_between = df.loc[np.minimum(previous_low_index, latest_low_index):\
+                np.maximum(previous_low_index, latest_low_index), 'High'].max()
             elif previous_low_index is not None and latest_low_index is None:
                 highest_between = df.loc[1: previous_low_index, 'High'].max()
             else:
@@ -517,8 +563,11 @@ class SimplePMM(ScriptStrategyBase):
 
             # Find Values Consecutively. 
             if latest_high_index is not None and latest_low_index is not None:
-                lowest_consecutive = df.loc[latest_high_index: latest_low_index, 'Low'].min() 
-                highest_consecutive = df.loc[latest_low_index: latest_high_index, 'High'].max()
+                lowest_consecutive = df.loc[np.minimum(latest_high_index,latest_low_index) :\
+                np.maximum(latest_high_index,latest_low_index), 'Low'].min()
+
+                highest_consecutive = df.loc[np.minimum(latest_low_index, latest_high_index):\
+                np.maximum(latest_low_index, latest_high_index), 'High'].max()
 
             
             elif latest_high_index is not None and latest_low_index is None:
@@ -533,56 +582,26 @@ class SimplePMM(ScriptStrategyBase):
                 lowest_consecutive = df.loc[1: i, 'Low'].min() 
                 highest_consecutive = df.loc[1: i, 'High'].max()
 
-            # print(f'Prev Low Index {previous_low_index}')
-            # print(f'Latest high index {latest_high_index}')
 
-            # Handle High Line Location (A new low tail triggers a previous top): 
-            if low_tail[i]:
-                if previous_low_index is not None and latest_high_index is not None:
-                    # A new Top is formed from a bounce
-                    if previous_low_index < latest_high_index:
-                        df.loc[i, 'latest_high_tail_value'] = highest_between 
-                    # Trailing price downwards as it makes new Bases
-                    elif previous_low_index > latest_high_index:
-                        df.loc[i,'latest_low_tail_value'] = lowest_consecutive
-                    else:
-                        df.loc[i, 'latest_high_tail_value'] = np.maximum(highest_between, highest_consecutive)
-                else:
-                    df.loc[i, 'latest_high_tail_value'] = df.loc[1: i, 'Low'].min() 
-            else:
-                df.loc[i,'latest_high_tail_value'] = df.loc[i-1,'latest_high_tail_value']
-
-            if pd.isna(df.loc[i, 'latest_high_tail_value']):
-                    df.loc[i, 'latest_high_tail_value'] = df.loc[i-1, 'latest_high_tail_value']
-                
-            # Handle Low Line Location: (A new high tail triggers a previous base)
-            if high_tail[i]:
-                if previous_high_index is not None and latest_low_index is not None:
-                    # A new Base is formed from a bounce
-                    if previous_high_index < latest_low_index:
-                        df.loc[i,'latest_low_tail_value'] = lowest_between 
-                    # Trailing price upwards as it makes new Tops
-                    elif previous_high_index > latest_low_index:
-                        df.loc[i, 'latest_high_tail_value'] = highest_consecutive
-                    else:
-                        df.loc[i,'latest_low_tail_value'] = np.minimum(lowest_between, lowest_consecutive)
-                else:
-                    df.loc[i,'latest_low_tail_value'] = df.loc[1: i, 'Low'].min() 
-            else:
-                df.loc[i,'latest_low_tail_value'] = df.loc[i-1,'latest_low_tail_value']
-                
-            if pd.isna(df.loc[i, 'latest_low_tail_value']):
-                    df.loc[i, 'latest_low_tail_value'] = df.loc[i-1, 'latest_low_tail_value']
             
-            # Update the DataFrame with the high and low tail values
-            df.loc[i, 'High Line'] = df.loc[i, 'latest_high_tail_value'] 
-            df.loc[i, 'Low Line'] = df.loc[i,'latest_low_tail_value']
+
+            new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
+            new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
+
+            # Update the DataFrame with the new values
+            df.loc[i, 'Trailing High Line'] = new_high_trailing
+            df.loc[i, 'Trailing Low Line'] = new_low_trailing
+            
+            # Finalize the High Line and Low Line
+            df.loc[i, 'High Line'] = new_high
+            df.loc[i, 'Low Line'] = new_low
 
 
-        df['Mid Line'] = (df['High Line'] + df['Low Line']) / 2
 
-        self._bid_baseline = df['Low Line'].iloc[-1]
-        self._ask_baseline = df['High Line'].iloc[-1]
+        df['Mid Line'] = (df['Trailing High Line'] + df['Trailing Low Line']) / 2
+
+        self._bid_baseline = df['Trailing Low Line'].iloc[-1]
+        self._ask_baseline = df['Trailing High Line'].iloc[-1]
         return df
 
     def call_trade_history(self, file_name='trades_XLM.csv'):
