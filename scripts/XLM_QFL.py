@@ -815,8 +815,9 @@ class SimplePMM(ScriptStrategyBase):
             if buy_price <= bid_reservation_price:
                 # Calculate adjusted order size to keep the same dollar value
                 adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
-                # Quantize Price
-                adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_price(self.trading_pair, adjusted_order_size_bid)
+                #Quantize Size
+                adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_bid)
+
                 buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                         order_side=TradeType.BUY, amount=Decimal(adjusted_order_size_bid), price=buy_price)
                 if adjusted_order_size_bid >= self.min_order_size_bid:
@@ -829,8 +830,9 @@ class SimplePMM(ScriptStrategyBase):
             if sell_price >= ask_reservation_price:
                 # Calculate adjusted order size to keep the same dollar value
                 adjusted_order_size_ask = order_size_ask * (optimal_ask_price / sell_price)
-                # Quantize Price
-                adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_price(self.trading_pair, adjusted_order_size_ask)
+                #Quantize Size
+                adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
+                
                 sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                             order_side=TradeType.SELL, amount=Decimal(adjusted_order_size_ask), price=sell_price)
                 if adjusted_order_size_ask >= self.min_order_size_ask:
@@ -842,6 +844,9 @@ class SimplePMM(ScriptStrategyBase):
             # Update prices for the next level
             buy_price *= buy_multiplier
             sell_price *= sell_multiplier
+            # Quantize Price
+            buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, buy_price)
+            sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, sell_price)
 
         return order_counter
 
