@@ -640,6 +640,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # self._last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
+        # Flag a new trading cycle to make logic trade on baselines, regardless of net value
+        new_trade_cycle = False
+
         # Iterate through the trade history in reverse order
         for index, row in df.iterrows():
             trade_type = row['trade_type']
@@ -666,17 +669,20 @@ class SimplePMM(ScriptStrategyBase):
 
             # Detect crossover in net value (crossing zero)
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
-                # new_trade_cycle = True
+                new_trade_cycle = True
                 cycle_start_index = index  # Update to the most recent crossover index
                 # print(f"{cycle_start_index}=====================CROSS=============================")
+            else:
+                new_trade_cycle = False
 
         
-        # print(f"Cycle Starting Index = {cycle_start_index}")
-        # Filter out trades after the identified cycle start point
-        if cycle_start_index == 0:
-            filtered_df = df.iloc[cycle_start_index:]
-        else:
-            filtered_df = df.iloc[cycle_start_index + 1 :]
+        # # Filter out trades after the identified cycle start point
+        # if cycle_start_index == 0:
+        #     filtered_df = df.iloc[cycle_start_index:]
+        # else:
+        #     filtered_df = df.iloc[cycle_start_index + 1 :]
+        
+        filtered_df = df.iloc[cycle_start_index:]
 
         # Filter out buy and sell trades
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
@@ -754,7 +760,7 @@ class SimplePMM(ScriptStrategyBase):
         self.pnl = realized_pnl
         self.n_v = net_value
 
-        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
+        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle
 
 
 
@@ -924,7 +930,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_CPOO')
 
 
 
@@ -1226,102 +1232,13 @@ class SimplePMM(ScriptStrategyBase):
 
         return order_size_bid, order_size_ask
     
-    # def get_midprice(self):
-    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-
-    #     if self._last_trade_price == None :
-    #         if self.initialize_flag == True:
-    #             # Fetch midprice only during initialization
-    #             if self._last_trade_price is None:
-
-    #                 ## If I have to manually restart the bot mid trade, this is the last traded price. 
-    #                 manual_price = 0.087009
-                    
-    #                 #self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
-
-    #                 # Ensure midprice is not None before converting and assigning
-    #                 if manual_price is not None:
-    #                     self._last_trade_price = (manual_price)
-
-    #                 self.initialize_flag = False  # Set flag to prevent further updates with midprice
-
-    #     else:
-    #         self._last_trade_price = self._last_trade_price
-
-    #     self._bid_baseline = (sold_baseline)
-    #     self._ask_baseline = (bought_baseline)
-    #     # msg_gv = (f"self._bid_baseline  { self._bid_baseline}, self._ask_baseline  { self._ask_baseline}")
-    #     # self.log_with_clock(logging.INFO, msg_gv)
-    #     return self._last_trade_price
-
-    # def call_garch_model(self):
-    #     sold_baseline, bought_baseline, log_returns_list, self.bought_volume_depth, self.sold_volume_depth = call_kraken_data()
-    #     self._bid_baseline = (sold_baseline)
-    #     self._ask_baseline = (bought_baseline)
-
-    #     # Retrieve the log returns from the DataFrame
-    #     log_returns = log_returns_list##self.log_returns
-
-    #     # Ensure log_returns is a one-dimensional pd.Series
-    #     if isinstance(log_returns, list):
-    #         log_returns = pd.Series(log_returns)
-
-    #     # Convert to numeric, forcing any errors to NaN
-    #     log_returns_numeric = pd.to_numeric(log_returns, errors='coerce')
-
-    #     # Remove any NaN or infinite values from log_returns
-    #     log_returns_clean = log_returns_numeric.replace([np.inf, -np.inf], np.nan).dropna()
-
-
-    #     # Fit GARCH model to log returns
-    #     current_variance = []
-    #     current_volatility = []
-    #     length = 0
-    #     # Define the GARCH model with automatic rescaling
-    #     model = arch_model(log_returns_clean, vol='Garch', mean='constant', p=1, q=1, power=2.0, rescale=True)
-
-    #     # Fit the model
-    #     model_fit = model.fit(disp="off")
-    #     msg_gv = (f"GARCH  { model_fit.summary()}")
-    #     self.log_with_clock(logging.INFO, msg_gv)
-        
-    #     # Adjust Volatility to Decimal Percent values 
-    #     volatility = model_fit.conditional_volatility / 100 
-
-    #     length = len(model_fit.conditional_volatility)
-
-    
-    #     # Convert current_volatility to a pandas Series to apply rolling
-    #     current_volatility_series = pd.Series(volatility)
-
-    #     # Define the rolling window size (square root of length)
-    #     window = int(np.round(np.sqrt(len(current_volatility_series))))
-
-    #     # Apply the rolling window to smooth volatility
-    #     rolling_volatility = current_volatility_series#.rolling(window=window).mean()
-
-    #     # Rank the Volatility
-    #     self.max_vola = rolling_volatility.max()
-    #     min_vola = rolling_volatility.min()
-    #     self.current_vola = current_volatility_series.iloc[-1]
-
-    #     # Prevent division by zero
-    #     if self.max_vola != min_vola:
-    #         self.volatility_rank = (self.current_vola - min_vola) / (self.max_vola - min_vola)
-    #     else:
-    #         self.volatility_rank = 1  # Handle constant volatility case
-
-    #     # msg = (f"Volatility :: Rank:{self.volatility_rank}, Max:{self.max_vola}, Min:{min_vola}, Current:{self.current_vola}")
-    #     # self.log_with_clock(logging.INFO, msg)            
-
-
 
     def reservation_price(self):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
         #self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_CPOO')
 
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
@@ -1350,25 +1267,25 @@ class SimplePMM(ScriptStrategyBase):
         breakeven_sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_sell_price)
 
          # There is no data, Use baselines
-        if not is_buy_data and not is_sell_data:
+        if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
             self.trade_position_text = "No Trades, Use Baseline"
             s_bid = self._bid_baseline
             s_ask = self._ask_baseline
         
         # You have started a Buy Cycle, use Bid BE
-        elif is_buy_data and not is_sell_data:
+        elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Buy Cycle"
             s_bid = self._last_buy_price # breakeven_buy_price
             s_ask = breakeven_buy_price
         
         # You have started a Sell Cycle, use Ask BE
-        elif not is_buy_data and is_sell_data:
+        elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Sell Cycle"
             s_bid = breakeven_sell_price
             s_ask = self._last_sell_price # breakeven_sell_price
 
         # You are mid trade, use net values to determine locations
-        elif is_buy_data and is_sell_data:
+        elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
             if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
                 self.trade_position_text = "Unfinished Buy Cycle"
                 s_bid = self._last_buy_price
@@ -1507,7 +1424,7 @@ class SimplePMM(ScriptStrategyBase):
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value = self.call_trade_history('trades_CPOO')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_CPOO')
 
         is_buy_data = breakeven_buy_price > 0
         is_sell_data = breakeven_sell_price > 0
