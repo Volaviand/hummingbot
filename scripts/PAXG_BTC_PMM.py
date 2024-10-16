@@ -761,7 +761,7 @@ class SimplePMM(ScriptStrategyBase):
         self.pnl = realized_pnl
         self.n_v = net_value
 
-        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value
+        return breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle
 
 
 
