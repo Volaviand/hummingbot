@@ -672,16 +672,16 @@ class SimplePMM(ScriptStrategyBase):
                 new_trade_cycle = True
                 cycle_start_index = index  # Update to the most recent crossover index
                 # print(f"{cycle_start_index}=====================CROSS=============================")
+            
+                # Update the filtered DataFrame only when a crossover happens
+                filtered_df = df.iloc[cycle_start_index:]
+                # Update the 'amount' at the crossover index based on the last_net_value
+                filtered_df.loc[cycle_start_index, 'amount'] = last_net_value / filtered_df.loc[cycle_start_index, 'price']
+                # print(f'Start of Trade Amount :: {filtered_df.loc[cycle_start_index, 'amount']}, Quote {last_net_value}')
             else:
                 new_trade_cycle = False
-
-        
-        # # Filter out trades after the identified cycle start point
-        # if cycle_start_index == 0:
-        #     filtered_df = df.iloc[cycle_start_index:]
-        # else:
-        #     filtered_df = df.iloc[cycle_start_index + 1 :]
-        
+            
+        # If you want to keep filtering for further processing
         filtered_df = df.iloc[cycle_start_index:]
 
         # Filter out buy and sell trades
@@ -1153,6 +1153,8 @@ class SimplePMM(ScriptStrategyBase):
         #When there is too much of one side, it makes the smaller side easier to trade in bid/ask, so 
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
+
+        # Max order size, based on 25th percentile over period ()
         maximum_order_size = Decimal(100.0)
         if q > 0 :
             # In order to balance the base, I want to sell more of ask to balance it
