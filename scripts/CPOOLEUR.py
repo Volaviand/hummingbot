@@ -1153,16 +1153,19 @@ class SimplePMM(ScriptStrategyBase):
         #When there is too much of one side, it makes the smaller side easier to trade in bid/ask, so 
         #having more orders of the unbalanced side while allowing price go to lower decreases it's loss
         #to market overcorrection
+        maximum_order_size = Decimal(100.0)
         if q > 0 :
             # In order to balance the base, I want to sell more of ask to balance it
-            base_balancing_volume =   abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #total_imbalance
+            # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
+            base_balancing_volume =   min(maximum_order_size, total_imbalance) # abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #
             quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
             base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
             # In order to balance the Quote, I want to buy more of bid to balance it
-            quote_balancing_volume =  abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q)  #total_imbalance
+            # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
+            quote_balancing_volume = min(maximum_order_size, total_imbalance) # abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q) 
 
 
          
