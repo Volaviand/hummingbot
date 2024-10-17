@@ -478,7 +478,7 @@ class SimplePMM(ScriptStrategyBase):
                                 
                                 if trailing:
                                     # Trailing price upwards as it makes new Tops
-                                    new_high_tail_value = np.maximum(new_high_tail_value, highest_consecutive)
+                                    new_high_tail_value = highest_consecutive # np.maximum(new_high_tail_value, highest_consecutive)
                         else:
                             new_low_tail_value = df.loc[1: i, 'Low'].min()
                     
@@ -493,7 +493,7 @@ class SimplePMM(ScriptStrategyBase):
                                 
                                 if trailing:
                                     # Trailing price downwards as it makes new Bases
-                                    new_low_tail_value = np.minimum(new_low_tail_value, lowest_consecutive)
+                                    new_low_tail_value = lowest_consecutive # np.minimum(new_low_tail_value, lowest_consecutive)
                         else:
                             new_high_tail_value = df.loc[1: i, 'High'].max()
                     
