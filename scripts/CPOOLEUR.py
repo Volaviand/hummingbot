@@ -692,6 +692,10 @@ class SimplePMM(ScriptStrategyBase):
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
         sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
 
+        # Ensure amounts are treated as absolute values after editing
+        buy_trades['amount'] = np.abs(buy_trades['amount'])
+        sell_trades['amount'] = np.abs(sell_trades['amount'])
+        
         # Check if there are any buy trades
         if not buy_trades.empty:
             sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
