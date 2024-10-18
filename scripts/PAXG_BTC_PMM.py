@@ -611,7 +611,7 @@ class SimplePMM(ScriptStrategyBase):
 
     def call_trade_history(self, file_name='trades_PAXG_BTC.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
-        
+
         # Start with default values
         last_net_value = 0
         prev_net_value = 0  # This tracks the previous net value for comparison
@@ -630,24 +630,28 @@ class SimplePMM(ScriptStrategyBase):
 
         df = pd.read_csv(csv_file_path)
 
+        # Convert to numeric
+        df['price'] = pd.to_numeric(df['price'], errors='coerce')
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
+        df['trade_fee_in_quote'] = pd.to_numeric(df['trade_fee_in_quote'], errors='coerce')
 
         # Variables to store trade cycle start point
         cycle_start_index = 0
 
         # Filter the DataFrame for BUY and SELL trades
-        buy_trades = df[df['trade_type'] == 'BUY']
-        sell_trades = df[df['trade_type'] == 'SELL']
-        
+        u_buy_trades = df[df['trade_type'] == 'BUY']
+        u_sell_trades = df[df['trade_type'] == 'SELL']
+
+
         # Get the last traded price for BUY and SELL, or set to 0 if no trades exist
-        self._last_buy_price = buy_trades['price'].iloc[-1] if not buy_trades.empty else 0
-        self._last_sell_price = sell_trades['price'].iloc[-1] if not sell_trades.empty else 0
+        self._last_buy_price = u_buy_trades['price'].iloc[-1] if not u_buy_trades.empty else 0
+        self._last_sell_price = u_sell_trades['price'].iloc[-1] if not u_sell_trades.empty else 0
 
 
         # self._last_trade_price = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.MidPrice)
 
         # Flag a new trading cycle to make logic trade on baselines, regardless of net value
         new_trade_cycle = False
-
         # Iterate through the trade history in reverse order
         for index, row in df.iterrows():
             trade_type = row['trade_type']
@@ -685,22 +689,33 @@ class SimplePMM(ScriptStrategyBase):
                 # print(f'Start of Trade Amount :: {filtered_df.loc[cycle_start_index, 'amount']}, Quote {last_net_value}')
             else:
                 new_trade_cycle = False
-            
-        # If you want to keep filtering for further processing
-        filtered_df = df.iloc[cycle_start_index:]
+                filtered_df = df.iloc[cycle_start_index:]
+
 
         # Filter out buy and sell trades
+
         buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
         sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
 
-        # Calculate weighted sums with fees
-        sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
-        sum_of_buy_amount = buy_trades['amount'].sum()
-        sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
-
-        sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
-        sum_of_sell_amount = sell_trades['amount'].sum()
-        sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
+        # Check if there are any buy trades
+        if not buy_trades.empty:
+            sum_of_buy_prices = (buy_trades['price'] * buy_trades['amount']).sum()
+            sum_of_buy_amount = buy_trades['amount'].sum()
+            sum_of_buy_fees = (buy_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in buy_trades else 0
+        else:
+            sum_of_buy_prices = 0
+            sum_of_buy_amount = 0
+            sum_of_buy_fees = 0
+        
+        # Check if there are any sell trades
+        if not sell_trades.empty:
+            sum_of_sell_prices = (sell_trades['price'] * sell_trades['amount']).sum()
+            sum_of_sell_amount = sell_trades['amount'].sum()
+            sum_of_sell_fees = (sell_trades['trade_fee_in_quote']).sum() if 'trade_fee_in_quote' in sell_trades else 0
+        else:
+            sum_of_sell_prices = 0
+            sum_of_sell_amount = 0
+            sum_of_sell_fees = 0
 
         # Calculate the total buy cost after  fees
         # This isnt a price movement, but a comparison of sum amount.  
@@ -712,19 +727,20 @@ class SimplePMM(ScriptStrategyBase):
         total_sell_proceeds = sum_of_sell_prices - sum_of_sell_fees
 
         # Calculate net value in quote
-        # Needed to change since the net value here used to calculate only based on the history of the current situation, 
-        # It is now updated for the net of  the bot's history 
-        # Sell proceeds are already - so add them together 
-        net_value =  total_buy_cost + total_sell_proceeds
-
+        # print(last_net_value)
+        # print(prev_net_value)
+        # Needed to change since the net value here used to calculate only based on the history of the current situation, not updated
+        net_value = total_buy_cost - total_sell_proceeds
+        # print(f'Net Value :: {net_value}')
 
         # Calculate the breakeven prices
         breakeven_buy_price = total_buy_cost / sum_of_buy_amount if sum_of_buy_amount > 0 else 0
         # print(f"Total Buy Cost : {total_buy_cost} / sum_buys {sum_of_buy_amount}")
-        
+        # print(f'Breakeven Buy Price : {breakeven_buy_price}')
+
         breakeven_sell_price = total_sell_proceeds / sum_of_sell_amount if sum_of_sell_amount > 0 else 0
         # print(f"Total Sell Proceeds : {total_sell_proceeds} / sum_sells {sum_of_sell_amount}")
-
+        # print(f'Breakeven Sell Price : {breakeven_sell_price}')
         # Calculate realized P&L: only include the amount of buys and sells that have balanced each other out
         balance_text = None
         if min(sum_of_buy_amount, sum_of_sell_amount) == sum_of_buy_amount:
