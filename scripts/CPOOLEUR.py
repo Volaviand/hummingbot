@@ -1,17 +1,22 @@
 import logging
+import math
+import time
+import requests
+import json
 from decimal import Decimal
 from typing import List
-import math
-from math import floor, ceil
-import pandas as pd
-import pandas_ta as ta  # noqa: F401
-import requests
+from random import gauss, seed
 
+import pandas as pd
 import numpy as np
-import random
-import time
-import datetime
-import datetime as dt
+from scipy.stats import norm, poisson, stats
+from scipy.optimize import minimize_scalar
+from scipy.signal import argrelextrema
+
+from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
+from arch import arch_model
+
+
 
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
@@ -34,7 +39,7 @@ import os
 import csv
 
 sys.path.append('/home/tyler/quant/API_call_tests/')
-from Kraken_Calculations import BuyTrades, SellTrades
+# from Kraken_Calculations import BuyTrades, SellTrades
 
 ########## Profiling example to find time/speed of code
 
@@ -43,7 +48,7 @@ from Kraken_Calculations import BuyTrades, SellTrades
 # import io
 
 class KrakenAPI:
-    def __init__(self, symbol, start_timestamp=None, end_timestamp=None):
+    def __init__(self, symbol, start_timestamp, end_timestamp=None):
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
         self.data = []
@@ -65,7 +70,7 @@ class KrakenAPI:
             
                 return True, trades, last_timestamp
             else:
-                # print(f"No data found or error in response for symbol: {self.symbol}")
+                print(f"No data found or error in response for symbol: {self.symbol}")
                 return False, [], self.last_timestamp
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
@@ -77,7 +82,7 @@ class KrakenAPI:
             success, trades, last_timestamp = self.fetch_trades(self.last_timestamp)
             # print(len(trades))
             if not success or not trades:
-                # print("No more data to fetch.")
+                print("No more data to fetch.")
                 break
 
             self.data.extend(trades)
@@ -85,11 +90,11 @@ class KrakenAPI:
 
             # Stop if last timestamp exceeds end timestamp or if no new data is returned
             if  self.last_timestamp >= self.end_timestamp:
-                # print("Reached the end timestamp.")
+                print("Reached the end timestamp.")
                 break
 
             if len(trades) == 1:
-                # print("No more trades.")
+                print("No more trades.")
                 break
 
             # # Limit the loop to avoid excessive requests
@@ -108,7 +113,7 @@ class KrakenAPI:
             
             # Define parameters
             params = {
-                'pair': self.symbol,  # Asset pair (e.g., 'XBTEUR' for Bitcoin/EUR)
+                'pair': self.symbol,  # Asset pair (e.g., 'XBTUSD' for Bitcoin/USD)
                 'interval': interval,     # Time frame in minutes (1440 = 1 day)
                 'since': since        # Unix timestamp for fetching data since a specific time
             }
@@ -125,11 +130,11 @@ class KrakenAPI:
                 trades = data["result"][self.symbol]  # OHLC data
                 last_timestamp = int(data["result"].get("last", self.last_timestamp))  # Timestamp of the last data point
                 
-                # print(f"Data Saved. Last Timestamp: {last_timestamp}")
+                print(f"Data Saved. Last Timestamp: {last_timestamp}")
             
                 return True, trades, last_timestamp
             else:
-                # print(f"No data found or error in response for symbol: {self.symbol}")
+                print(f"No data found or error in response for symbol: {self.symbol}")
                 return False, [], self.last_timestamp
     
         except requests.exceptions.RequestException as e:
@@ -140,9 +145,8 @@ class KrakenAPI:
         initial_start_timestamp = self.start_timestamp  # Store the initial start timestamp
         while True:
             success, trades, last_timestamp = self.fetch_kraken_ohlc_data(self.last_timestamp, interval)
-            # print(len(trades))
             if not success or not trades:
-                # print("No more data to fetch.")
+                print("No more data to fetch.")
                 break
 
             self.data.extend(trades)
@@ -150,11 +154,11 @@ class KrakenAPI:
 
             # Stop if last timestamp exceeds end timestamp or if no new data is returned
             if  self.last_timestamp >= self.end_timestamp:
-                # print("Reached the end timestamp.")
+                print("Reached the end timestamp.")
                 break
 
             if len(trades) == 1:
-                # print("No more trades.")
+                print("No more trades.")
                 break
 
             # # Limit the loop to avoid excessive requests
@@ -166,26 +170,508 @@ class KrakenAPI:
             time.sleep(1)
 
         return self.data
-    def call_kraken_ohlc_data(self, hist_days = 720, market = 'CPOOLEUR', interval = 60):
-        # Calculate the timestamp for hist_days ago
-        since_input = datetime.datetime.now() - datetime.timedelta(days=hist_days)
+
+# csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{file_name}.csv'
+class KRAKENQFL():
+    def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods):
+        self.filepath = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{filepath}'
+        self.symbol = symbol
+        self.base_url = 'https://api.kraken.com/0/public/Trades'
+        self.data = []
+        self.volatility_periods = volatility_periods
+        self.rolling_periods = rolling_periods
+        self.interval = interval
+
+    def call_csv_history(self):
+        """
+        Opens a CSV file in OHLCVT format and saves the data to a pandas DataFrame.
+
+        Args:
+            filepath (str): Path to the CSV file.
+
+        Returns:
+            pandas.DataFrame: The DataFrame containing the data from the CSV file.
+        """
+
+        try:
+            # Read the CSV file using pandas.read_csv, specifying the header as the first row
+            df = pd.read_csv(self.filepath, header=0)
+        
+            # If the first row contains column names, use them. Otherwise, create default column names.
+            if df.columns[0].isdigit():
+                # Create default column names (adjust as needed)
+                df.columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume', 'Trades']
+        
+            # Save the data to the class attribute (optional)
+            self.data = df
+        
+            return df
+    
+        except FileNotFoundError:
+            print(f"Error: File not found: {filepath}")
+            return None
+
+    def get_ohlc_calculations(self, df, fitted_params=None):
+        """ Run calculations for traing bot information"""
+
+        # Slice dataset by hist_days to avoid overly long history
+        # maximum_time = np.maximum(self.volatility_periods, len(df))
+        # df = df.iloc[maximum_time:]
+        
+        df['Open'] = pd.to_numeric(df['Open'])
+        df['High'] = pd.to_numeric(df['High'])
+        df['Low'] =pd.to_numeric(df['Low'])
+        source = ( df['High'] + df['Low']) / 2 # pd.to_numeric(df['Close'])# 
+        df['Source'] = source
+        df['Close'] = pd.to_numeric(df['Close'])
+        close = df['Close']
+        log_returns = np.log(source/np.roll(source,shift=1))[1:].dropna()
+    
+        log_returns_series = pd.Series(log_returns)
+        # df['LR_High'] = log_returns.rolling(720).quantile(0.8413)
+        # df['LR_Low'] = log_returns.rolling(720).quantile(0.1587)
+    
+        if fitted_params is not None:
+            # Fit GARCH on higher range data with initial values from shorter-range model
+            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
+            model_fit = model.fit(starting_values=fitted_params)
+            print(model_fit.summary())
+        else:
+            # Define the GARCH model with automatic rescaling
+            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
+            # Fit the model
+            model_fit = model.fit(disp="off")
+    
+            print(model_fit.summary())
+        # Extract standardized residuals
+        std_residuals = model_fit.std_resid
+        
+        # Extract conditional volatility
+        volatility_rescaled = model_fit.conditional_volatility
+    
+        # Convert the percent to decimal percent
+        volatility = volatility_rescaled / 100 
+    
+        dates = log_returns_series.index
+    
+        #######################::::::::::::::::::::::::::::::::::::::::::
+        ############## Volatility of volatility, Secondary Volatility::::
+        secondary_log_returns = np.log(volatility / np.roll(volatility, shift=1))[1:]
+        
+        # Convert log returns to a pandas Series
+        secondary_log_returns_series = pd.Series(secondary_log_returns) #* scale
+    
+        # Define the GARCH model with automatic rescaling
+        secondary_model = arch_model(secondary_log_returns, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
+    
+        # Fit the model
+        secondary_model_fit = secondary_model.fit(disp="off")
+    
+        # Extract conditional volatility
+        secondary_volatility_rescaled = secondary_model_fit.conditional_volatility
+        
+        # Convert the percent to decimal percent
+        secondary_volatility = secondary_volatility_rescaled / 100 
+    
+        #Append values to df
+        df['Mean'] = source.dropna().mean()
+        df['Log Returns'] = log_returns_series.dropna()
+        df['Secondary Volatility'] = secondary_volatility.dropna()
+        df['Standard Residuals'] = std_residuals.dropna()
+    
+
+        window_length = max(1, min(len(df), self.volatility_periods))
+        # df['Volatility'] = df['Close'].pct_change().rolling(window=2).std().dropna() #  volatility.dropna() # 
+        df['Volatility'] = volatility.dropna() # 
+
+        df['Rolling Volatility'] = df['Volatility'].rolling(window=self.rolling_periods).mean()
+        # # Filter out the first self.volatility_periods rows from the volatility data
+        # filtered_volatility = df.iloc[self.volatility_periods:].dropna(subset=['Volatility'])
+        
+        # if len(df) >= 2 * self.volatility_periods:
+        #     # Use full rolling window quantiles for larger datasets
+        #     IQR3_vola = df['Volatility'].rolling(window=window_length).quantile(0.8413)
+        #     vola_median = df['Volatility'].rolling(window=window_length).quantile(0.50)
+        #     IQR1_vola = df['Volatility'].rolling(window=window_length).quantile(0.1587)
+        # else:
+        #     # Use filtered volatility values for smaller datasets
+        #     IQR3_vola = filtered_volatility['Volatility'].quantile(0.8413)
+        #     vola_median = filtered_volatility['Volatility'].quantile(0.50)
+        #     IQR1_vola = filtered_volatility['Volatility'].quantile(0.1587)
+
+        # Entilre Dataset Method ** Perhaps more accurate to true distribution
+        IQR3_vola = df['Volatility'].rolling(window= self.volatility_periods).quantile(0.8413)
+        vola_median = df['Volatility'].rolling(window= self.volatility_periods).quantile(0.50)
+        IQR1_vola = df['Volatility'].rolling(window= self.volatility_periods).quantile(0.1587)
+            
+        IQR3_Source = df['High'].rolling(window=self.rolling_periods).quantile(0.8413)
+        IQR1_Source = df['Low'].rolling(window=self.rolling_periods).quantile(0.1587)    
+        
+        # Assign these values to the entire DataFrame in new columns
+        df['Local Volatility Min Event'] = df['Volatility'].iloc[argrelextrema(df['Volatility'].values, np.less_equal, order=self.rolling_periods)[0]]
+        # Local maxima (resistance)
+        df['Local Volatility Max Event'] = df['Volatility'].iloc[argrelextrema(df['Volatility'].values, np.greater_equal, order=self.rolling_periods)[0]]
+        # Fill na values for horizontal lines
+        df['Local Volatility Min PreLine'] = df['Local Volatility Min Event'].ffill()
+        df['Local Volatility Max PreLine'] = df['Local Volatility Max Event'].ffill()
+
+        if df['Local Volatility Max Event'] is not None:
+            df['Local Volatility Min'] = df['Local Volatility Min PreLine']
+        if df['Local Volatility Min Event'] is not None:
+            df['Local Volatility Max'] = df['Local Volatility Max PreLine']
+
+
+        
+        df['IQR3_vola'] = IQR3_vola #df['Local Volatility Max'] 
+        df['Vola_Median'] = vola_median
+        df['IQR1_vola'] =  IQR1_vola #df['Local Volatility Min']
+        df['IQR3_Source'] = IQR3_Source
+        df['IQR1_Source'] = IQR1_Source
+        
+    
+        # Rank the Volatility
+        max_vola = df['Volatility'].iloc[-self.rolling_periods:].min()
+        min_vola = df['Volatility'].iloc[-self.rolling_periods:].max()
+    
+        # Prevent division by zero
+        if max_vola != min_vola:
+            df['volatility_rank'] = (df['Volatility'] - min_vola) / (max_vola - min_vola)
+        else:
+            df['volatility_rank'] = 1  # Handle constant volatility case
+        df['volatility_rank'] = np.maximum(0.00000001, df['volatility_rank'] )
+        # print(f"Max Volatility :: {max_vola}")
+        # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
+    
+        ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
+        q = 0.0
+        min_profit = 0.01
+        
+        df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
+    
+        
+        # Max volatility of the moment * Value of unbalance (q)
+        df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
+    
+        # df['LR_High'] = log_returns.rolling(self.volatility_periods).quantile(0.997) # 0.8413)
+        # df['LR_Low'] = log_returns.rolling(self.volatility_periods).quantile(0.003) # 0.1587)
+        
+        # Create conditions for high and low tails
+        high_volatility = df['Rolling Volatility'] > df['IQR3_vola'] #  df['IQR3_vola'] > df['IQR3_vola'].shift(1) #
+    
+        low_tail = (df['Low'] < df['IQR1_Source'])  & high_volatility
+        high_tail = (df['High'] > df['IQR3_Source'])  & high_volatility
+        
+        # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
+    
+        ## Initialize
+        df['Trailing High Line'] = np.nan
+        df['Trailing Low Line'] = np.nan
+        
+        df['Low Line'] = np.nan
+        df['High Line'] = np.nan
+        # df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
+        # df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
+    
+    
+    
+        def determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, trailing):
+                    # Initialize values to hold updated tails
+                    if trailing:
+                        new_high_tail_value = df.loc[i-1, 'Trailing High Line']
+                        new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
+                    else:
+                        new_high_tail_value = df.loc[i-1, 'High Line']
+                        new_low_tail_value = df.loc[i-1, 'Low Line']
+                    
+                    # Handle Low Line Location: (A new high tail triggers a previous base)
+                    if high_tail[i]:
+                        if previous_high_index is not None and latest_low_index is not None:
+                            # A new Base is formed from a bounce
+                            if previous_high_index < latest_low_index:
+                                new_low_tail_value = lowest_between 
+                            else:
+                                new_low_tail_value = np.minimum(lowest_between, lowest_consecutive)
+                                
+                                if trailing:
+                                    # Trailing price upwards as it makes new Tops
+                                    new_high_tail_value = highest_consecutive # np.maximum(new_high_tail_value, highest_consecutive)
+                        else:
+                            new_low_tail_value = df.loc[1: i, 'Low'].min()
+                    
+                    # Handle High Line Location (A new low tail triggers a previous top)
+                    if low_tail[i]:
+                        if previous_low_index is not None and latest_high_index is not None:
+                            # A new Top is formed from a bounce
+                            if previous_low_index < latest_high_index:
+                                new_high_tail_value = highest_between 
+                            else:
+                                new_high_tail_value = np.maximum(highest_between, highest_consecutive)
+                                
+                                if trailing:
+                                    # Trailing price downwards as it makes new Bases
+                                    new_low_tail_value = lowest_consecutive # np.minimum(new_low_tail_value, lowest_consecutive)
+                        else:
+                            new_high_tail_value = df.loc[1: i, 'High'].max()
+                    
+                    # # Ensure no NaN values remain
+                    # if pd.isna(new_high_tail_value):
+                    #     new_high_tail_value = df.loc[i-1, 'Trailing High Line']
+                    # if pd.isna(new_low_tail_value):
+                    #     new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
+                        
+                    return new_high_tail_value, new_low_tail_value
+    
+        
+        # Initialize indexers to keep track of when an event happened
+        last_low_indices = []
+        last_high_indices = []
+    
+        # Iterate through each row and update the Low Line and High Line
+        for i in range(1, len(df)):
+        # Keep track of the last two indices for low_tail events
+            if low_tail[i]:
+                last_low_indices.append(i)
+                if len(last_low_indices) > 2:
+                    last_low_indices.pop(0)  # Maintain only the last 2 indices
+        
+            # Keep track of the last two indices for high_tail events
+            if high_tail[i]:
+                last_high_indices.append(i)
+                if len(last_high_indices) > 2:
+                    last_high_indices.pop(0)  # Maintain only the last 2 indices
+                    
+            # Initialize indexes based on # of events in the symbol/market
+            if len(last_low_indices) == 2:
+                previous_low_index = last_low_indices[0]
+                latest_low_index = last_low_indices[1]
+            elif len(last_low_indices) ==  1:
+                previous_low_index = last_low_indices[0]
+                latest_low_index = None
+            else:
+                previous_low_index = None
+                latest_low_index = None
+        
+            if len(last_high_indices) == 2:
+                previous_high_index = last_high_indices[0]
+                latest_high_index = last_high_indices[1]
+            elif len(last_high_indices) ==  1:
+                previous_high_index = last_high_indices[0]
+                latest_high_index = None
+            else:
+                previous_high_index = None
+                latest_high_index = None
+    
+            
+            #Find Values between points        
+            if previous_high_index is not None and latest_high_index is not None:
+                lowest_between = df.loc[np.minimum(previous_high_index,latest_high_index):\
+                np.maximum(previous_high_index,latest_high_index), 'Low'].min() 
+            elif previous_high_index is not None and latest_high_index is None:
+                lowest_between = df.loc[1: previous_high_index, 'Low'].min() 
+            else:
+                lowest_between = df.loc[1: i, 'Low'].min() 
+    
+            
+            if previous_low_index is not None and latest_low_index is not None:
+                highest_between = df.loc[np.minimum(previous_low_index, latest_low_index):\
+                np.maximum(previous_low_index, latest_low_index), 'High'].max()
+            elif previous_low_index is not None and latest_low_index is None:
+                highest_between = df.loc[1: previous_low_index, 'High'].max()
+            else:
+                highest_between = df.loc[1: i, 'High'].max()
+    
+            # Find Values Consecutively. 
+            if latest_high_index is not None and latest_low_index is not None:
+                lowest_consecutive = df.loc[np.minimum(latest_high_index,latest_low_index) :\
+                np.maximum(latest_high_index,latest_low_index), 'Low'].min()
+    
+                highest_consecutive = df.loc[np.minimum(latest_low_index, latest_high_index):\
+                np.maximum(latest_low_index, latest_high_index), 'High'].max()
+    
+            
+            elif latest_high_index is not None and latest_low_index is None:
+                lowest_consecutive = df.loc[latest_high_index: i, 'Low'].min()
+                highest_consecutive = df.loc[1: latest_high_index, 'High'].max()
+    
+            
+            elif latest_high_index is None and latest_low_index is not None:
+                lowest_consecutive = df.loc[1: latest_low_index, 'Low'].min()
+                highest_consecutive = df.loc[latest_low_index: i, 'High'].max()
+            else:
+                lowest_consecutive = df.loc[1: i, 'Low'].min() 
+                highest_consecutive = df.loc[1: i, 'High'].max()
+    
+    
+            
+    
+            new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
+            new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
+
+
+            # # Update the DataFrame with the new values
+            df.loc[i, 'Trailing High Line'] = new_high_trailing
+            df.loc[i, 'Trailing Low Line'] = new_low_trailing
+            
+            # Finalize the High Line and Low Line
+            df.loc[i, 'High Line'] = new_high
+            df.loc[i, 'Low Line'] = new_low
+
+        # Check if the whole 'High Line' series is NaN and fill with local maxima if necessary
+        if df['High Line'].isna().all():
+            df['High Line'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
+            # Fill any remaining NaN values forward, so the line is continuous
+            df['High Line'] = df['High Line'].ffill()
+            df['Trailing High Line'] = df['High Line']
+
+        # Check if the whole 'Low Line' series is NaN and fill with local minima if necessary
+        if df['Low Line'].isna().all():
+            df['Low Line'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
+            df['Low Line'] = df['Low Line'].ffill()
+            df['Trailing Low Line'] = df['Low Line']
+
+
+        
+        df['Local Min Event'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
+        # Local maxima (resistance)
+        df['Local Max Event'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
+        
+        # Forward-fill the events for horizontal lines
+        df['Local Min PreLine'] = df['Local Min Event'].ffill()  # Fills previous minima
+        df['Local Max PreLine'] = df['Local Max Event'].ffill()  # Fills previous maxima
+        
+        # Initialize new columns
+        df['Local Min'] = np.nan
+        df['Local Max'] = np.nan
+        
+        # Condition: if a local max event occurs, the last min value is saved to 'Local Min'
+        df['Local Min'] = np.where(df['Local Max Event'].notna(), df['Local Min PreLine'], np.nan)
+        
+        # Condition: if a local min event occurs, the last max value is saved to 'Local Max'
+        df['Local Max'] = np.where(df['Local Min Event'].notna(), df['Local Max PreLine'], np.nan)
+        
+        # Fill forward the 'Local Min' and 'Local Max' to create continuous horizontal lines
+        df['Local Min'] = df['Local Min'].ffill()
+        df['Local Max'] = df['Local Max'].ffill()
+
+        
+        # df['Local Min'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
+        # # Local maxima (resistance)
+        # df['Local Max'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
+        
+    
+        # Update the DataFrame with the new values
+        # df['Trailing High Line'] = df['Local Max PreLine'] #new_high_trailing
+        # df['Trailing Low Line'] = df['Local Min PreLine'] #new_low_trailing
+        
+        # Finalize the High Line and Low Line
+        # df['High Line'] = df['Local Max'].ffill() #new_high
+        # df['Low Line'] = df['Local Min'].ffill() #new_low
+
+        # Update the DataFrame with the new values
+        # df['Trailing High Line'] = new_high_trailing
+        # df['Trailing Low Line'] = new_low_trailing
+
+        # df['High Line'] = new_high
+        # df['Low Line'] = new_low
+
+        # Initialize DataFrames for low and high tails
+        df_low_tails = pd.DataFrame()
+        df_high_tails = pd.DataFrame()
+        
+        # Condition for Low, avoiding initialized Low Line
+        df['Lowest Base'] = np.minimum(df['Low Line'], df['Trailing Low Line'])
+        low_below_base = (df['Low'] < df['Lowest Base'])  # Avoid using the initialized low line
+        
+        # # Fill df_low_tails for Low conditions while keeping alignment with the full DataFrame
+        df['% Diff Low'] = np.where(low_below_base, (df['Lowest Base'] - df['Low']) / df['Lowest Base'], np.nan)
+        # # Calculate the percentage difference straightforwardly
+        # df['% Diff Low'] = (df['Lowest Base'] - df['Low']) / df['Lowest Base']
+        
+        # # Filter out values where the percentage difference is less than 0
+        # df['% Diff Low'] = df['% Diff Low'].where(df['% Diff Low'] >= 0, np.nan)
+        
+        # Calculate rolling quantiles while keeping the DataFrame aligned
+        df['% Diff IQR3 Low'] = df['% Diff Low'].quantile(0.9332)
+        df['% Diff Median Low'] = df['% Diff Low'].quantile(0.50)
+        df['% Diff IQR1 Low'] = df['% Diff Low'].quantile(0.0668)
+        df['Max % Diff Low'] = df['% Diff Low'].max()
+        
+        # Condition for High
+        df['Highest Top'] = np.maximum(df['High Line'], df['Trailing High Line'])
+        high_above_top = (df['High'] > df['Highest Top'])
+        
+        # Fill df_high_tails for High conditions while keeping alignment
+        df['% Diff High'] = np.where(high_above_top, (df['High'] - df['Highest Top']) / df['High'], np.nan)
+        
+        # Calculate rolling quantiles while keeping the DataFrame aligned
+        df['% Diff IQR3 High'] = df['% Diff High'].quantile(0.9332)
+        df['% Diff Median High'] = df['% Diff High'].quantile(0.50)
+        df['% Diff IQR1 High'] = df['% Diff High'].quantile(0.0668)
+        df['Max % Diff High'] = df['% Diff High'].max()
+
+        # Fill for plotting
+        df['% Diff Low'] = df['% Diff Low'].fillna(0)
+        df['% Diff High'] = df['% Diff High'].fillna(0)
+
+        
+        df['Mid Line'] = (df['Highest Top'] + df['Lowest Base']) / 2
+
+        _bid_baseline = df['Mid Line'].iloc[-1] # df['Low Line'].iloc[-1]
+        _ask_baseline = df['Mid Line'].iloc[-1] # df['High Line'].iloc[-1]
+        # print(df)
+    
+        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline 
+        
+    def call_kraken_ohlc_data(self):
+        #Convert string interval to numerical
+        interval = pd.to_numeric(self.interval)
+        # Calculate the timestamp for x Days ago
+        since_input = datetime.datetime.now() - datetime.timedelta(days=720)
         since_timestamp = int(time.mktime(since_input.timetuple())) * 1000000000  # Convert to nanoseconds
-        # print(f'Since Timestamp, {since_timestamp}')
         # Calculate the timestamp for now
         now_timestamp = int(time.time() * 1000000000)  # Current time in nanoseconds
-        # print(f'Now Timestamp {now_timestamp}')
-        markets = market 
         # Initialize Kraken API object with your symbol and start timestamp
-        api = KrakenAPI(market, since_timestamp, end_timestamp=now_timestamp)
+        api = KrakenAPI(self.symbol, since_timestamp, end_timestamp=now_timestamp)
         trades = api.get_ohlc_since(interval)
         # Convert to DataFrame
         #[int <time>, string <open>, string <high>, string <low>, string <close>, string <vwap>, string <volume>, int <count>]
-        df = pd.DataFrame(trades, columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'VWAP', 'Volume', 'Count'])
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='s')
+        df = pd.DataFrame(trades, columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'VWAP', 'Volume', 'Trades'])
+        # df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='s')
         # Pop out last data point, which is a duplicate of current data etc * 
         df = df.iloc[:-1]
-        # print(df)
         return df
+
+    def append_non_overlapping_data(self, csv_df, api_df):
+        """Append non-overlapping data based on Timestamp and only keep the necessary columns."""
+        columns_to_keep = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume', 'Trades']
+        
+        # Ensure both dataframes contain only the relevant columns
+        csv_df_filtered = csv_df[columns_to_keep]
+        api_df_filtered = api_df[columns_to_keep]
+        
+        if csv_df_filtered.empty:
+            return api_df_filtered  # No historical data, just return the API data
+        
+        # Find the max timestamp in the CSV data
+        last_timestamp = csv_df_filtered['Timestamp'].max()
+
+        # Filter API data to get only the rows that have timestamps later than the CSV's last timestamp
+        new_data = api_df_filtered[api_df_filtered['Timestamp'] > last_timestamp]
+        
+        if not new_data.empty:
+            # Append new rows to the historical data
+            combined_df = pd.concat([csv_df_filtered, new_data], ignore_index=True)
+            print(f"Appending {len(new_data)} new rows.")
+        else:
+            combined_df = csv_df_filtered
+            print("No new data to append.")
+        
+        return combined_df
+    
+    def save_to_csv(self, df):
+        """Save the DataFrame back to CSV."""
+        df.to_csv(self.filepath, index=False)
+        print(f"Data saved to {self.filepath}")
 
 
 
@@ -201,11 +687,11 @@ class SimplePMM(ScriptStrategyBase):
     exchange, with a distance defined by the ask_spread and bid_spread. Every order_refresh_time in seconds,
     the bot will cancel and replace the orders.
     """
+
     # bid_spread = 0.05
     # ask_spread = 0.05
     min_profitability = 0.015
     target_profitability = min_profitability
-    # _order_refresh_tolerance_pct = 0.0301
 
 
     ## Trade Halting Process
@@ -226,6 +712,7 @@ class SimplePMM(ScriptStrategyBase):
     base_asset = "CPOOL"
     quote_asset = "EUR"
     history_market = 'CPOOLEUR'
+
 
     #Maximum amount of orders  Bid + Ask
     maximum_orders = 170
@@ -264,6 +751,8 @@ class SimplePMM(ScriptStrategyBase):
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
 
+        # Define Market Parameters and Settings
+        self.Kraken_QFL = KRAKENQFL('CPOOLEUR_60.csv', self.history_market, '60', volatility_periods=186, rolling_periods=24)
 
         # Cooldown for how long an order stays in place. 
         self.create_timestamp = 0
@@ -324,285 +813,6 @@ class SimplePMM(ScriptStrategyBase):
         self._last_sell_price = 0
 
         self.trade_position_text = ""
-
-
-
-
-    def get_ohlc_calculations(self, df, rolling_period=12):
-        df['Open'] = pd.to_numeric(df['Open'])
-        df['High'] = pd.to_numeric(df['High'])
-        df['Low'] =pd.to_numeric(df['Low'])
-        source = ( df['High'] + df['Low']) / 2 # pd.to_numeric(df['Close'])# 
-        df['Source'] = source
-        df['Close'] = pd.to_numeric(df['Close'])
-        close = df['Close']
-        log_returns = np.log(source/np.roll(source,shift=1))[1:].dropna()
-        log_returns_series = pd.Series(log_returns)
-        
-        # Define the GARCH model with automatic rescaling
-        model = arch_model(log_returns_series, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True, dist="StudentsT")
-
-        # Fit the model
-        model_fit = model.fit(disp="off")
-        # fig1 = model_fit.plot()
-        print(model_fit.summary())
-        # Extract standardized residuals
-        std_residuals = model_fit.std_resid
-        
-        # Extract conditional volatility
-        volatility_rescaled = model_fit.conditional_volatility
-
-        # Convert the percent to decimal percent
-        volatility = volatility_rescaled / 100 
-
-        dates = log_returns_series.index
-
-        #######################::::::::::::::::::::::::::::::::::::::::::
-        ############## Volatility of volatility, Secondary Volatility::::
-        secondary_log_returns = np.log(volatility / np.roll(volatility, shift=1))[1:]
-        
-        # Convert log returns to a pandas Series
-        secondary_log_returns_series = pd.Series(secondary_log_returns) #* scale
-
-        # Define the GARCH model with automatic rescaling
-        secondary_model = arch_model(secondary_log_returns, vol='Garch', mean='constant', p=3, q=3, power=2.0, rescale=True, dist="StudentsT")
-
-        # Fit the model
-        secondary_model_fit = secondary_model.fit(disp="off")
-
-        # Extract conditional volatility
-        secondary_volatility_rescaled = secondary_model_fit.conditional_volatility
-        
-        # Convert the percent to decimal percent
-        secondary_volatility = secondary_volatility_rescaled / 100 
-
-        #Append values to df
-        df['Mean'] = source.dropna().mean()
-        df['Log Returns'] = log_returns_series.dropna()
-        df['Volatility'] = volatility.dropna()
-        df['Secondary Volatility'] = secondary_volatility.dropna()
-        df['Standard Residuals'] = std_residuals.dropna()
-
-        # Edit Volume for calculations
-        df['Volume'] = pd.to_numeric(df['Volume'])
-        # rolling_period = 12
-
-        # update to use 1 standard deviations ( Spikes greater than 2 or 3 are rare *PANIC*)
-        IQR3_vola = df['Volatility'].quantile(0.8413) # rolling(window=rolling_period).
-        vola_median = df['Volatility'].quantile(0.50) # rolling(window=rolling_period).
-        IQR1_vola = df['Volatility'].quantile(0.1587) # rolling(window=rolling_period).
-
-        
-        IQR3_Source = df['High'].rolling(window=rolling_period).quantile(0.8413)
-        IQR1_Source = df['Low'].rolling(window=rolling_period).quantile(0.1587)    
-        
-        # Assign these values to the entire DataFrame in new columns
-
-        
-        df['IQR3_vola'] = IQR3_vola
-        df['Vola_Median'] = vola_median
-        df['IQR1_vola'] = IQR1_vola
-        df['IQR3_Source'] = IQR3_Source
-        df['IQR1_Source'] = IQR1_Source
-        
-        dt = 1 
-        
-
-
-        df['Rolling Volatility'] = df['Volatility'].rolling(window=rolling_period).mean()
-
-
-
-        # Rank the Volatility
-        max_vola = df['Volatility'].iloc[-rolling_period:].min()
-        min_vola = df['Volatility'].iloc[-rolling_period:].max()
-
-        # Prevent division by zero
-        if max_vola != min_vola:
-            df['volatility_rank'] = (df['Volatility'] - min_vola) / (max_vola - min_vola)
-        else:
-            df['volatility_rank'] = 1  # Handle constant volatility case
-
-        # print(f"Max Volatility :: {max_vola}")
-        # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
-
-        ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
-        q = 0.0
-        min_profit = 0.01
-        
-        df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
-
-        
-        # Max volatility of the moment * Value of unbalance (q)
-        df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
-
-
-        # Create conditions for high and low tails
-        high_volatility = df['Volatility'] > df['IQR3_vola']
-        low_tail = (df['Low'] < df['IQR1_Source']) & high_volatility
-        high_tail = (df['High'] > df['IQR3_Source']) & high_volatility
-        
-        # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
-
-        ## Initialize
-        df['Trailing High Line'] = np.nan
-        df['Trailing Low Line'] = np.nan
-        
-        df['Low Line'] = np.nan
-        df['High Line'] = np.nan
-        # df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
-        # df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
-
-
-
-        def determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, trailing):
-                    # Initialize values to hold updated tails
-                    if trailing:
-                        new_high_tail_value = df.loc[i-1, 'Trailing High Line']
-                        new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
-                    else:
-                        new_high_tail_value = df.loc[i-1, 'High Line']
-                        new_low_tail_value = df.loc[i-1, 'Low Line']
-                    
-                    # Handle Low Line Location: (A new high tail triggers a previous base)
-                    if high_tail[i]:
-                        if previous_high_index is not None and latest_low_index is not None:
-                            # A new Base is formed from a bounce
-                            if previous_high_index < latest_low_index:
-                                new_low_tail_value = lowest_between 
-                            else:
-                                new_low_tail_value = np.minimum(lowest_between, lowest_consecutive)
-                                
-                                if trailing:
-                                    # Trailing price upwards as it makes new Tops
-                                    new_high_tail_value = highest_consecutive # np.maximum(new_high_tail_value, highest_consecutive)
-                        else:
-                            new_low_tail_value = df.loc[1: i, 'Low'].min()
-                    
-                    # Handle High Line Location (A new low tail triggers a previous top)
-                    if low_tail[i]:
-                        if previous_low_index is not None and latest_high_index is not None:
-                            # A new Top is formed from a bounce
-                            if previous_low_index < latest_high_index:
-                                new_high_tail_value = highest_between 
-                            else:
-                                new_high_tail_value = np.maximum(highest_between, highest_consecutive)
-                                
-                                if trailing:
-                                    # Trailing price downwards as it makes new Bases
-                                    new_low_tail_value = lowest_consecutive # np.minimum(new_low_tail_value, lowest_consecutive)
-                        else:
-                            new_high_tail_value = df.loc[1: i, 'High'].max()
-                    
-                    # # Ensure no NaN values remain
-                    # if pd.isna(new_high_tail_value):
-                    #     new_high_tail_value = df.loc[i-1, 'Trailing High Line']
-                    # if pd.isna(new_low_tail_value):
-                    #     new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
-                        
-                    return new_high_tail_value, new_low_tail_value
-
-        
-        # Initialize indexers to keep track of when an event happened
-        last_low_indices = []
-        last_high_indices = []
-
-        # Iterate through each row and update the Low Line and High Line
-        for i in range(1, len(df)):
-        # Keep track of the last two indices for low_tail events
-            if low_tail[i]:
-                last_low_indices.append(i)
-                if len(last_low_indices) > 2:
-                    last_low_indices.pop(0)  # Maintain only the last 2 indices
-        
-            # Keep track of the last two indices for high_tail events
-            if high_tail[i]:
-                last_high_indices.append(i)
-                if len(last_high_indices) > 2:
-                    last_high_indices.pop(0)  # Maintain only the last 2 indices
-                    
-            # Initialize indexes based on # of events in the market
-            if len(last_low_indices) == 2:
-                previous_low_index = last_low_indices[0]
-                latest_low_index = last_low_indices[1]
-            elif len(last_low_indices) ==  1:
-                previous_low_index = last_low_indices[0]
-                latest_low_index = None
-            else:
-                previous_low_index = None
-                latest_low_index = None
-        
-            if len(last_high_indices) == 2:
-                previous_high_index = last_high_indices[0]
-                latest_high_index = last_high_indices[1]
-            elif len(last_high_indices) ==  1:
-                previous_high_index = last_high_indices[0]
-                latest_high_index = None
-            else:
-                previous_high_index = None
-                latest_high_index = None
-
-            
-            #Find Values between points        
-            if previous_high_index is not None and latest_high_index is not None:
-                lowest_between = df.loc[np.minimum(previous_high_index,latest_high_index):\
-                np.maximum(previous_high_index,latest_high_index), 'Low'].min() 
-            elif previous_high_index is not None and latest_high_index is None:
-                lowest_between = df.loc[1: previous_high_index, 'Low'].min() 
-            else:
-                lowest_between = df.loc[1: i, 'Low'].min() 
-
-            
-            if previous_low_index is not None and latest_low_index is not None:
-                highest_between = df.loc[np.minimum(previous_low_index, latest_low_index):\
-                np.maximum(previous_low_index, latest_low_index), 'High'].max()
-            elif previous_low_index is not None and latest_low_index is None:
-                highest_between = df.loc[1: previous_low_index, 'High'].max()
-            else:
-                highest_between = df.loc[1: i, 'High'].max()
-
-            # Find Values Consecutively. 
-            if latest_high_index is not None and latest_low_index is not None:
-                lowest_consecutive = df.loc[np.minimum(latest_high_index,latest_low_index) :\
-                np.maximum(latest_high_index,latest_low_index), 'Low'].min()
-
-                highest_consecutive = df.loc[np.minimum(latest_low_index, latest_high_index):\
-                np.maximum(latest_low_index, latest_high_index), 'High'].max()
-
-            
-            elif latest_high_index is not None and latest_low_index is None:
-                lowest_consecutive = df.loc[latest_high_index: i, 'Low'].min()
-                highest_consecutive = df.loc[1: latest_high_index, 'High'].max()
-
-            
-            elif latest_high_index is None and latest_low_index is not None:
-                lowest_consecutive = df.loc[1: latest_low_index, 'Low'].min()
-                highest_consecutive = df.loc[latest_low_index: i, 'High'].max()
-            else:
-                lowest_consecutive = df.loc[1: i, 'Low'].min() 
-                highest_consecutive = df.loc[1: i, 'High'].max()
-
-
-            
-
-            new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
-            new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
-
-            # Update the DataFrame with the new values
-            df.loc[i, 'Trailing High Line'] = new_high_trailing
-            df.loc[i, 'Trailing Low Line'] = new_low_trailing
-            
-            # Finalize the High Line and Low Line
-            df.loc[i, 'High Line'] = new_high
-            df.loc[i, 'Low Line'] = new_low
-
-
-
-        df['Mid Line'] = (df['Trailing High Line'] + df['Trailing Low Line']) / 2
-
-        self._bid_baseline = df['Mid Line'].iloc[-1] # df['Low Line'].iloc[-1]
-        self._ask_baseline = df['Mid Line'].iloc[-1] # df['High Line'].iloc[-1]
-        return df
 
     def call_trade_history(self, file_name='trades_CPOO.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
@@ -794,15 +1004,33 @@ class SimplePMM(ScriptStrategyBase):
 
         #Calculate garch every so many seconds
         if self.create_garch_timestamp <= self.current_timestamp:
-                ### Call Historical Calculations
-                kraken_api = KrakenAPI(self.history_market)
-                df = kraken_api.call_kraken_ohlc_data(720, 'CPOOLEUR',  60)    
-                ohlc_calc_df = self.get_ohlc_calculations(df)
+            ### Call Historical Calculations
+            csv_df = self.Kraken_QFL.call_csv_history()
+            api_df = self.Kraken_QFL.call_kraken_ohlc_data()
+            if csv_df is not None and not csv_df.empty:
+                # print(f"CSV DF :: \n{csv_df}")
+                if api_df is not None and not api_df.empty:
+                    # print(f"API DF :: \n{api_df}")
+                    
+                    # update CSV with new Data!
+                    ###########################################################
+                    # Merge data safely (without duplicates)
+                    combined_df = self.Kraken_QFL.append_non_overlapping_data(csv_df, api_df)
+            
+                    # Save the updated data to CSV (only combined original data, no calculations)
+                    self.Kraken_QFL.save_to_csv(combined_df)
 
-                #msg_gv = (f"GARCH Volatility {garch_volatility:.8f}")
-                #self.log_with_clock(logging.INFO, msg_gv)
-                self.target_profitability = max(self.min_profitability, self.current_vola)
-                self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+                    # Perform any additional calculations separately (not saved to CSV)
+                    calculated_df, df_low_tails, df_high_tails, self._bid_baseline, self._ask_baseline = self.Kraken_QFL.get_ohlc_calculations(combined_df)                
+                else:
+                    print(f'API DF Empty, Using only historical Data')
+                    # Perform any additional calculations separately (not saved to CSV)
+                    calculated_df, df_low_tails, df_high_tails, self._bid_baseline, self._ask_baseline = self.Kraken_QFL.get_ohlc_calculations(csv_df)
+
+            else:
+                print(f"No CSV data found. Initializing new dataset.")
+            self.target_profitability = max(self.min_profitability, self.current_vola)
+            self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
