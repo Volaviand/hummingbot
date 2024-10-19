@@ -238,12 +238,12 @@ class KRAKENQFL():
     
         if fitted_params is not None:
             # Fit GARCH on higher range data with initial values from shorter-range model
-            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
+            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=1, q=1, rescale=True, dist="StudentsT")
             model_fit = model.fit(starting_values=fitted_params)
             print(model_fit.summary())
         else:
             # Define the GARCH model with automatic rescaling
-            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
+            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=1, q=1, rescale=True, dist="StudentsT")
             # Fit the model
             model_fit = model.fit(disp="off")
     
@@ -267,7 +267,7 @@ class KRAKENQFL():
         secondary_log_returns_series = pd.Series(secondary_log_returns) #* scale
     
         # Define the GARCH model with automatic rescaling
-        secondary_model = arch_model(secondary_log_returns, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
+        secondary_model = arch_model(secondary_log_returns, vol='EGARCH', mean='HARX', p=1, q=1, rescale=True, dist="StudentsT")
     
         # Fit the model
         secondary_model_fit = secondary_model.fit(disp="off")
