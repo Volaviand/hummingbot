@@ -1308,8 +1308,8 @@ class SimplePMM(ScriptStrategyBase):
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
         # Bypass with manual numbers for now
-        bp = Decimal(0.950)
-        sp = Decimal(1.03150)
+        bp = Decimal(0.970)
+        sp = Decimal(1.03)
         return bp, sp
 
 
