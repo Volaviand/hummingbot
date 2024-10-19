@@ -1,5 +1,7 @@
 import logging
-import math
+import math 
+from math import floor, ceil
+
 import time
 import requests
 import json
@@ -12,7 +14,6 @@ import datetime as dt
 
 import pandas as pd
 import numpy as np
-import math
 from scipy.stats import norm, poisson, stats
 from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
