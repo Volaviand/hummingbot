@@ -6,10 +6,13 @@ import json
 from decimal import Decimal
 from typing import List
 from random import gauss, seed
+
 import datetime
 import datetime as dt
+
 import pandas as pd
 import numpy as np
+import math
 from scipy.stats import norm, poisson, stats
 from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
