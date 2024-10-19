@@ -777,7 +777,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Cooldown for Volatility calculations 
         self.create_garch_timestamp = 0
-        self.garch_refresh_time = 300 
+        self.garch_refresh_time = 600 
         self_last_garch_time_reported = 0
         
         # Cooldown after a fill
