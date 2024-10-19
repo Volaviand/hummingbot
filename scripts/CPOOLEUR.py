@@ -618,8 +618,11 @@ class KRAKENQFL():
         df['% Diff Low'] = df['% Diff Low'].fillna(0)
         df['% Diff High'] = df['% Diff High'].fillna(0)
 
-        
+    
         df['Mid Line'] = (df['Highest Top'] + df['Lowest Base']) / 2
+
+        _bid_trailing_baseline = df['Trailing Low Line'].iloc[-1]
+        _ask_trailing_baseline = df['Trailing High Line'].iloc[-1]
 
         _bid_baseline = df['Mid Line'].iloc[-1] # df['Low Line'].iloc[-1]
         _ask_baseline = df['Mid Line'].iloc[-1] # df['High Line'].iloc[-1]
