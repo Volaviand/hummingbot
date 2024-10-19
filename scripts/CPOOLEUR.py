@@ -625,7 +625,7 @@ class KRAKENQFL():
         _ask_baseline = df['Mid Line'].iloc[-1] # df['High Line'].iloc[-1]
         # print(df)
     
-        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline 
+        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline, _bid_trailing_baseline, _ask_trailing_baseline
         
     def call_kraken_ohlc_data(self):
         #Convert string interval to numerical
@@ -1026,11 +1026,13 @@ class SimplePMM(ScriptStrategyBase):
                     self.Kraken_QFL.save_to_csv(combined_df)
 
                     # Perform any additional calculations separately (not saved to CSV)
-                    calculated_df, df_low_tails, df_high_tails, self._bid_baseline, self._ask_baseline = self.Kraken_QFL.get_ohlc_calculations(combined_df)                
+                    calculated_df, df_low_tails, df_high_tails, self._bid_baseline, \
+                    self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline = self.Kraken_QFL.get_ohlc_calculations(combined_df)                
                 else:
                     print(f'API DF Empty, Using only historical Data')
                     # Perform any additional calculations separately (not saved to CSV)
-                    calculated_df, df_low_tails, df_high_tails, self._bid_baseline, self._ask_baseline = self.Kraken_QFL.get_ohlc_calculations(csv_df)
+                    calculated_df, df_low_tails, df_high_tails, self._bid_baseline, \
+                    self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline = self.Kraken_QFL.get_ohlc_calculations(csv_df)
 
             else:
                 print(f"No CSV data found. Initializing new dataset.")
