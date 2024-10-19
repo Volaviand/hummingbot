@@ -219,9 +219,14 @@ class KRAKENQFL():
     def get_ohlc_calculations(self, df, fitted_params=None):
         """ Run calculations for traing bot information"""
 
-        # Slice dataset by hist_days to avoid overly long history
-        # maximum_time = np.maximum(self.volatility_periods, len(df))
-        # df = df.iloc[maximum_time:]
+        # Set the number of rows to keep (8760=1yr in h as default or length of dataframe if it's shorter)
+        slice_length = np.minimum(8760, len(df))
+        
+        # Slice the dataframe to keep only the last 'slice_length' rows
+        df = df.iloc[-slice_length:].copy()
+        
+        # Reset index after slicing
+        df = df.reset_index(drop=True)
         
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
