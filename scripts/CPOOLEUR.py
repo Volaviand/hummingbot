@@ -1479,8 +1479,8 @@ class SimplePMM(ScriptStrategyBase):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
         vwap_bid, vwap_ask = self.get_vwap_bid_ask()
 
-        deepest_bid = min(vwap_bid, top_bid_price)
-        deepest_ask = max(vwap_ask, top_ask_price)
+        deepest_bid = top_bid_price #min(vwap_bid, top_bid_price)
+        deepest_ask = top_ask_price #max(vwap_ask, top_ask_price)
 
 
         # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
