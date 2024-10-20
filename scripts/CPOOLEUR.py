@@ -353,15 +353,15 @@ class KRAKENQFL():
         # print(f"Max Volatility :: {max_vola}")
         # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
     
-        ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
-        q = 0.0
-        min_profit = 0.01
+        # ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
+        # q = 0.0
+        # min_profit = 0.01
         
-        df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
+        # df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
     
         
-        # Max volatility of the moment * Value of unbalance (q)
-        df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
+        # # Max volatility of the moment * Value of unbalance (q)
+        # df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
     
         # df['LR_High'] = log_returns.rolling(self.volatility_periods).quantile(0.997) # 0.8413)
         # df['LR_Low'] = log_returns.rolling(self.volatility_periods).quantile(0.003) # 0.1587)
@@ -599,7 +599,7 @@ class KRAKENQFL():
     
         return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline, \
          _bid_trailing_baseline, _ask_trailing_baseline, volatility_rank, current_vola
-         
+
     def call_kraken_ohlc_data(self):
         #Convert string interval to numerical
         interval = pd.to_numeric(self.interval)
