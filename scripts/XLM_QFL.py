@@ -632,8 +632,10 @@ class KRAKENQFL():
         _bid_baseline = df['Low Line'].iloc[-1]
         _ask_baseline = df['High Line'].iloc[-1]
         # print(df)
+        current_vola = df['Volatility'].iloc[-1]
+        volatility_rank = df['volatility_rank'].iloc[-1]
     
-        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline, _bid_trailing_baseline, _ask_trailing_baseline
+        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline, _bid_trailing_baseline, _ask_trailing_baseline, volatility_rank
         
     def call_kraken_ohlc_data(self):
         #Convert string interval to numerical
@@ -1038,13 +1040,14 @@ class SimplePMM(ScriptStrategyBase):
 
                     # Perform any additional calculations separately (not saved to CSV)
                     calculated_df, df_low_tails, df_high_tails, self._bid_baseline, \
-                    self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline = self.Kraken_QFL.get_ohlc_calculations(combined_df)                
+                    self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline, \
+                    self.volatility_rank, self.current_vola = self.Kraken_QFL.get_ohlc_calculations(combined_df)                
                 else:
                     print(f'API DF Empty, Using only historical Data')
                     # Perform any additional calculations separately (not saved to CSV)
                     calculated_df, df_low_tails, df_high_tails, self._bid_baseline, \
-                    self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline = self.Kraken_QFL.get_ohlc_calculations(csv_df)
-
+                    self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline, \
+                    self.volatility_rank, self.current_vola = self.Kraken_QFL.get_ohlc_calculations(csv_df)
             else:
                 print(f"No CSV data found. Initializing new dataset.")
             self.target_profitability = max(self.min_profitability, self.current_vola)
