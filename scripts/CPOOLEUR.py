@@ -1286,7 +1286,7 @@ class SimplePMM(ScriptStrategyBase):
                 transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
                 return min(transformed_value, m_0)  # Prevent exceeding m_0
             else:
-            return m_0
+                return m_0
 
         q, _, _, _,_, _, _ = self.get_current_positions()
 
