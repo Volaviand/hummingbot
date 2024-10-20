@@ -1272,20 +1272,20 @@ class SimplePMM(ScriptStrategyBase):
         # New Method
         # Function to transform the metric
         
-    def log_transform_reverse(q, m_0, m_min, k):
-        abs_q = abs(q)
-        
-        if m_0 < 1:  # Drop situation (values < 1)
-            adj_m_min = 1 - m_min
-            transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (1 - np.log(k * abs_q + 1))
-            return min(transformed_value, m_min)
-        #
-        elif m_0 > 1:  # Rise situation (values > 1)
-            adj_m_min = 1 + m_min
-            # Here m_0 > 1 and the transformed value should decrease towards m_min=1
-            transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
-            return min(transformed_value, m_0)  # Prevent exceeding m_0
-        else:
+        def log_transform_reverse(q, m_0, m_min, k):
+            abs_q = abs(q)
+            
+            if m_0 < 1:  # Drop situation (values < 1)
+                adj_m_min = 1 - m_min
+                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (1 - np.log(k * abs_q + 1))
+                return min(transformed_value, m_min)
+            #
+            elif m_0 > 1:  # Rise situation (values > 1)
+                adj_m_min = 1 + m_min
+                # Here m_0 > 1 and the transformed value should decrease towards m_min=1
+                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
+                return min(transformed_value, m_0)  # Prevent exceeding m_0
+            else:
             return m_0
 
         q, _, _, _,_, _, _ = self.get_current_positions()
