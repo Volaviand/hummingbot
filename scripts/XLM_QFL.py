@@ -1128,7 +1128,7 @@ class SimplePMM(ScriptStrategyBase):
         # Loop through each level
         for level in range(num_levels):
             # Adjust buy price and create buy order
-            if buy_price <= bid_reservation_price:
+            if buy_price <= bid_reservation_price and quote_balance_in_base > order_size_bid:
                 # Calculate adjusted order size to keep the same dollar value
                 # adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
                 # #Quantize Size
@@ -1143,7 +1143,7 @@ class SimplePMM(ScriptStrategyBase):
                     self.log_with_clock(logging.INFO, msg)
             
             # Adjust sell price and create sell order
-            if sell_price >= ask_reservation_price:
+            if sell_price >= ask_reservation_price and maker_base_balance  > order_size_ask:
                 # Calculate adjusted order size to keep the same dollar value
                 # adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
                 # #Quantize Size
@@ -1284,38 +1284,79 @@ class SimplePMM(ScriptStrategyBase):
         ### Trades into the more volatile markets should be deeper to account for this
         ## for example, buying illiquid or low volume coins(more volatile than FIAT) should be harder to do than selling/ (profiting) from the trade. 
 
-        n = self.maximum_orders
-        # n = math.floor(self.maximum_orders/2)
+        # n = self.maximum_orders
+        # # n = math.floor(self.maximum_orders/2)
 
-        ## Buys
-        #Minimum Distance in percent. 0.01 = a drop of 99% from original value
-        bd = 1 / 30
-        bp = math.exp(math.log(bd)/n)
+        # ## Buys
+        # #Minimum Distance in percent. 0.01 = a drop of 99% from original value
+        # bd = 1 / 30
+        # bp = math.exp(math.log(bd)/n)
         
-        bp = np.minimum(1 - self.min_profitability, bp)
+        # bp = np.minimum(1 - self.min_profitability, bp)
 
-        ## Include Fees
-        bp = Decimal(bp)  * (Decimal(1.0) - Decimal(self.fee_percent))
+        # ## Include Fees
+        # bp = Decimal(bp)  * (Decimal(1.0) - Decimal(self.fee_percent))
         
-        ## Sells
-        ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
-        sd = 30
-        sp = math.exp(math.log(sd)/n)
+        # ## Sells
+        # ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
+        # sd = 30
+        # sp = math.exp(math.log(sd)/n)
 
-        sp = np.maximum(1 + self.min_profitability, sp)
+        # sp = np.maximum(1 + self.min_profitability, sp)
 
-        ## Include Fees
-        sp = Decimal(sp) * (Decimal(1.0) + Decimal(self.fee_percent))
+        # ## Include Fees
+        # sp = Decimal(sp) * (Decimal(1.0) + Decimal(self.fee_percent))
 
 
         #Decimalize for later use
 
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
+        # New Method
+        # Function to transform the metric
+        
+        def log_transform_reverse(q, m_0, m_min, k):
+            abs_q = Decimal(abs(q))
+            m_0 = Decimal(m_0)
+            m_min = Decimal(m_min)
+            k = Decimal(k)
+            ONE = Decimal(1.0)
+            if m_0 < ONE:  # Drop situation (values < 1)
+                adj_m_min = ONE - m_min
+                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (ONE - Decimal.ln(k * abs_q + ONE))
+                return min(transformed_value, adj_m_min)
+            #
+            elif m_0 > ONE:  # Rise situation (values > 1)
+                adj_m_min = ONE + m_min
+                # Here m_0 > 1 and the transformed value should decrease towards m_min=1
+                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (ONE - Decimal.ln(k * abs_q + ONE))
+                return min(transformed_value, adj_m_min)  # Prevent exceeding m_0
+            else:
+                print('Error, trade depth set at 0% (m_0 = 1)')
+                return m_0
+
+        q, _, _, _,_, _, _ = self.get_current_positions()
+
+        # Ratio of how strong the reverse transform is K, modified by 
+        # the strength of volatility.  1 - vr = as volatility ^, % distance decreases
+        k = Decimal(1.0) * (Decimal(1.0) - Decimal(self.volatility_rank))
+        # Deepest entry % to start off the trade
+        maximum_bp = 0.970
+        maximum_sp = 1.03
+        # Log Transform the values based on q balance and k rate
+        bp = log_transform_reverse(q, maximum_bp, self.min_profitability, k)
+        sp = log_transform_reverse(q, maximum_sp, self.min_profitability, k)
+
+        # Decimal values for use
+        bp = Decimal(bp)
+        sp = Decimal(sp)
+
+        # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}, q :: {q}")
+        # self.log_with_clock(logging.INFO, msg)
 
         # # Bypass with manual numbers for now
-        # bp = Decimal(0.950)
-        # sp = Decimal(1.050)
+        # bp = Decimal(0.970)
+        # sp = Decimal(1.03)
         return bp, sp
 
 
