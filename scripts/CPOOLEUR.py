@@ -1269,9 +1269,40 @@ class SimplePMM(ScriptStrategyBase):
 
         # msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}")
         # self.log_with_clock(logging.INFO, msg)
-        # Bypass with manual numbers for now
-        bp = Decimal(0.970)
-        sp = Decimal(1.03)
+        # New Method
+        # Function to transform the metric
+        
+    def log_transform_reverse(q, m_0, m_min, k):
+        abs_q = abs(q)
+        
+        if m_0 < 1:  # Drop situation (values < 1)
+            m_min = 1 - m_min
+            transformed_value = (m_min) + (m_0 - (m_min)) * (1 - np.log(k * abs_q + 1))
+            return min(transformed_value, m_min)
+        #
+        elif m_0 > 1:  # Rise situation (values > 1)
+            m_min = 1 + m_min
+            # Here m_0 > 1 and the transformed value should decrease towards m_min=1
+            transformed_value = (m_min) - (m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
+            return min(transformed_value, m_0)  # Prevent exceeding m_0
+
+
+        q, _, _, _,_, _, _ = self.get_current_positions()
+        # Ratio of how strong the reverse transform is K, modified by 
+        # the strength of volatility.  1 - vr = as volatility ^, % distance decreases
+        k = 1 * (1 - self.volatility_rank)
+        maximum_bp = 0.970
+        maximum_sp = 1.03
+        bp = log_transform_reverse(q, maximum_bp, self.min_profitability, k)
+        sp = log_transform_reverse(q, maximum_sp, self.min_profitability, k)
+
+        # Decimal values for use
+        bp = Decimal(bp)
+        sp = Decimal(sp)
+
+        # # Bypass with manual numbers for now
+        # bp = Decimal(0.970)
+        # sp = Decimal(1.03)
         return bp, sp
 
 
@@ -1371,7 +1402,11 @@ class SimplePMM(ScriptStrategyBase):
 
         # Total Abs(imbalance)
         total_imbalance = abs(inventory_difference)
-        
+
+        # Log entry sizes
+        def log_transform(q, M_0, k):
+            abs_q = abs(q)  # Make sure we are using |q|
+            return M_0 * (1 + np.log(1 + k * abs_q))
         # Adjust base and quote balancing volumes based on shape factor and entry size by percentage
         # This method reduces the size of the orders which are overbalanced
         #if I have too much base, more base purchases are made small
@@ -1388,9 +1423,9 @@ class SimplePMM(ScriptStrategyBase):
             base_balancing_volume =   min(maximum_order_size, total_imbalance) # abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #
             quote_balancing_volume =  max ( self.order_amount, abs(self.order_amount) * Decimal.exp(-self.order_shape_factor * q) )
 
-
         elif q < 0 :
             base_balancing_volume = max( self.order_amount, abs(self.order_amount) *  Decimal.exp(self.order_shape_factor * q))
+
             # In order to balance the Quote, I want to buy more of bid to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
             quote_balancing_volume = min(maximum_order_size, total_imbalance) # abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q) 
