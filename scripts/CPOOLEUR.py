@@ -597,8 +597,9 @@ class KRAKENQFL():
         current_vola = df['Volatility'].iloc[-1]
         volatility_rank = df['volatility_rank'].iloc[-1]
     
-        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline, _bid_trailing_baseline, _ask_trailing_baseline, volatility_rank
-        
+        return df, df_low_tails, df_high_tails, _bid_baseline, _ask_baseline, \
+         _bid_trailing_baseline, _ask_trailing_baseline, volatility_rank, current_vola
+         
     def call_kraken_ohlc_data(self):
         #Convert string interval to numerical
         interval = pd.to_numeric(self.interval)
