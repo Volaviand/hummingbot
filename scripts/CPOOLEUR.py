@@ -1280,13 +1280,13 @@ class SimplePMM(ScriptStrategyBase):
             ONE = Decimal(1.0)
             if m_0 < ONE:  # Drop situation (values < 1)
                 adj_m_min = ONE - m_min
-                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (ONE - Decimal.log(k * abs_q + ONE))
+                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (ONE - Decimal.ln(k * abs_q + ONE))
                 return min(transformed_value, m_min)
             #
             elif m_0 > ONE:  # Rise situation (values > 1)
                 adj_m_min = ONE + m_min
                 # Here m_0 > 1 and the transformed value should decrease towards m_min=1
-                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (ONE - Decimal.log(k * abs_q + ONE))
+                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (ONE - Decimal.ln(k * abs_q + ONE))
                 return min(transformed_value, m_0)  # Prevent exceeding m_0
             else:
                 print('Error, trade depth set at 0% (m_0 = 1)')
@@ -1296,7 +1296,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ratio of how strong the reverse transform is K, modified by 
         # the strength of volatility.  1 - vr = as volatility ^, % distance decreases
-        k = 1 * (1 - self.volatility_rank)
+        k = Decimal(1.0) * (Decimal(1.0) - Decimal(self.volatility_rank))
         # Deepest entry % to start off the trade
         maximum_bp = 0.970
         maximum_sp = 1.03
