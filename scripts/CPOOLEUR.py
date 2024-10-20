@@ -1304,6 +1304,9 @@ class SimplePMM(ScriptStrategyBase):
         bp = Decimal(bp)
         sp = Decimal(sp)
 
+        msg = (f"sp :: {sp:.8f} , bp :: {bp:.8f}, q :: {q}")
+        self.log_with_clock(logging.INFO, msg)
+
         # # Bypass with manual numbers for now
         # bp = Decimal(0.970)
         # sp = Decimal(1.03)
