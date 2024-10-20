@@ -735,7 +735,7 @@ class SimplePMM(ScriptStrategyBase):
         min_refresh_time = 90
         max_refresh_time = 300
         
-        self.order_refresh_time = 127 # random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 27 # random.randint(min_refresh_time, max_refresh_time)
 
         # Cooldown for Volatility calculations 
         self.create_garch_timestamp = 0
@@ -1074,7 +1074,7 @@ class SimplePMM(ScriptStrategyBase):
         sell_price = optimal_ask_price
 
         # Number of levels to create (customizable)
-        num_levels = 10  # e.g., 3 buy and 3 sell levels
+        num_levels = 5  # e.g., 3 buy and 3 sell levels
         
         # Multiplier values for buy and sell price adjustments
         buy_multiplier = bp  # Reduce buy price by bp%
