@@ -219,7 +219,7 @@ class KRAKENQFL():
     def get_ohlc_calculations(self, df, fitted_params=None):
         """ Run calculations for traing bot information"""
 
-        # Set the number of rows to keep (8760=1yr in h as default or length of dataframe if it's shorter)
+        # Set the number of rows to keep (1440 as default or length of dataframe if it's shorter)
         slice_length = np.minimum(8760, len(df))
         
         # Slice the dataframe to keep only the last 'slice_length' rows
@@ -227,6 +227,7 @@ class KRAKENQFL():
         
         # Reset index after slicing
         df = df.reset_index(drop=True)
+
         
         df['Open'] = pd.to_numeric(df['Open'])
         df['High'] = pd.to_numeric(df['High'])
@@ -243,12 +244,12 @@ class KRAKENQFL():
     
         if fitted_params is not None:
             # Fit GARCH on higher range data with initial values from shorter-range model
-            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=1, q=1, rescale=True, dist="StudentsT")
+            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
             model_fit = model.fit(starting_values=fitted_params)
             print(model_fit.summary())
         else:
             # Define the GARCH model with automatic rescaling
-            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=1, q=1, rescale=True, dist="StudentsT")
+            model = arch_model(log_returns_series, vol='EGARCH', mean='HARX', p=3, q=3, rescale=True, dist="StudentsT")
             # Fit the model
             model_fit = model.fit(disp="off")
     
@@ -317,18 +318,18 @@ class KRAKENQFL():
         IQR3_Source = df['High'].rolling(window=self.rolling_periods).quantile(0.8413)
         IQR1_Source = df['Low'].rolling(window=self.rolling_periods).quantile(0.1587)    
         
-        # Assign these values to the entire DataFrame in new columns
-        df['Local Volatility Min Event'] = df['Volatility'].iloc[argrelextrema(df['Volatility'].values, np.less_equal, order=self.rolling_periods)[0]]
-        # Local maxima (resistance)
-        df['Local Volatility Max Event'] = df['Volatility'].iloc[argrelextrema(df['Volatility'].values, np.greater_equal, order=self.rolling_periods)[0]]
-        # Fill na values for horizontal lines
-        df['Local Volatility Min PreLine'] = df['Local Volatility Min Event'].ffill()
-        df['Local Volatility Max PreLine'] = df['Local Volatility Max Event'].ffill()
+        # # Assign these values to the entire DataFrame in new columns
+        # df['Local Volatility Min Event'] = df['Volatility'].iloc[argrelextrema(df['Volatility'].values, np.less_equal, order=self.rolling_periods)[0]]
+        # # Local maxima (resistance)
+        # df['Local Volatility Max Event'] = df['Volatility'].iloc[argrelextrema(df['Volatility'].values, np.greater_equal, order=self.rolling_periods)[0]]
+        # # Fill na values for horizontal lines
+        # df['Local Volatility Min PreLine'] = df['Local Volatility Min Event'].ffill()
+        # df['Local Volatility Max PreLine'] = df['Local Volatility Max Event'].ffill()
 
-        if df['Local Volatility Max Event'] is not None:
-            df['Local Volatility Min'] = df['Local Volatility Min PreLine']
-        if df['Local Volatility Min Event'] is not None:
-            df['Local Volatility Max'] = df['Local Volatility Max PreLine']
+        # if df['Local Volatility Max Event'] is not None:
+        #     df['Local Volatility Min'] = df['Local Volatility Min PreLine']
+        # if df['Local Volatility Min Event'] is not None:
+        #     df['Local Volatility Max'] = df['Local Volatility Max PreLine']
 
 
         
@@ -422,15 +423,17 @@ class KRAKENQFL():
                                     new_low_tail_value = lowest_consecutive # np.minimum(new_low_tail_value, lowest_consecutive)
                         else:
                             new_high_tail_value = df.loc[1: i, 'High'].max()
-                    
-                    # # Ensure no NaN values remain
-                    # if pd.isna(new_high_tail_value):
-                    #     new_high_tail_value = df.loc[i-1, 'Trailing High Line']
-                    # if pd.isna(new_low_tail_value):
-                    #     new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
                         
                     return new_high_tail_value, new_low_tail_value
-    
+
+        # Call local values for init values if no events ::         
+        # Fill any remaining NaN values forward, so the line is continuous
+
+        df['Local Min'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
+        df['Local Min'] = df['Local Min'].ffill()
+        
+        df['Local Max'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
+        df['Local Max'] = df['Local Max'].ffill()
         
         # Initialize indexers to keep track of when an event happened
         last_low_indices = []
@@ -476,19 +479,19 @@ class KRAKENQFL():
             if previous_high_index is not None and latest_high_index is not None:
                 lowest_between = df.loc[np.minimum(previous_high_index,latest_high_index):\
                 np.maximum(previous_high_index,latest_high_index), 'Low'].min() 
-            elif previous_high_index is not None and latest_high_index is None:
-                lowest_between = df.loc[1: previous_high_index, 'Low'].min() 
+            # elif previous_high_index is not None and latest_high_index is None:
+            #     lowest_between = df.loc[1: previous_high_index, 'Low'].min() 
             else:
-                lowest_between = df.loc[1: i, 'Low'].min() 
+                lowest_between = df.loc[i, 'Local Min'] #df.loc[1: i, 'Low'].min() 
     
             
             if previous_low_index is not None and latest_low_index is not None:
                 highest_between = df.loc[np.minimum(previous_low_index, latest_low_index):\
                 np.maximum(previous_low_index, latest_low_index), 'High'].max()
-            elif previous_low_index is not None and latest_low_index is None:
-                highest_between = df.loc[1: previous_low_index, 'High'].max()
+            # elif previous_low_index is not None and latest_low_index is None:
+            #     highest_between = df.loc[1: previous_low_index, 'High'].max()
             else:
-                highest_between = df.loc[1: i, 'High'].max()
+                highest_between = df.loc[i, 'Local Max'] #df.loc[1: i, 'High'].max()
     
             # Find Values Consecutively. 
             if latest_high_index is not None and latest_low_index is not None:
@@ -499,17 +502,17 @@ class KRAKENQFL():
                 np.maximum(latest_low_index, latest_high_index), 'High'].max()
     
             
-            elif latest_high_index is not None and latest_low_index is None:
-                lowest_consecutive = df.loc[latest_high_index: i, 'Low'].min()
-                highest_consecutive = df.loc[1: latest_high_index, 'High'].max()
+            # elif latest_high_index is not None and latest_low_index is None:
+            #     lowest_consecutive = df.loc[latest_high_index: i, 'Low'].min()
+            #     highest_consecutive = df.loc[1: latest_high_index, 'High'].max()
     
             
-            elif latest_high_index is None and latest_low_index is not None:
-                lowest_consecutive = df.loc[1: latest_low_index, 'Low'].min()
-                highest_consecutive = df.loc[latest_low_index: i, 'High'].max()
+            # elif latest_high_index is None and latest_low_index is not None:
+            #     lowest_consecutive = df.loc[1: latest_low_index, 'Low'].min()
+            #     highest_consecutive = df.loc[latest_low_index: i, 'High'].max()
             else:
-                lowest_consecutive = df.loc[1: i, 'Low'].min() 
-                highest_consecutive = df.loc[1: i, 'High'].max()
+                lowest_consecutive = df.loc[i, 'Local Min']#df.loc[1: i, 'Low'].min() 
+                highest_consecutive = df.loc[i, 'Local Max']#df.loc[1: i, 'High'].max()
     
     
             
@@ -539,58 +542,19 @@ class KRAKENQFL():
             df['Low Line'] = df['Low Line'].ffill()
             df['Trailing Low Line'] = df['Low Line']
 
-
-        
-        df['Local Min Event'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
-        # Local maxima (resistance)
-        df['Local Max Event'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
-        
-        # Forward-fill the events for horizontal lines
-        df['Local Min PreLine'] = df['Local Min Event'].ffill()  # Fills previous minima
-        df['Local Max PreLine'] = df['Local Max Event'].ffill()  # Fills previous maxima
-        
-        # Initialize new columns
-        df['Local Min'] = np.nan
-        df['Local Max'] = np.nan
-        
-        # Condition: if a local max event occurs, the last min value is saved to 'Local Min'
-        df['Local Min'] = np.where(df['Local Max Event'].notna(), df['Local Min PreLine'], np.nan)
-        
-        # Condition: if a local min event occurs, the last max value is saved to 'Local Max'
-        df['Local Max'] = np.where(df['Local Min Event'].notna(), df['Local Max PreLine'], np.nan)
-        
-        # Fill forward the 'Local Min' and 'Local Max' to create continuous horizontal lines
-        df['Local Min'] = df['Local Min'].ffill()
-        df['Local Max'] = df['Local Max'].ffill()
-
-        
-        # df['Local Min'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
-        # # Local maxima (resistance)
-        # df['Local Max'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
-        
-    
-        # Update the DataFrame with the new values
-        # df['Trailing High Line'] = df['Local Max PreLine'] #new_high_trailing
-        # df['Trailing Low Line'] = df['Local Min PreLine'] #new_low_trailing
-        
-        # Finalize the High Line and Low Line
-        # df['High Line'] = df['Local Max'].ffill() #new_high
-        # df['Low Line'] = df['Local Min'].ffill() #new_low
-
-        # Update the DataFrame with the new values
-        # df['Trailing High Line'] = new_high_trailing
-        # df['Trailing Low Line'] = new_low_trailing
-
-        # df['High Line'] = new_high
-        # df['Low Line'] = new_low
-
         # Initialize DataFrames for low and high tails
         df_low_tails = pd.DataFrame()
         df_high_tails = pd.DataFrame()
         
         # Condition for Low, avoiding initialized Low Line
         df['Lowest Base'] = np.minimum(df['Low Line'], df['Trailing Low Line'])
+        df['Highest Top'] = np.maximum(df['High Line'], df['Trailing High Line'])
+        # df['Mid Line'] = (df['Highest Top'] + df['Lowest Base']) / 2
+
         low_below_base = (df['Low'] < df['Lowest Base'])  # Avoid using the initialized low line
+        # Condition for High
+        high_above_top = (df['High'] > df['Highest Top'])
+
         
         # # Fill df_low_tails for Low conditions while keeping alignment with the full DataFrame
         df['% Diff Low'] = np.where(low_below_base, (df['Lowest Base'] - df['Low']) / df['Lowest Base'], np.nan)
@@ -606,9 +570,7 @@ class KRAKENQFL():
         df['% Diff IQR1 Low'] = df['% Diff Low'].quantile(0.0668)
         df['Max % Diff Low'] = df['% Diff Low'].max()
         
-        # Condition for High
-        df['Highest Top'] = np.maximum(df['High Line'], df['Trailing High Line'])
-        high_above_top = (df['High'] > df['Highest Top'])
+
         
         # Fill df_high_tails for High conditions while keeping alignment
         df['% Diff High'] = np.where(high_above_top, (df['High'] - df['Highest Top']) / df['High'], np.nan)
