@@ -1086,7 +1086,7 @@ class SimplePMM(ScriptStrategyBase):
         # Loop through each level
         for level in range(num_levels):
             # Adjust buy price and create buy order
-            if buy_price <= bid_reservation_price:
+            if buy_price <= bid_reservation_price and maker_base_balance > order_size_bid:
                 # Calculate adjusted order size to keep the same dollar value
                 # adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
                 # #Quantize Size
@@ -1101,7 +1101,7 @@ class SimplePMM(ScriptStrategyBase):
                     self.log_with_clock(logging.INFO, msg)
             
             # Adjust sell price and create sell order
-            if sell_price >= ask_reservation_price:
+            if sell_price >= ask_reservation_price and quote_balance_in_base > order_size_ask:
                 # Calculate adjusted order size to keep the same dollar value
                 # adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
                 # #Quantize Size
