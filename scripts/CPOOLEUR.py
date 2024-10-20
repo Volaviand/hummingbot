@@ -1135,7 +1135,7 @@ class SimplePMM(ScriptStrategyBase):
                 if order_size_bid >= self.min_order_size_bid:
                     order_counter.append(buy_order)
                 else:
-                    msg = (f" order_size_bid |{order_size_bid}| below minimum_size for bid order |{self.order_amount}| ")
+                    msg = (f" order_size_bid |{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Adjust sell price and create sell order
@@ -1147,10 +1147,10 @@ class SimplePMM(ScriptStrategyBase):
                 
                 sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
                                             order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
-                if order_size_ask >= self.order_amount: # self.min_order_size_ask:
+                if order_size_ask >= self.min_order_size_ask:
                     order_counter.append(sell_order)
                 else:
-                    msg = (f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.order_amount}| ")
+                    msg = (f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Update prices for the next level
