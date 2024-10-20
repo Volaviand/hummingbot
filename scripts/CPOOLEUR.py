@@ -1241,28 +1241,28 @@ class SimplePMM(ScriptStrategyBase):
         ### Trades into the more volatile markets should be deeper to account for this
         ## for example, buying illiquid or low volume coins(more volatile than FIAT) should be harder to do than selling/ (profiting) from the trade. 
 
-        n = self.maximum_orders
-        # n = math.floor(self.maximum_orders/2)
+        # n = self.maximum_orders
+        # # n = math.floor(self.maximum_orders/2)
 
-        ## Buys
-        #Minimum Distance in percent. 0.01 = a drop of 99% from original value
-        bd = 1 / 30
-        bp = math.exp(math.log(bd)/n)
+        # ## Buys
+        # #Minimum Distance in percent. 0.01 = a drop of 99% from original value
+        # bd = 1 / 30
+        # bp = math.exp(math.log(bd)/n)
         
-        bp = np.minimum(1 - self.min_profitability, bp)
+        # bp = np.minimum(1 - self.min_profitability, bp)
 
-        ## Include Fees
-        bp = Decimal(bp)  * (Decimal(1.0) - Decimal(self.fee_percent))
+        # ## Include Fees
+        # bp = Decimal(bp)  * (Decimal(1.0) - Decimal(self.fee_percent))
         
-        ## Sells
-        ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
-        sd = 30
-        sp = math.exp(math.log(sd)/n)
+        # ## Sells
+        # ## 3 distance move,(distance starts at 1 or 100%) 200% above 100 %
+        # sd = 30
+        # sp = math.exp(math.log(sd)/n)
 
-        sp = np.maximum(1 + self.min_profitability, sp)
+        # sp = np.maximum(1 + self.min_profitability, sp)
 
-        ## Include Fees
-        sp = Decimal(sp) * (Decimal(1.0) + Decimal(self.fee_percent))
+        # ## Include Fees
+        # sp = Decimal(sp) * (Decimal(1.0) + Decimal(self.fee_percent))
 
 
         #Decimalize for later use
@@ -1273,17 +1273,20 @@ class SimplePMM(ScriptStrategyBase):
         # Function to transform the metric
         
         def log_transform_reverse(q, m_0, m_min, k):
-            abs_q = abs(q)
-            
-            if m_0 < 1:  # Drop situation (values < 1)
-                adj_m_min = 1 - m_min
-                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (1 - np.log(k * abs_q + 1))
+            abs_q = Decimal(abs(q))
+            m_0 = Decimal(m_0)
+            m_min = Decimal(m_min)
+            k = Decimal(k)
+            ONE = Decimal(1.0)
+            if m_0 < ONE:  # Drop situation (values < 1)
+                adj_m_min = ONE - m_min
+                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (ONE - np.log(k * abs_q + ONE))
                 return min(transformed_value, m_min)
             #
-            elif m_0 > 1:  # Rise situation (values > 1)
-                adj_m_min = 1 + m_min
+            elif m_0 > ONE:  # Rise situation (values > 1)
+                adj_m_min = ONE + m_min
                 # Here m_0 > 1 and the transformed value should decrease towards m_min=1
-                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
+                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (ONE - np.log(k * abs_q + ONE))
                 return min(transformed_value, m_0)  # Prevent exceeding m_0
             else:
                 print('Error, trade depth set at 0% (m_0 = 1)')
