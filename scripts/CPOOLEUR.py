@@ -1276,23 +1276,27 @@ class SimplePMM(ScriptStrategyBase):
         abs_q = abs(q)
         
         if m_0 < 1:  # Drop situation (values < 1)
-            m_min = 1 - m_min
-            transformed_value = (m_min) + (m_0 - (m_min)) * (1 - np.log(k * abs_q + 1))
+            adj_m_min = 1 - m_min
+            transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (1 - np.log(k * abs_q + 1))
             return min(transformed_value, m_min)
         #
         elif m_0 > 1:  # Rise situation (values > 1)
-            m_min = 1 + m_min
+            adj_m_min = 1 + m_min
             # Here m_0 > 1 and the transformed value should decrease towards m_min=1
-            transformed_value = (m_min) - (m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
+            transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (1 - np.log(k * abs_q + 1))
             return min(transformed_value, m_0)  # Prevent exceeding m_0
-
+        else:
+            return m_0
 
         q, _, _, _,_, _, _ = self.get_current_positions()
+
         # Ratio of how strong the reverse transform is K, modified by 
         # the strength of volatility.  1 - vr = as volatility ^, % distance decreases
         k = 1 * (1 - self.volatility_rank)
+        # Deepest entry % to start off the trade
         maximum_bp = 0.970
         maximum_sp = 1.03
+        # Log Transform the values based on q balance and k rate
         bp = log_transform_reverse(q, maximum_bp, self.min_profitability, k)
         sp = log_transform_reverse(q, maximum_sp, self.min_profitability, k)
 
