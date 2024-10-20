@@ -1126,12 +1126,12 @@ class SimplePMM(ScriptStrategyBase):
             # Adjust buy price and create buy order
             if buy_price <= bid_reservation_price:
                 # Calculate adjusted order size to keep the same dollar value
-                adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
-                #Quantize Size
-                adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_bid)
+                # adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
+                # #Quantize Size
+                # adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_bid)
 
                 buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.BUY, amount=Decimal(adjusted_order_size_bid), price=buy_price)
+                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
                 if adjusted_order_size_bid >= self.min_order_size_bid:
                     order_counter.append(buy_order)
                 else:
@@ -1141,16 +1141,16 @@ class SimplePMM(ScriptStrategyBase):
             # Adjust sell price and create sell order
             if sell_price >= ask_reservation_price:
                 # Calculate adjusted order size to keep the same dollar value
-                adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
-                #Quantize Size
-                adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
+                # adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
+                # #Quantize Size
+                # adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
                 
                 sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                            order_side=TradeType.SELL, amount=Decimal(adjusted_order_size_ask), price=sell_price)
-                if adjusted_order_size_ask >= self.min_order_size_ask:
+                                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
+                if adjusted_order_size_ask >= self.order_amount: # self.min_order_size_ask:
                     order_counter.append(sell_order)
                 else:
-                    msg = (f" order_size_ask |{adjusted_order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
+                    msg = (f" order_size_ask |{adjusted_order_size_ask}| below minimum_size for ask order |{self.order_amount}| ")
                     self.log_with_clock(logging.INFO, msg)
             
             # Update prices for the next level
@@ -1424,11 +1424,11 @@ class SimplePMM(ScriptStrategyBase):
             # In order to balance the base, I want to sell more of ask to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
             base_balancing_volume =   min(maximum_order_size, total_imbalance) # abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #
-            quote_balancing_volume =  max ( self.min_order_size_bid, abs(self.min_order_size_bid) * Decimal.exp(-self.order_shape_factor * q) )
+            quote_balancing_volume =  max ( self.order_amount, abs(self.order_amount) * Decimal.exp(-self.order_shape_factor * q) )
 
 
         elif q < 0 :
-            base_balancing_volume = max( self.min_order_size_ask, abs(self.min_order_size_ask) *  Decimal.exp(-self.order_shape_factor * q))
+            base_balancing_volume = max( self.order_amount, abs(self.order_amount) *  Decimal.exp(self.order_shape_factor * q))
             # In order to balance the Quote, I want to buy more of bid to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
             quote_balancing_volume = min(maximum_order_size, total_imbalance) # abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q) 
@@ -1451,8 +1451,8 @@ class SimplePMM(ScriptStrategyBase):
     def percentage_order_size(self, bid_op, ask_op):
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         
-        self.min_order_size_bid = max(self.quote_order_amount /  bid_op , self.order_amount)
-        self.min_order_size_ask = max(self.quote_order_amount / ask_op , self.order_amount)
+        self.min_order_size_bid = self.order_amount #max(self.quote_order_amount /  bid_op , self.order_amount)
+        self.min_order_size_ask = self.order_amount # max(self.quote_order_amount / ask_op , self.order_amount)
 
         self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
         self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_ask)
