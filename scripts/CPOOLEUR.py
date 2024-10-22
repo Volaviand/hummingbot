@@ -353,24 +353,37 @@ class KRAKENQFL():
         # print(f"Max Volatility :: {max_vola}")
         # print(f"Volatility Rank :: {df['volatility_rank'].tail()}")    
     
-        # ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
-        # q = 0.0
-        # min_profit = 0.01
+        ## Inventory Balance d%, 0 = perfectly balanced,  > 0 is too much base, < 0 is too much quote
+        q = 0.0
+        min_profit = 0.01
         
-        # df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
+        df['max_volatility'] = np.maximum(min_profit  , df['Volatility'] )
     
         
-        # # Max volatility of the moment * Value of unbalance (q)
-        # df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
+        # Max volatility of the moment * Value of unbalance (q)
+        df['Risk_Rate'] = np.maximum(0.01 * df['volatility_rank']  , df['Volatility'] * df['volatility_rank'] ) * q
     
-        # df['LR_High'] = log_returns.rolling(self.volatility_periods).quantile(0.997) # 0.8413)
-        # df['LR_Low'] = log_returns.rolling(self.volatility_periods).quantile(0.003) # 0.1587)
+        # Call local values for init values if no events ::         
+        # Fill any remaining NaN values forward, so the line is continuous
+
+        df['Local Min'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
+        df['Local Min'] = df['Local Min'].ffill()
+        
+        df['Local Max'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
+        df['Local Max'] = df['Local Max'].ffill()
+
         
         # Create conditions for high and low tails
-        high_volatility = df['Rolling Volatility'] > df['IQR3_vola'] #  df['IQR3_vola'] > df['IQR3_vola'].shift(1) #
-    
-        low_tail = (df['Low'] < df['IQR1_Source'])  & high_volatility
-        high_tail = (df['High'] > df['IQR3_Source'])  & high_volatility
+        # Average High is greater than upper percentile (1 StDev)
+        high_avg_volatility = df['Rolling Volatility'] > df['IQR3_vola']
+        high_spike_volatility = df['Volatility'].shift(-1) > 3 * df['IQR3_vola']
+        high_volatility = (high_avg_volatility) | (high_spike_volatility)   
+
+        # low_tail = (df['Low'] < df['IQR1_Source'])  & high_volatility
+        # high_tail = (df['High'] > df['IQR3_Source'])  & high_volatility
+        
+        low_tail =  high_volatility  & (df['Low'] <= df['Local Min'].shift(1))   
+        high_tail =  high_volatility  & (df['High'] >= df['Local Max'].shift(1))   
         
         # Initialize Low Line and High Line with NaN values and fill the first values of IQR1_Source and IQR3_Source
     
@@ -382,58 +395,59 @@ class KRAKENQFL():
         df['High Line'] = np.nan
         # df.loc[0, 'Low Line'] = df.loc[0, 'Low']  # Start Low Line with the first value of IQR1_Source
         # df.loc[0, 'High Line'] = df.loc[0, 'High']  # Start High Line with the first value of IQR3_Source
-    
+
+
+
     
     
         def determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, trailing):
-                    # Initialize values to hold updated tails
-                    if trailing:
-                        new_high_tail_value = df.loc[i-1, 'Trailing High Line']
-                        new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
+
+            
+            # Initialize values to the last used level
+            # If no tails are triggered, the past value is used. 
+            if trailing:
+                new_high_tail_value = df.loc[i-1, 'Trailing High Line']
+                new_low_tail_value = df.loc[i-1, 'Trailing Low Line']
+            else:
+                new_high_tail_value = df.loc[i-1, 'High Line']
+                new_low_tail_value = df.loc[i-1, 'Low Line']
+            
+            # Handle Low Line Location: (A new high tail triggers a previous base)
+            if high_tail[i]:
+                if previous_high_index is not None and latest_low_index is not None:
+                    # A new Base is formed from a bounce
+                    if previous_high_index < latest_low_index:
+                        new_low_tail_value = lowest_between 
                     else:
-                        new_high_tail_value = df.loc[i-1, 'High Line']
-                        new_low_tail_value = df.loc[i-1, 'Low Line']
-                    
-                    # Handle Low Line Location: (A new high tail triggers a previous base)
-                    if high_tail[i]:
-                        if previous_high_index is not None and latest_low_index is not None:
-                            # A new Base is formed from a bounce
-                            if previous_high_index < latest_low_index:
-                                new_low_tail_value = lowest_between 
-                            else:
-                                new_low_tail_value = np.minimum(lowest_between, lowest_consecutive)
-                                
-                                if trailing:
-                                    # Trailing price upwards as it makes new Tops
-                                    new_high_tail_value = highest_consecutive # np.maximum(new_high_tail_value, highest_consecutive)
-                        else:
-                            new_low_tail_value = df.loc[1: i, 'Low'].min()
-                    
-                    # Handle High Line Location (A new low tail triggers a previous top)
-                    if low_tail[i]:
-                        if previous_low_index is not None and latest_high_index is not None:
-                            # A new Top is formed from a bounce
-                            if previous_low_index < latest_high_index:
-                                new_high_tail_value = highest_between 
-                            else:
-                                new_high_tail_value = np.maximum(highest_between, highest_consecutive)
-                                
-                                if trailing:
-                                    # Trailing price downwards as it makes new Bases
-                                    new_low_tail_value = lowest_consecutive # np.minimum(new_low_tail_value, lowest_consecutive)
-                        else:
-                            new_high_tail_value = df.loc[1: i, 'High'].max()
+                        new_low_tail_value = np.minimum(lowest_between, lowest_consecutive)
                         
-                    return new_high_tail_value, new_low_tail_value
+                        if trailing:
+                            # Trailing price upwards as it makes new Tops
+                            new_high_tail_value = highest_consecutive # np.maximum(new_high_tail_value, highest_consecutive)
+                else:
+                    new_low_tail_value = df.loc[i, 'Local Min']
+                    # new_low_tail_value = df.loc[1: i, 'Low'].min()
 
-        # Call local values for init values if no events ::         
-        # Fill any remaining NaN values forward, so the line is continuous
+            
+            # Handle High Line Location (A new low tail triggers a previous top)
+            if low_tail[i]:
+                if previous_low_index is not None and latest_high_index is not None:
+                    # A new Top is formed from a bounce
+                    if previous_low_index < latest_high_index:
+                        new_high_tail_value = highest_between 
+                    else:
+                        new_high_tail_value = np.maximum(highest_between, highest_consecutive)
+                        
+                        if trailing:
+                            # Trailing price downwards as it makes new Bases
+                            new_low_tail_value = lowest_consecutive # np.minimum(new_low_tail_value, lowest_consecutive)
+                else:
+                    new_high_tail_value = df.loc[i, 'Local Max']
+                    # new_high_tail_value = df.loc[1: i, 'High'].max()
+                
+            return new_high_tail_value, new_low_tail_value
 
-        df['Local Min'] = df['Low'].iloc[argrelextrema(df['Low'].values, np.less_equal, order=self.rolling_periods)[0]]
-        df['Local Min'] = df['Local Min'].ffill()
-        
-        df['Local Max'] = df['High'].iloc[argrelextrema(df['High'].values, np.greater_equal, order=self.rolling_periods)[0]]
-        df['Local Max'] = df['Local Max'].ffill()
+
         
         # Initialize indexers to keep track of when an event happened
         last_low_indices = []
@@ -474,7 +488,7 @@ class KRAKENQFL():
                 previous_high_index = None
                 latest_high_index = None
     
-            
+
             #Find Values between points        
             if previous_high_index is not None and latest_high_index is not None:
                 lowest_between = df.loc[np.minimum(previous_high_index,latest_high_index):\
@@ -548,8 +562,7 @@ class KRAKENQFL():
         
         # Condition for Low, avoiding initialized Low Line
         df['Lowest Base'] = np.minimum(df['Low Line'], df['Trailing Low Line'])
-        df['Highest Top'] = np.maximum(df['High Line'], df['Trailing High Line'])
-        # df['Mid Line'] = (df['Highest Top'] + df['Lowest Base']) / 2
+        df['Highest Top'] =  np.maximum(df['High Line'], df['Trailing High Line'])
 
         low_below_base = (df['Low'] < df['Lowest Base'])  # Avoid using the initialized low line
         # Condition for High
