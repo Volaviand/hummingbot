@@ -743,7 +743,7 @@ class SimplePMM(ScriptStrategyBase):
         super().__init__(connectors)
 
         # Define Market Parameters and Settings
-        self.Kraken_QFL = KRAKENQFL('CPOOLEUR_60.csv', self.history_market, '60', volatility_periods=186, rolling_periods=24)
+        self.Kraken_QFL = KRAKENQFL('CPOOLEUR_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
 
         # Cooldown for how long an order stays in place. 
         self.create_timestamp = 0
