@@ -34,6 +34,8 @@ class BudgetChecker:
         Frees collateral assets locked for hypothetical orders.
         """
         self._locked_collateral.clear()
+        print(f"Collateral Unlocked")
+
 
     def adjust_candidates(
         self, order_candidates: List[OrderCandidate], all_or_none: bool = True
@@ -159,3 +161,5 @@ class BudgetChecker:
     def _lock_available_collateral(self, order_candidate: OrderCandidate):
         for token, amount in order_candidate.collateral_dict.items():
             self._locked_collateral[token] += amount
+            print(f"Locking {amount} of {token}. Total locked: {self._locked_collateral[token]}")
+
