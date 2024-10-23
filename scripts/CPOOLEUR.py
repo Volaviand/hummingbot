@@ -6,9 +6,7 @@ import time
 import requests
 import json
 from decimal import Decimal
-import typing
-
-from typing import Dict, List
+from typing import List
 from random import gauss, seed
 
 import datetime
@@ -35,10 +33,6 @@ from hummingbot.connector.budget_checker import BudgetChecker
 from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
-
-# import Exchange for calls 
-if typing.TYPE_CHECKING:  # avoid circular import problems
-    from hummingbot.connector.exchange_base import ExchangeBase
 
 from arch import arch_model
 
@@ -707,7 +701,6 @@ class SimplePMM(ScriptStrategyBase):
 
     trading_pair = "CPOOL-EUR"
     exchange = "kraken"
-    self._exchange = exchange
     base_asset = "CPOOL"
     quote_asset = "EUR"
     history_market = 'CPOOLEUR'
@@ -1044,9 +1037,6 @@ class SimplePMM(ScriptStrategyBase):
             self.wait_after_cancel_timestamp <= self.current_timestamp:
 
 
-                # # Update Balances before placing an order to attempt faster updates
-                self._exchange.get_available_balance
-                # balance_df = self.get_balance_df()
                 # Update Timestamps
                 self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time   # e.g., 10 seconds
 
