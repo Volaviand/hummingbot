@@ -6,7 +6,9 @@ import time
 import requests
 import json
 from decimal import Decimal
-from typing import List
+import typing
+
+from typing import Dict, List
 from random import gauss, seed
 
 import datetime
