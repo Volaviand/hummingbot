@@ -27,6 +27,7 @@ from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
 from hummingbot.core.event.events import OrderFilledEvent
 from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
+from hummingbot.connector.budget_checker import BudgetChecker
 
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
@@ -1034,6 +1035,11 @@ class SimplePMM(ScriptStrategyBase):
             # If there was a fill or cancel, this timer will halt new orders until timers are met   
             if self.wait_after_fill_timestamp <= self.current_timestamp and \
             self.wait_after_cancel_timestamp <= self.current_timestamp:
+
+                # Reset Locked Collateral to allow new trades to operate freely. 
+                self.connectors[self.exchange].budget_checker.reset_locked_collateral()
+
+
                 # Update Timestamps
                 self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time   # e.g., 10 seconds
 
