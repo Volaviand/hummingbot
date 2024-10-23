@@ -613,7 +613,7 @@ class KrakenExchange(ExchangePyBase):
         for asset_name, balance in balances.items():
             cleaned_name = convert_from_exchange_symbol(asset_name).upper()
             total_balance = Decimal(balance)
-            free_balance = total_balance - Decimal(locked[cleaned_name])
+            free_balance = total_balance #- Decimal(locked[cleaned_name])
             self._account_available_balances[cleaned_name] = free_balance
             self._account_balances[cleaned_name] = total_balance
             remote_asset_names.add(cleaned_name)
