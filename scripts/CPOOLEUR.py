@@ -1032,6 +1032,9 @@ class SimplePMM(ScriptStrategyBase):
         if self.create_timestamp <= self.current_timestamp:
             self.cancel_all_orders()
 
+            # # Call the balance dataframe
+            # self.get_balance_df()
+
             # If there was a fill or cancel, this timer will halt new orders until timers are met   
             if self.wait_after_fill_timestamp <= self.current_timestamp and \
             self.wait_after_cancel_timestamp <= self.current_timestamp:
@@ -1048,6 +1051,8 @@ class SimplePMM(ScriptStrategyBase):
 
                 # Open Orders if the halt timer is changed to False
                 if not self.trade_in_progress:
+                    # Call the balance dataframe
+                    self.get_balance_df()
                     # Flag the start of a trade Execution
                     self.trade_in_progress = True
                     proposal: List[OrderCandidate] = self.create_proposal()
