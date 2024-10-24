@@ -1585,10 +1585,10 @@ class SimplePMM(ScriptStrategyBase):
         original_maker_quote_balance = self.connectors[self.exchange].get_balance(self.quote_asset) 
         
         #Convert to Quote asset at best sell into bid price
-        original_quote_balance_in_base = maker_quote_balance / top_ask_price
+        original_quote_balance_in_base = original_maker_quote_balance / top_ask_price
 
         # Get the total balance in base
-        total_balance_in_base = quote_balance_in_base + maker_base_balance
+        total_balance_in_base = original_quote_balance_in_base + original_maker_base_balance
 
         # Calculate the target amounts to hold in base and quote assets
         target_base_balance = total_balance_in_base * percent_base_to_hold
