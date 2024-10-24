@@ -1030,7 +1030,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
+            # self.cancel_all_orders()
+            self.cancel_bid_orders()
+            self.cancel_ask_orders()
 
             # # Call the balance dataframe
             # self.get_balance_df()
@@ -1077,10 +1079,6 @@ class SimplePMM(ScriptStrategyBase):
         # # Optionally save to a file
         # with open('profiling_results.txt', 'a') as f:
         #     f.write(s.getvalue())
-
-
-
-
 
     def create_proposal(self) -> List[OrderCandidate]:
 
@@ -1150,6 +1148,144 @@ class SimplePMM(ScriptStrategyBase):
 
         return order_counter
 
+
+
+    def create_bid_proposal(self) -> List[OrderCandidate]:
+
+        bp, sp = self.determine_log_multipliers()
+        # Fetch balances and optimal bid/ask prices
+        _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+
+        # Save Values for Status use without recalculating them over and over again
+        self.bid_percent = optimal_bid_percent
+        # self.ask_percent = optimal_ask_percent
+        self.b_r_p = bid_reservation_price
+        # self.a_r_p = ask_reservation_price
+
+        # Initial prices
+        buy_price = optimal_bid_price 
+        # sell_price = optimal_ask_price
+
+        # Number of levels to create (customizable)
+        num_levels = 5  # e.g., 3 buy and 3 sell levels
+        
+        # Multiplier values for buy and sell price adjustments
+        buy_multiplier = bp  # Reduce buy price by bp%
+        # sell_multiplier = sp  # Increase sell price by sp%
+        
+        # Store orders
+        order_counter = []
+
+        # Loop through each level
+        for level in range(num_levels):
+            # Adjust buy price and create buy order
+            if buy_price <= bid_reservation_price and quote_balance_in_base > order_size_bid:
+                # Calculate adjusted order size to keep the same dollar value
+                # adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
+                # #Quantize Size
+                # adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_bid)
+
+                buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+                if order_size_bid >= self.min_order_size_bid:
+                    order_counter.append(buy_order)
+                else:
+                    msg = (f" order_size_bid |{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
+                    self.log_with_clock(logging.INFO, msg)
+            
+            # # Adjust sell price and create sell order
+            # if sell_price >= ask_reservation_price and maker_base_balance  > order_size_ask:
+            #     # Calculate adjusted order size to keep the same dollar value
+            #     # adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
+            #     # #Quantize Size
+            #     # adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
+                
+            #     sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+            #                                 order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
+            #     if order_size_ask >= self.min_order_size_ask:
+            #         order_counter.append(sell_order)
+            #     else:
+            #         msg = (f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
+            #         self.log_with_clock(logging.INFO, msg)
+            
+            # Update prices for the next level
+            buy_price *= buy_multiplier
+            # sell_price *= sell_multiplier
+            # Quantize Price
+            buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, buy_price)
+            # sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, sell_price)
+
+        return order_counter
+
+    def create_ask_proposal(self) -> List[OrderCandidate]:
+
+        bp, sp = self.determine_log_multipliers()
+        # Fetch balances and optimal bid/ask prices
+        _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        optimal_bid_price, optimal_ask_price, order_size_bid, order_size_ask, bid_reservation_price, ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+
+        # Save Values for Status use without recalculating them over and over again
+        self.bid_percent = optimal_bid_percent
+        self.ask_percent = optimal_ask_percent
+        self.b_r_p = bid_reservation_price
+        self.a_r_p = ask_reservation_price
+
+        # Initial prices
+        # buy_price = optimal_bid_price 
+        sell_price = optimal_ask_price
+
+        # Number of levels to create (customizable)
+        num_levels = 5  # e.g., 3 buy and 3 sell levels
+        
+        # Multiplier values for buy and sell price adjustments
+        # buy_multiplier = bp  # Reduce buy price by bp%
+        sell_multiplier = sp  # Increase sell price by sp%
+        
+        # Store orders
+        order_counter = []
+
+        # Loop through each level
+        for level in range(num_levels):
+            # # Adjust buy price and create buy order
+            # if buy_price <= bid_reservation_price and quote_balance_in_base > order_size_bid:
+            #     # Calculate adjusted order size to keep the same dollar value
+            #     # adjusted_order_size_bid = order_size_bid * (optimal_bid_price / buy_price)
+            #     # #Quantize Size
+            #     # adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_bid)
+
+            #     buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+            #                             order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+            #     if order_size_bid >= self.min_order_size_bid:
+            #         order_counter.append(buy_order)
+            #     else:
+            #         msg = (f" order_size_bid |{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
+            #         self.log_with_clock(logging.INFO, msg)
+            
+            # Adjust sell price and create sell order
+            if sell_price >= ask_reservation_price and maker_base_balance  > order_size_ask:
+                # Calculate adjusted order size to keep the same dollar value
+                # adjusted_order_size_ask = max(self.min_order_size_ask, order_size_ask * (optimal_ask_price / sell_price))
+                # #Quantize Size
+                # adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
+                
+                sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
+                                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
+                if order_size_ask >= self.min_order_size_ask:
+                    order_counter.append(sell_order)
+                else:
+                    msg = (f" order_size_ask |{order_size_ask}| below minimum_size for ask order |{self.min_order_size_ask}| ")
+                    self.log_with_clock(logging.INFO, msg)
+            
+            # Update prices for the next level
+            # buy_price *= buy_multiplier
+            sell_price *= sell_multiplier
+            # Quantize Price
+            # buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, buy_price)
+            sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, sell_price)
+
+        return order_counter
+
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
         return proposal_adjusted
@@ -1172,6 +1308,15 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
+    def cancel_bid_orders(self):
+        for order in self.get_active_orders(connector_name=self.exchange):
+            if order.order_side == TradeType.BUY:
+                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+
+    def cancel_ask_orders(self):
+        for order in self.get_active_orders(connector_name=self.exchange):
+            if order.order_side == TradeType.SELL:
+                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
 
 
