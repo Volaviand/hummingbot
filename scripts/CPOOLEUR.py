@@ -1573,23 +1573,34 @@ class SimplePMM(ScriptStrategyBase):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
-        amount_base_to_hold = Decimal(0.005)
-        amount_base_rate = Decimal(1.0) - amount_base_to_hold
+        percent_base_to_hold = Decimal(0.005)
+        # percent_base_rate = Decimal(1.0) - percent_base_to_hold
         
-        amount_quote_to_hold = Decimal(0.005)
-        amount_quote_rate = Decimal(1.0) - amount_quote_to_hold
+        percent_quote_to_hold = Decimal(0.005)
+        # percent_quote_rate = Decimal(1.0) - percent_quote_to_hold
         
 
         # Get currently held balances in each asset base
-        maker_base_balance = (self.connectors[self.exchange].get_balance(self.base_asset) * amount_base_rate)
-        maker_quote_balance = (self.connectors[self.exchange].get_balance(self.quote_asset) * amount_quote_rate)
+        original_maker_base_balance = self.connectors[self.exchange].get_balance(self.base_asset) 
+        original_maker_quote_balance = self.connectors[self.exchange].get_balance(self.quote_asset) 
         
         #Convert to Quote asset at best sell into bid price
-        quote_balance_in_base = maker_quote_balance / top_ask_price
+        original_quote_balance_in_base = maker_quote_balance / top_ask_price
 
         # Get the total balance in base
         total_balance_in_base = quote_balance_in_base + maker_base_balance
 
+        # Calculate the target amounts to hold in base and quote assets
+        target_base_balance = total_balance_in_base * percent_base_to_hold
+        target_quote_balance = total_balance_in_base * percent_quote_to_hold
+
+        # Ensure that you're not going below zero (capped to avoid negatives)
+        # Update Balances to reflect wanted held values
+        maker_base_balance = max((original_maker_base_balance) - target_base_balance, 0)
+        quote_balance_in_base = max((original_maker_quote_balance) - target_quote_balance, 0)
+
+        # Recalculate the total base balance after adjusting for held amounts
+        adjusted_total_balance_in_base = maker_base_balance + quote_balance_in_base
 
         maximum_number_of_orders = self.maximum_orders    
 
@@ -1598,16 +1609,16 @@ class SimplePMM(ScriptStrategyBase):
             return 0, 0, 0, 0
         ### For Entry Size to have /10 (/2 for) orders on each side of the bid/ask
         ### In terms of Maker Base asset
-        entry_size_by_percentage = (total_balance_in_base * self.inv_target_percent) / maximum_number_of_orders 
+        entry_size_by_percentage = (adjusted_total_balance_in_base * self.inv_target_percent) / maximum_number_of_orders 
         # minimum_size = max(self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.order_amount), entry_size_by_percentage)
 
 
 
         ## Q relation in percent relative terms, later it is in base(abolute)terms
-        target_inventory = total_balance_in_base * self.inv_target_percent
+        target_inventory = adjusted_total_balance_in_base * self.inv_target_percent
         # Inventory Deviation, base inventory - target inventory. 
         inventory_difference = maker_base_balance  - target_inventory
-        q = (inventory_difference) / total_balance_in_base
+        q = (inventory_difference) / adjusted_total_balance_in_base
         q = Decimal(q)
 
         self.q_imbalance = q
