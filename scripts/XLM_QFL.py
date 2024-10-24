@@ -1114,7 +1114,7 @@ class SimplePMM(ScriptStrategyBase):
                 # adjusted_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_bid)
 
                 buy_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price)
+                                        order_side=TradeType.BUY, amount=Decimal(order_size_bid), price=buy_price, from_total_balances = True)
                 if order_size_bid >= self.min_order_size_bid:
                     order_counter.append(buy_order)
                 else:
@@ -1129,7 +1129,7 @@ class SimplePMM(ScriptStrategyBase):
                 # adjusted_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, adjusted_order_size_ask)
                 
                 sell_order = OrderCandidate(trading_pair=self.trading_pair, is_maker=True, order_type=OrderType.LIMIT,
-                                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price)
+                                            order_side=TradeType.SELL, amount=Decimal(order_size_ask), price=sell_price, from_total_balances = True)
                 if order_size_ask >= self.min_order_size_ask:
                     order_counter.append(sell_order)
                 else:
