@@ -1307,22 +1307,25 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-            print(dir(order)))
+            print(order.__dict__)
+            print(dir(order))
+            print('/n')
 
 
-    def cancel_bid_orders(self):
-        for order in self.get_active_orders(connector_name=self.exchange):
-            details = order.get("descr")
+
+    # def cancel_bid_orders(self):
+    #     for order in self.get_active_orders(connector_name=self.exchange):
+    #         details = order.get("descr")
             
-            if details.get("type") == "buy":
-                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+    #         if details.get("type") == "buy":
+    #             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
-    def cancel_ask_orders(self):
-        for order in self.get_active_orders(connector_name=self.exchange):
-            details = order.get("descr")
+    # def cancel_ask_orders(self):
+    #     for order in self.get_active_orders(connector_name=self.exchange):
+    #         details = order.get("descr")
             
-            if details.get("type") == "sell":
-                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+    #         if details.get("type") == "sell":
+    #             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
 
 
