@@ -893,8 +893,8 @@ class SimplePMM(ScriptStrategyBase):
 
         # Filter out buy and sell trades
 
-        buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY']
-        sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL']
+        buy_trades = filtered_df[filtered_df['trade_type'] == 'BUY'].copy()
+        sell_trades = filtered_df[filtered_df['trade_type'] == 'SELL'].copy()
 
         # Ensure amounts are treated as absolute values after editing
         buy_trades.loc[:, 'amount'] = np.abs(buy_trades['amount'])
@@ -1221,6 +1221,8 @@ class SimplePMM(ScriptStrategyBase):
         """
         if not self.ready_to_trade:
             return "Market connectors are not ready."
+        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+
         lines = []
         warning_lines = []
         warning_lines.extend(self.network_warning(self.get_market_trading_pair_tuples()))

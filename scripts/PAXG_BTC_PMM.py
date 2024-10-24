@@ -1219,6 +1219,8 @@ class SimplePMM(ScriptStrategyBase):
         """
         if not self.ready_to_trade:
             return "Market connectors are not ready."
+        _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+
         lines = []
         warning_lines = []
         warning_lines.extend(self.network_warning(self.get_market_trading_pair_tuples()))
