@@ -1030,9 +1030,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
-            # self.cancel_bid_orders()
-            # self.cancel_ask_orders()
+            # self.cancel_all_orders()
+            self.cancel_bid_orders()
+            self.cancel_ask_orders()
 
             # # Call the balance dataframe
             # self.get_balance_df()
@@ -1307,19 +1307,20 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-            for attribute, value in vars(order).items():
-                print(f"{attribute}: {value}")
 
-            print("----")  # Separator for better readability
 
     def cancel_bid_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
-            if order.isBuy:
+            details = order.get("descr")
+            
+            if details.get("type") == "buy":
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
     def cancel_ask_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
-            if not order.isBuy:
+            details = order.get("descr")
+            
+            if details.get("type") == "sell":
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
 
