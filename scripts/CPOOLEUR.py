@@ -1310,12 +1310,12 @@ class SimplePMM(ScriptStrategyBase):
 
     def cancel_bid_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
-            if order.order_side == TradeType.BUY:
+            if order.isbuy:
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
     def cancel_ask_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
-            if order.order_side == TradeType.SELL:
+            if not order.isbuy:
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
 
