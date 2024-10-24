@@ -1289,8 +1289,9 @@ class SimplePMM(ScriptStrategyBase):
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
         return proposal_adjusted
+
     def manual_reset_locked_collateral(self):
-        self.connectors[self.exchange].budget_chjecker.reset_locked_collateral()
+        self.connectors[self.exchange].budget_checker.reset_locked_collateral()
 
     def place_orders(self, proposal: List[OrderCandidate]) -> None:
 
