@@ -1030,9 +1030,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
-            # self.cancel_all_orders()
-            self.cancel_bid_orders()
-            self.cancel_ask_orders()
+            self.cancel_all_orders()
+            # self.cancel_bid_orders()
+            # self.cancel_ask_orders()
 
             # # Call the balance dataframe
             # self.get_balance_df()
