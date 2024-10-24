@@ -751,7 +751,7 @@ class SimplePMM(ScriptStrategyBase):
         min_refresh_time = 90
         max_refresh_time = 300
         
-        self.order_refresh_time = 27 # random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 59 # random.randint(min_refresh_time, max_refresh_time)
 
         # Cooldown for Volatility calculations 
         self.create_garch_timestamp = 0
@@ -760,10 +760,10 @@ class SimplePMM(ScriptStrategyBase):
         
         # Cooldown after a fill
         self.wait_after_fill_timestamp = 0
-        self.fill_cooldown_duration = 11
+        self.fill_cooldown_duration = 27
         # Cooldown after cancelling orders
         self.wait_after_cancel_timestamp = 0
-        self.cancel_cooldown_duration = 11
+        self.cancel_cooldown_duration = 7
 
         self._bid_trailing_baseline = None
         self._ask_trailing_baseline = None
