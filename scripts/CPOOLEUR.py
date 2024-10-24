@@ -1124,7 +1124,7 @@ class SimplePMM(ScriptStrategyBase):
                         order_side=TradeType.BUY,
                         amount=Decimal(order_size_bid),
                         price=buy_price,
-                        from_total_balances=True
+                        from_total_balances=False
                     )
                     if order_size_bid >= self.min_order_size_bid:
                         order_counter.append(buy_order)
