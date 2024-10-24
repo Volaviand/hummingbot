@@ -127,7 +127,7 @@ class BudgetChecker:
             if not order_candidate.from_total_balances
             else self._exchange.get_balance
         )
-
+        # hold_adjustment = 0.995
         if order_candidate.order_collateral is not None:
             token, _ = order_candidate.order_collateral
             available_balances[token] = (
