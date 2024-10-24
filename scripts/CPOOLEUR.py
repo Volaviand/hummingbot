@@ -1030,9 +1030,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
-            # self.cancel_bid_orders()
-            # self.cancel_ask_orders()
+            # self.cancel_all_orders()
+            self.cancel_bid_orders()
+            self.cancel_ask_orders()
 
             # # Call the balance dataframe
             # self.get_balance_df()
@@ -1289,6 +1289,8 @@ class SimplePMM(ScriptStrategyBase):
     def adjust_proposal_to_budget(self, proposal: List[OrderCandidate]) -> List[OrderCandidate]:
         proposal_adjusted = self.connectors[self.exchange].budget_checker.adjust_candidates(proposal, all_or_none=True)
         return proposal_adjusted
+    def manual_reset_locked_collateral(self):
+        self.connectors[self.exchange].budget_chjecker.reset_locked_collateral()
 
     def place_orders(self, proposal: List[OrderCandidate]) -> None:
 
@@ -1307,7 +1309,9 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-            # print(order.__dict__)
+            self.manual_reset_locked_collateral()
+
+            ## Print object attributes. 
             # print(dir(order))
             # print('/n')
 
@@ -1315,17 +1319,15 @@ class SimplePMM(ScriptStrategyBase):
 
     def cancel_bid_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
-            details = order.get("descr")
-            
             if order.is_buy :
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+                self.manual_reset_locked_collateral()
 
     def cancel_ask_orders(self):
-        for order in self.get_active_orders(connector_name=self.exchange):
-            details = order.get("descr")
-            
+        for order in self.get_active_orders(connector_name=self.exchange):            
             if not order.is_buy:
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+                self.manual_reset_locked_collateral()
 
 
 
