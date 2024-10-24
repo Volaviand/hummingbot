@@ -1030,9 +1030,9 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
-            self.cancel_all_orders()
-            # self.cancel_bid_orders()
-            # self.cancel_ask_orders()
+            # self.cancel_all_orders()
+            self.cancel_bid_orders()
+            self.cancel_ask_orders()
 
             # # Call the balance dataframe
             # self.get_balance_df()
@@ -1308,24 +1308,24 @@ class SimplePMM(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
             # print(order.__dict__)
-            print(dir(order))
-            print('/n')
+            # print(dir(order))
+            # print('/n')
 
 
 
-    # def cancel_bid_orders(self):
-    #     for order in self.get_active_orders(connector_name=self.exchange):
-    #         details = order.get("descr")
+    def cancel_bid_orders(self):
+        for order in self.get_active_orders(connector_name=self.exchange):
+            details = order.get("descr")
             
-    #         if details.get("type") == "buy":
-    #             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+            if order.is_buy :
+                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
-    # def cancel_ask_orders(self):
-    #     for order in self.get_active_orders(connector_name=self.exchange):
-    #         details = order.get("descr")
+    def cancel_ask_orders(self):
+        for order in self.get_active_orders(connector_name=self.exchange):
+            details = order.get("descr")
             
-    #         if details.get("type") == "sell":
-    #             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
+            if not order.is_buy:
+                self.cancel(self.exchange, order.trading_pair, order.client_order_id)
 
 
 
