@@ -1596,8 +1596,8 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure that you're not going below zero (capped to avoid negatives)
         # Update Balances to reflect wanted held values
-        maker_base_balance = max((original_maker_base_balance) - target_base_balance, 0)
-        quote_balance_in_base = max((original_maker_quote_balance) - target_quote_balance, 0)
+        maker_base_balance = max(Decimal(original_maker_base_balance) - target_base_balance, Decimal(0))
+        quote_balance_in_base = max(Decimal(original_maker_quote_balance) - target_quote_balance, Decimal(0))
 
         # Recalculate the total base balance after adjusting for held amounts
         adjusted_total_balance_in_base = maker_base_balance + quote_balance_in_base
