@@ -1307,7 +1307,7 @@ class SimplePMM(ScriptStrategyBase):
     def cancel_all_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
-            print(order.__dict__)
+            print(dir(order)))
 
 
     def cancel_bid_orders(self):
