@@ -37,11 +37,11 @@ if TYPE_CHECKING:
 
 
 class KrakenExchange(ExchangePyBase):
-    UPDATE_ORDER_STATUS_MIN_INTERVAL = 5.0
-    SHORT_POLL_INTERVAL = 15.0
+    UPDATE_ORDER_STATUS_MIN_INTERVAL = 10.0
+    SHORT_POLL_INTERVAL = 30.0
 
     web_utils = web_utils
-    REQUEST_ATTEMPTS = 7
+    REQUEST_ATTEMPTS = 5
 
     def __init__(self,
                  client_config_map: "ClientConfigAdapter",
