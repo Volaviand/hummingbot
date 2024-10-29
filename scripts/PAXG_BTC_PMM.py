@@ -877,7 +877,7 @@ class SimplePMM(ScriptStrategyBase):
             if (last_net_value <= 0 and prev_net_value > 0) or (last_net_value >= 0 and prev_net_value < 0):
                 new_trade_cycle = True
                 cycle_start_index = index  # Update to the most recent crossover index
-                print(f"{cycle_start_index}=====================CROSS=============================")
+                # print(f"{cycle_start_index}=====================CROSS=============================")
             
                 # Update the filtered DataFrame only when a crossover happens
                 filtered_df = df.iloc[cycle_start_index:]
