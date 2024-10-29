@@ -885,7 +885,7 @@ class SimplePMM(ScriptStrategyBase):
                 adjusted_amount = last_net_value / filtered_df.loc[cycle_start_index, 'price']
                 filtered_df.loc[cycle_start_index, 'amount'] = adjusted_amount
                 # Adjust trade_fee_in_quote based on the updated amount
-                fee_percentage = self.fee_percent # Fee Rate
+                fee_percentage = float(self.fee_percent) # Fee Rate
                 filtered_df.loc[cycle_start_index, 'trade_fee_in_quote'] = abs(adjusted_amount) * filtered_df.loc[cycle_start_index, 'price'] * fee_percentage
             
                 # print(f'Start of Trade Amount :: {filtered_df.loc[cycle_start_index, 'amount']:.8f}, Quote {last_net_value:.8f}')
