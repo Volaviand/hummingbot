@@ -1236,6 +1236,7 @@ class SimplePMM(ScriptStrategyBase):
         if not self.ready_to_trade:
             return "Market connectors are not ready."
         _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+        bp, sp = self.determine_log_multipliers()
 
         lines = []
         warning_lines = []
@@ -1249,7 +1250,7 @@ class SimplePMM(ScriptStrategyBase):
         lines.extend(["", "| Inventory Imbalance | Trade History |"])
         lines.extend([f"Bal ::maker_base_balance {maker_base_balance:.8f} | quote_balance_in_base :: {quote_balance_in_base:.8f}"])
 
-        lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}"])
+        lines.extend([f"q(d%) :: {self.q_imbalance:.8f} | Inventory Difference :: {self.inventory_diff:.8f}| bp/sp :: {bp:.4f}:{sp:.4f}"] )
         lines.extend([f"R_PnL (Quote) :: {self.pnl:.8f} | U_PnL (Quote) :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
