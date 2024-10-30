@@ -1489,24 +1489,25 @@ class SimplePMM(ScriptStrategyBase):
         # Function to transform the metric
         
         def log_transform_reverse(q, m_0, m_min, k):
-            abs_q = Decimal(abs(q))
-            m_0 = Decimal(m_0)
-            m_min = Decimal(m_min)
-            k = Decimal(k)
-            ONE = Decimal(1.0)
+            abs_q = abs(float(q))
+            m_0 = float(m_0)
+            m_min = float(m_min)
+            k = float(k)
+            ONE = 1.0
+
             if m_0 < ONE:  # Drop situation (values < 1)
                 adj_m_min = ONE - m_min
-                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (ONE - Decimal.ln(k * abs_q + ONE))
-                return min(transformed_value, adj_m_min)
-            #
+                transformed_value = adj_m_min + (m_0 - adj_m_min) * (ONE - np.log(k * abs_q + ONE))
+                return Decimal(min(transformed_value, adj_m_min))
+
             elif m_0 > ONE:  # Rise situation (values > 1)
                 adj_m_min = ONE + m_min
-                # Here m_0 > 1 and the transformed value should decrease towards m_min=1
-                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (ONE - Decimal.ln(k * abs_q + ONE))
-                return min(transformed_value, adj_m_min)  # Prevent exceeding m_0
+                transformed_value = adj_m_min - (adj_m_min - m_0) * (ONE - np.log(k * abs_q + ONE))
+                return Decimal(min(transformed_value, adj_m_min))
+
             else:
                 print('Error, trade depth set at 0% (m_0 = 1)')
-                return m_0
+                return Decimal(m_0)
 
         q, _, _, _,_, _, _ = self.get_current_positions()
 
