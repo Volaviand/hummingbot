@@ -1503,6 +1503,7 @@ class SimplePMM(ScriptStrategyBase):
                 adj_m_min = ONE + m_min
                 # Here m_0 > 1 and the transformed value should decrease towards m_min=1
                 transformed_value = adj_m_min - ((adj_m_min  - m_0) * (ONE - Decimal.ln(k * abs_q + ONE)))
+                print(f'SP Transformed Value Variables :: adj_min {adj_m_min}, m_0{m_0},k{k}, absq{abs_q} :transformed_value{transformed_value}')
                 return min(transformed_value, adj_m_min)  # Prevent exceeding m_0
             else:
                 print('Error, trade depth set at 0% (m_0 = 1)')
