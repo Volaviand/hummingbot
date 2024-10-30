@@ -531,8 +531,17 @@ class KRAKENQFL():
     
             
     
-            new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
-            new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
+            if self.symbol == 'BSXUSD' or self.symbol == 'CPOOLEUR':
+                new_high_trailing = df.loc[i, 'Local Max']
+                new_low_trailing = df.loc[i, 'Local Min']
+                new_high = df.loc[i, 'Local Max']
+                new_low = df.loc[i, 'Local Min']
+            else:
+                new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
+                new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
+           
+            # new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
+            # new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
 
 
             # # Update the DataFrame with the new values
