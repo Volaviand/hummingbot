@@ -1497,14 +1497,14 @@ class SimplePMM(ScriptStrategyBase):
             ONE = Decimal(1.0)
             if m_0 < ONE:  # Drop situation (values < 1)
                 adj_m_min = ONE - m_min
-                transformed_value = (adj_m_min) + (m_0 - (adj_m_min)) * (ONE - Decimal.ln(k * abs_q + ONE))
+                transformed_value = adj_m_min + ((m_0 - adj_m_min) * (ONE - Decimal.ln(k * abs_q + ONE)))
                 return min(transformed_value, adj_m_min)
             #
             elif m_0 > ONE:  # Rise situation (values > 1)
                 adj_m_min = ONE + m_min
                 # Here m_0 > 1 and the transformed value should decrease towards m_min=1
-                transformed_value = (adj_m_min) - (adj_m_min  - (m_0)) * (ONE - Decimal.ln(k * abs_q + ONE))
-                return min(transformed_value, adj_m_min)  # Prevent exceeding m_0
+                transformed_value = adj_m_min - ((adj_m_min  - m_0) * (ONE - Decimal.ln(k * abs_q + ONE)))
+                return max(transformed_value, adj_m_min)  # Prevent exceeding m_0
             else:
                 print('Error, trade depth set at 0% (m_0 = 1)')
                 return m_0
