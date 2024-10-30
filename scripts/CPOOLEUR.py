@@ -831,7 +831,7 @@ class SimplePMM(ScriptStrategyBase):
             self.pnl = 0
             self.n_v = 0
             # Return zeros if the file doesn't exist
-            return 0, 0, 0, 0        # Read the CSV file into a Pandas DataFrame
+            return 0, 0, 0, 0, 0        # Read the CSV file into a Pandas DataFrame
 
         df = pd.read_csv(csv_file_path)
 
