@@ -1610,11 +1610,11 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure that you're not going below zero (capped to avoid negatives)
         # Update Balances to reflect wanted held values
-        maker_base_balance = Decimal(original_maker_base_balance) - target_base_balance # max(Decimal(original_maker_base_balance) - target_base_balance, Decimal(0))
+        maker_base_balance =Decimal(original_maker_base_balance) - target_base_balance # max(Decimal(original_maker_base_balance) - target_base_balance, Decimal(0))
         quote_balance_in_base = Decimal(original_quote_balance_in_base) - target_quote_balance #max(Decimal(original_quote_balance_in_base) - target_quote_balance, Decimal(0))
 
         # Recalculate the total base balance after adjusting for held amounts
-        adjusted_total_balance_in_base = abs(maker_base_balance + quote_balance_in_base)
+        adjusted_total_balance_in_base = maker_base_balance + quote_balance_in_base
 
         maximum_number_of_orders = self.maximum_orders    
 
@@ -1631,7 +1631,7 @@ class SimplePMM(ScriptStrategyBase):
         ## Q relation in percent relative terms, later it is in base(abolute)terms
         target_inventory = adjusted_total_balance_in_base * self.inv_target_percent
         # Inventory Deviation, base inventory - target inventory. 
-        inventory_difference = abs(maker_base_balance)  - target_inventory
+        inventory_difference = maker_base_balance  - target_inventory
         q = (inventory_difference) / adjusted_total_balance_in_base
         q = Decimal(q)
 
