@@ -1427,10 +1427,10 @@ class SimplePMM(ScriptStrategyBase):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
-        percent_base_to_hold = Decimal(0.005)
+        percent_base_to_hold = Decimal(0.01)
         # percent_base_rate = Decimal(1.0) - percent_base_to_hold
         
-        percent_quote_to_hold = Decimal(0.01)
+        percent_quote_to_hold = Decimal(0.005)
         # percent_quote_rate = Decimal(1.0) - percent_quote_to_hold
         
 
@@ -1447,12 +1447,10 @@ class SimplePMM(ScriptStrategyBase):
         # Calculate the target amounts to hold in base and quote assets
         target_base_balance = total_balance_in_base * percent_base_to_hold
         target_quote_balance = total_balance_in_base * percent_quote_to_hold
-        print(top_ask_price)
-        print(total_balance_in_base)
-        print(target_base_balance)
+
         
         # Update Balances to reflect wanted held values
-        maker_base_balance =Decimal(original_maker_base_balance) - target_base_balance # max(Decimal(original_maker_base_balance) - target_base_balance, Decimal(0))
+        maker_base_balance = Decimal(original_maker_base_balance) - target_base_balance # max(Decimal(original_maker_base_balance) - target_base_balance, Decimal(0))
         quote_balance_in_base = Decimal(original_quote_balance_in_base) - target_quote_balance #max(Decimal(original_quote_balance_in_base) - target_quote_balance, Decimal(0))
 
         # Recalculate the total base balance after adjusting for held amounts
