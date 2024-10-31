@@ -1438,7 +1438,7 @@ class SimplePMM(ScriptStrategyBase):
         original_maker_base_balance = self.connectors[self.exchange].get_balance(self.base_asset) 
         original_maker_quote_balance = self.connectors[self.exchange].get_balance(self.quote_asset) 
         
-        #Convert to Quote asset at best sell into bid price
+        #Convert to Quote asset at best buy into ask price
         original_quote_balance_in_base = original_maker_quote_balance / top_ask_price
 
         # Get the total balance in base
