@@ -1447,6 +1447,7 @@ class SimplePMM(ScriptStrategyBase):
         # Calculate the target amounts to hold in base and quote assets
         target_base_balance = total_balance_in_base * percent_base_to_hold
         target_quote_balance = total_balance_in_base * percent_quote_to_hold
+        print(top_ask_price)
         print(total_balance_in_base)
         print(target_base_balance)
         
