@@ -717,7 +717,7 @@ class SimplePMM(ScriptStrategyBase):
     #Maximum amount of orders  Bid + Ask
     maximum_orders = 170
 
-    inv_target_percent = Decimal(0.05)   
+    inv_target_percent = Decimal(0)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
     order_shape_factor = Decimal(2.0) 
