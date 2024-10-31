@@ -1975,14 +1975,14 @@ class SimplePMM(ScriptStrategyBase):
         price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
 
         if q > 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)#, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)#, deepest_ask)
         if q < 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)#, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)#, deepest_ask)
         if q == 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)#, deepest_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)#, deepest_ask)
 
 
         if optimal_bid_price <= 0 :
