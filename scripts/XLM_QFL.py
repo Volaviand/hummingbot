@@ -1794,11 +1794,9 @@ class SimplePMM(ScriptStrategyBase):
 
         ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
-        vwap_bid, vwap_ask = self.get_vwap_bid_ask()
 
-        deepest_bid = min(vwap_bid, top_bid_price)
-        deepest_ask = max(vwap_ask, top_ask_price)
-
+        # Specified Volume Depth VWAP in the order book
+        depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
 
         # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
         bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(
@@ -1815,14 +1813,14 @@ class SimplePMM(ScriptStrategyBase):
         price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
 
         if q > 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)#, depth_vwap_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)#, depth_vwap_ask)
         if q < 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)#, depth_vwap_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)#, depth_vwap_ask)
         if q == 0:
-            optimal_bid_price = min( optimal_bid_price, price_above_bid, deepest_bid)
-            optimal_ask_price = max( optimal_ask_price, price_below_ask, deepest_ask)
+            optimal_bid_price = min( optimal_bid_price, price_above_bid)#, depth_vwap_bid)
+            optimal_ask_price = max( optimal_ask_price, price_below_ask)#, depth_vwap_ask)
 
 
         if optimal_bid_price <= 0 :
