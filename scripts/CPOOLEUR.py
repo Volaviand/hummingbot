@@ -1135,7 +1135,7 @@ class SimplePMM(ScriptStrategyBase):
                 # Calculate order size for this iteration
                 if remaining_balance >= self.max_order_amount:
                     current_order_size = self.max_order_amount  # Fill up to max size
-                elif remaining_balance >= self.order_amount:
+                elif remaining_balance >= self.min_order_size_bid:
                     current_order_size = remaining_balance  # Fill only remaining balance if between min and max
                 else:
                     break  # Exit if remaining balance is below minimum size
@@ -1166,7 +1166,7 @@ class SimplePMM(ScriptStrategyBase):
                 # Calculate order size for this iteration
                 if remaining_balance_ask >= self.max_order_amount:
                     current_order_size_ask = self.max_order_amount  # Fill up to max size
-                elif remaining_balance_ask >= self.order_amount:
+                elif remaining_balance_ask >= self.min_order_size_ask:
                     current_order_size_ask = remaining_balance_ask  # Fill only remaining balance if between min and max
                 else:
                     break  # Exit if remaining balance is below minimum size
