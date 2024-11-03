@@ -703,6 +703,7 @@ class SimplePMM(ScriptStrategyBase):
     #order_refresh_time = 30
     quote_order_amount = Decimal(6.0)
     order_amount = Decimal(33)
+    max_order_amount = Decimal(100)
     min_order_size_bid = Decimal(0)
     min_order_size_ask = Decimal(0)
 
@@ -1128,8 +1129,19 @@ class SimplePMM(ScriptStrategyBase):
         for level in range(num_levels):
             # Adjust buy price and create buy order
             if buy_price <= bid_reservation_price:
-                # Check if the cumulative order size plus the current order size exceeds the available balance
-                if cumulative_order_size_bid + order_size_bid <= quote_balance_in_base:
+                # Track remaining balance for each order size decision
+                remaining_balance = quote_balance_in_base - cumulative_order_size_bid
+
+                # Calculate order size for this iteration
+                if remaining_balance >= self.max_order_amount:
+                    current_order_size = self.max_order_amount  # Fill up to max size
+                elif remaining_balance >= self.order_amount:
+                    current_order_size = remaining_balance  # Fill only remaining balance if between min and max
+                else:
+                    break  # Exit if remaining balance is below minimum size
+
+                # Place order if within inventory limits
+                if cumulative_order_size_bid + current_order_size <= quote_balance_in_base:
                     buy_order = OrderCandidate(
                         trading_pair=self.trading_pair,
                         is_maker=True,
@@ -1146,8 +1158,19 @@ class SimplePMM(ScriptStrategyBase):
                         msg = (f" order_size_bid |{order_size_bid}| below minimum_size for bid order |{self.min_order_size_bid}| ")
                         self.log_with_clock(logging.INFO, msg)
 
-            # Adjust sell price and create sell order
+             # Adjust sell price and create sell order
             if sell_price >= ask_reservation_price:
+                # Track remaining balance for sell side
+                remaining_balance_ask = maker_base_balance - cumulative_order_size_ask
+
+                # Calculate order size for this iteration
+                if remaining_balance_ask >= self.max_order_amount:
+                    current_order_size_ask = self.max_order_amount  # Fill up to max size
+                elif remaining_balance_ask >= self.order_amount:
+                    current_order_size_ask = remaining_balance_ask  # Fill only remaining balance if between min and max
+                else:
+                    break  # Exit if remaining balance is below minimum size
+
                 # Check if the cumulative order size plus the current order size exceeds the available balance
                 if cumulative_order_size_ask + order_size_ask <= maker_base_balance:
                     sell_order = OrderCandidate(
@@ -1654,7 +1677,7 @@ class SimplePMM(ScriptStrategyBase):
         #to market overcorrection
 
         # Max order size, based on 25th percentile over period ()
-        maximum_order_size = Decimal(100.0)
+        maximum_order_size = self.max_order_amount
         if q > 0 :
             # In order to balance the base, I want to sell more of ask to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
