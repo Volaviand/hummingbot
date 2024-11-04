@@ -1707,7 +1707,7 @@ class SimplePMM(ScriptStrategyBase):
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                     self.trading_pair, (floor(Decimal(min_above) / ask_price_quantum) - 1) * ask_price_quantum
                                 )
-                                break
+                                
 
                     elif price_multiplier < 1:
                         base_increment = (1 - price_multiplier) / max_orders
@@ -1728,7 +1728,7 @@ class SimplePMM(ScriptStrategyBase):
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                     self.trading_pair, (ceil(Decimal(max_below) / bid_price_quantum) + 1) * bid_price_quantum
                                 )
-                                break
+                                
 
                 else:
                     if price_multiplier > 1:
