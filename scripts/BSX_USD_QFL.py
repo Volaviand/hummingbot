@@ -821,15 +821,15 @@ class SimplePMM(ScriptStrategyBase):
         # Initialize the async order book data source
         self.orderbook_source = KrakenAPIOrderBookDataSource(self.trading_pair)
     
-    def fetch_orderbook_data(self):
-        # Get the current event loop or create a new one if none exists
-        loop = asyncio.get_event_loop()
+    # def fetch_orderbook_data(self):
+    #     # Get the current event loop or create a new one if none exists
+    #     loop = asyncio.get_event_loop()
         
-        # Use `run_until_complete` to call the async function synchronously on the instance
-        result = loop.run_until_complete(self.orderbook_source._order_book_snapshot(self.trading_pair))
+    #     # Use `run_until_complete` to call the async function synchronously on the instance
+    #     result = loop.run_until_complete(self.orderbook_source._order_book_snapshot(self.trading_pair))
         
-        print(result)
-        return result
+    #     print(result)
+    #     return result
 
 
     def call_trade_history(self, file_name='trades_BSX_USD.csv'):
@@ -1062,9 +1062,10 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
+            
             # Use asyncio.run to execute the async method synchronously
-            orderbook_data = self.fetch_orderbook_data()        
-            # print(orderbook_data)
+            # orderbook_data = self.fetch_orderbook_data()       
+
             # self.cancel_all_orders()
             self.cancel_bid_orders()
             self.cancel_ask_orders()
