@@ -703,7 +703,7 @@ class SimplePMM(ScriptStrategyBase):
     #order_refresh_time = 30
     quote_order_amount = Decimal(6.0)
     order_amount = Decimal(33)
-    max_order_amount = Decimal(100)
+    max_order_amount = Decimal(200)
     min_order_size_bid = Decimal(0)
     min_order_size_ask = Decimal(0)
 
@@ -1590,21 +1590,32 @@ class SimplePMM(ScriptStrategyBase):
             max_full_orders = calculate_max_orders(min_order_size, max_order_size)
             max_full_distance = max_levels * max_full_orders
             max_full_distance = int(max_full_distance)
+
             # If min and max sizes are the same, only place that order size
             if min_order_size == max_order_size:
                 for level in range(max_full_distance):
+                    remaining_balance = balance - total_size
+
                     if total_size + min_order_size > balance:
+                        if remaining_balance >= min_order_size:  # This is our final order
+                            order_levels.loc[level] = {'price': None, 'size': remaining_balance}
+                            total_size += remaining_balance
                         break  # Exit if we can't place another valid order
-                    
+
                     order_levels.loc[level] = {'price': None, 'size': min_order_size}
                     total_size += min_order_size
             else:
                 for level in range(max_full_distance):
-                    if total_size + min_order_size > balance:
-                        break  # Exit if we can't place another valid order
-                    
-                    order_size = min_order_size #+ (level * ((max_order_size - min_order_size) / (max_levels - 1)))
-                    order_size = min(order_size, balance - total_size)  # Prevent overshooting the balance
+                    remaining_balance = balance - total_size
+
+                    if remaining_balance < min_order_size:  # If remaining balance is too small, use it as the last order
+                        if remaining_balance > 0:
+                            order_levels.loc[level] = {'price': None, 'size': remaining_balance}
+                            total_size += remaining_balance
+                        break
+
+                    order_size = min_order_size  # + (level * ((max_order_size - min_order_size) / (max_levels - 1)))
+                    order_size = min(order_size, remaining_balance)  # Prevent overshooting the balance
                     order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
 
                     if order_size >= min_order_size:
@@ -1612,6 +1623,7 @@ class SimplePMM(ScriptStrategyBase):
                         total_size += order_size
 
             return order_levels, max_full_orders
+
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
