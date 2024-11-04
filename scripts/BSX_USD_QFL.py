@@ -1702,12 +1702,12 @@ class SimplePMM(ScriptStrategyBase):
 
                         # Find the next price above the calculated price from asks_df (iterate from lowest to highest)
                         if not asks_df.empty:
-                            for index, row in asks_df.iterrows():  # Normal iteration to find the lowest price above
-                                if row['Price'] > order_levels.at[i, 'price']:
-                                    order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, (floor(Decimal(row['Price']) / ask_price_quantum) - 1) * ask_price_quantum
-                                    )
-                                    break
+                            min_above = asks_df[asks_df['Price'] > order_levels.at[i, 'price']]['Price'].min()
+                            if pd.notna(min_above):  # Ensure there's a valid minimum
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, (floor(Decimal(min_above) / ask_price_quantum) - 1) * ask_price_quantum
+                                )
+                                break
 
                     elif price_multiplier < 1:
                         base_increment = (1 - price_multiplier) / max_orders
@@ -1723,12 +1723,12 @@ class SimplePMM(ScriptStrategyBase):
                             )
                         # Find the next price below the calculated price from bids_df (iterate from highest to lowest)
                         if not bids_df.empty:
-                            for index, row in bids_df[::-1].iterrows():  # Reverse iteration to find the highest price below
-                                if row['Price'] < order_levels.at[i, 'price']:
-                                    order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, (ceil(Decimal(row['Price']) / bid_price_quantum) + 1) * bid_price_quantum
-                                    )
-                                    break
+                            max_below = bids_df[bids_df['Price'] < order_levels.at[i, 'price']]['Price'].max()
+                            if pd.notna(max_below):  # Ensure there's a valid maximum
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, (ceil(Decimal(max_below) / bid_price_quantum) + 1) * bid_price_quantum
+                                )
+                                break
 
                 else:
                     if price_multiplier > 1:
