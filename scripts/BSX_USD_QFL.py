@@ -1089,7 +1089,7 @@ class SimplePMM(ScriptStrategyBase):
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
 
-            # Use asyncio.run to execute the async method synchronously
+            # Call Order Book Data
             asks_df, bids_df = self.get_kraken_order_book(self.history_market)        
             print(asks_df.head())
             print(bids_df.tail())
