@@ -1897,13 +1897,14 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
         optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
 
-        ## Market Depth Check to allow for hiding further in the orderbook by the volume vwap
-        # top_bid_price, top_ask_price = self.get_current_top_bid_ask()
+        # Market Depth Check to allow for hiding further in the orderbook by the volume vwap
+        top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
-        # # Specified Volume Depth VWAP in the order book
-        depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
-        top_bid_price = depth_vwap_bid
-        top_ask_price = depth_vwap_ask
+        # # # Specified Volume Depth VWAP in the order book
+        # depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
+        # top_bid_price = depth_vwap_bid
+        # top_ask_price = depth_vwap_ask
+
         # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
         bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(
             self.trading_pair,
