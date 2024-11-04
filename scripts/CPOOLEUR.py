@@ -1622,7 +1622,7 @@ class SimplePMM(ScriptStrategyBase):
 
                 if price_multiplier > 1:
                     base_increment = (price_multiplier - 1) / max_orders
-                    increment_multiplier = base_increment / (1 + np.log(i % max_orders + 1))  # Logarithmic adjustment
+                    increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))  # Logarithmic adjustment
 
                     if i % max_orders == 0 and i != 0:  # At the start of a new group
                         # Use full multiplier
@@ -1637,7 +1637,7 @@ class SimplePMM(ScriptStrategyBase):
 
                 elif price_multiplier < 1:
                     base_increment = (1 - price_multiplier) / max_orders
-                    increment_multiplier = base_increment / (1 + np.log(i % max_orders + 1))
+                    increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
 
                     if i % max_orders == 0 and i != 0:
                         # Use full multiplier
