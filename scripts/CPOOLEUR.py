@@ -1428,8 +1428,8 @@ class SimplePMM(ScriptStrategyBase):
         #     bid_depth = bid_volume_cdf_value
         #     ask_depth = ask_volume_cdf_value
 
-        bid_depth = 1000 # self.order_amount
-        ask_depth = 1000 # self.order_amount
+        bid_depth = self.max_order_amount # self.order_amount
+        ask_depth = self.max_order_amount # self.order_amount
         self.b_d = bid_depth # bid_depth
         self.a_d = ask_depth # ask_depth
         # msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
