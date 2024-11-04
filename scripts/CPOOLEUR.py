@@ -1577,7 +1577,7 @@ class SimplePMM(ScriptStrategyBase):
         order_levels = pd.DataFrame(columns=['price', 'size'])
 
         def calculate_max_orders(min_order_size, max_order_size ):
-            if minimum_order_size <= 0:
+            if min_order_size <= 0:
                 raise ValueError("Order size must be greater than zero.")
             
             # Calculate the maximum number of full orders that can fit
