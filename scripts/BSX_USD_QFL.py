@@ -31,6 +31,7 @@ from hummingbot.connector.budget_checker import BudgetChecker
 
 ## Order Book Data
 from hummingbot.connector.exchange.kraken.kraken_api_order_book_data_soure import KrakenAPIOrderBookDataSource
+import asyncio
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
@@ -756,7 +757,6 @@ class SimplePMM(ScriptStrategyBase):
 
         # Define Market Parameters and Settings
         self.Kraken_QFL = KRAKENQFL('BSXUSD_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
-        self.OrderBook = KrakenAPIOrderBookDataSource(self.trading_pair)
 
         # Cooldown for how long an order stays in place. 
         self.create_timestamp = 0
@@ -817,6 +817,12 @@ class SimplePMM(ScriptStrategyBase):
         self._last_sell_price = 0
 
         self.trade_position_text = ""
+
+        # Define an async wrapper to run the method
+        async def fetch_orderbook_data():
+            data_source = KrakenAPIOrderBookDataSource(self.trading_pair)
+            return await data_source._order_book_snapshot(self.trading_pair)
+
 
     def call_trade_history(self, file_name='trades_BSX_USD.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
@@ -1048,7 +1054,8 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
-            orderbook_data = self.OrderBook._order_book_snapshot(self.trading_pair)
+            # Use asyncio.run to execute the async method synchronously
+            orderbook_data = asyncio.run(fetch_orderbook_data())            
             print(orderbook_data)
             # self.cancel_all_orders()
             self.cancel_bid_orders()
