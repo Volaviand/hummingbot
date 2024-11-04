@@ -1109,7 +1109,7 @@ class SimplePMM(ScriptStrategyBase):
         self.a_r_p = ask_reservation_price
 
         # Generate order sizes lists for both buy and sell sides
-        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=5)  # Limit to 5 levels as an example
+        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=10)  # Limit to 5 levels as an example
 
         # Initial prices
         buy_price = optimal_bid_price 
