@@ -818,10 +818,10 @@ class SimplePMM(ScriptStrategyBase):
 
         self.trade_position_text = ""
 
-        # Define an async wrapper to run the method
-        async def fetch_orderbook_data():
-            data_source = KrakenAPIOrderBookDataSource(self.trading_pair)
-            return await data_source._order_book_snapshot(self.trading_pair)
+    # Define an async wrapper to run the method
+    async def fetch_orderbook_data():
+        data_source = KrakenAPIOrderBookDataSource(self.trading_pair)
+        return await data_source._order_book_snapshot(self.trading_pair)
 
 
     def call_trade_history(self, file_name='trades_BSX_USD.csv'):
