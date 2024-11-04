@@ -1709,7 +1709,7 @@ class SimplePMM(ScriptStrategyBase):
                             for index, row in bids_df[::-1].iterrows():  # Reverse iteration
                                 if row['Price'] < order_levels.at[i, 'price']:
                                     order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, row['Price'] + bid_price_quantum
+                                        Decimal(self.trading_pair, row['Price']) + bid_price_quantum
                                     )
                                     break
 
@@ -1731,7 +1731,7 @@ class SimplePMM(ScriptStrategyBase):
                             for index, row in asks_df.iterrows():  # Normal iteration
                                 if row['Price'] > order_levels.at[i, 'price']:
                                     order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, row['Price'] - ask_price_quantum
+                                        Decimal(self.trading_pair, row['Price']) - ask_price_quantum
                                     )
                                     break
                 else:
