@@ -1588,7 +1588,8 @@ class SimplePMM(ScriptStrategyBase):
             total_size = 0
 
             max_full_orders = calculate_max_orders(min_order_size, max_order_size)
-            max_full_distance = max_levels * int(max_full_orders)
+            max_full_distance = max_levels * max_full_orders
+            max_full_distance = int(max_full_distance)
             # If min and max sizes are the same, only place that order size
             if min_order_size == max_order_size:
                 for level in range(max_full_distance):
