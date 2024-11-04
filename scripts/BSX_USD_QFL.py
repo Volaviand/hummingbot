@@ -1092,7 +1092,8 @@ class SimplePMM(ScriptStrategyBase):
 
             # Use asyncio.run to execute the async method synchronously
             asks_df, bids_df = self.get_kraken_order_book(self.history_market)        
-
+            print(asks_df.head())
+            print(bids_df.tail())
             # self.cancel_all_orders()
             self.cancel_bid_orders()
             self.cancel_ask_orders()
