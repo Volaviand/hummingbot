@@ -1655,7 +1655,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Example usage in your main function or workflow
         bid_order_levels, ask_order_levels = create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels)
-
+        return bid_order_levels, ask_order_levels
 
 
 
