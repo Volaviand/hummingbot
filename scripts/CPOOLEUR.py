@@ -1578,22 +1578,37 @@ class SimplePMM(ScriptStrategyBase):
 
         # Calculate order sizes
         def calculate_dynamic_order_sizes(balance, min_order_size, max_order_size, max_levels):
+            order_levels = pd.DataFrame(columns=['price', 'size'])  # Create an empty DataFrame for order levels
             total_size = 0
-            for level in range(max_levels):
-                # Incrementally determine the order size for each level
-                if total_size + min_order_size > balance:
-                    break
-                
-                order_size = min_order_size + (level * ((max_order_size - min_order_size) / (max_levels - 1)))
-                order_size = min(order_size, balance - total_size)  # Prevent overshooting the balance
-                order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
-                
-                if order_size >= min_order_size:
-                    total_size += order_size
-                    order_levels.loc[level] = {
-                        'price': None,  # Placeholder for price
-                        'size': order_size
-                    }
+
+            if min_order_size == max_order_size:
+                # If min and max are the same, we can only place that order size
+                for level in range(max_levels):
+                    if balance >= min_order_size:
+                        order_levels = order_levels.append({'price': None, 'size': min_order_size}, ignore_index=True)
+                        total_size += min_order_size
+                    else:
+                        break
+            else:
+                for level in range(max_levels):
+                    # Incrementally determine the order size for each level
+                    order_size = min_order_size + (level * ((max_order_size - min_order_size) / (max_levels - 1)))
+
+                    if total_size + order_size > balance:
+                        order_size = balance - total_size  # Prevent overshooting the balance
+
+                    if order_size < min_order_size:
+                        break  # Exit if we can't place a valid order
+                    
+                    order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
+
+                    if order_size >= min_order_size:
+                        order_levels.loc[level] = {
+                            'price': None,  # Placeholder for price
+                            'size': order_size
+                        }
+                        total_size += order_size
+
             return order_levels
 
         # Depending on the cycle, calculate order sizes
@@ -1626,6 +1641,7 @@ class SimplePMM(ScriptStrategyBase):
         # Populate prices based on the order levels calculated
         for i in range(len(bid_order_levels)):
             bid_order_levels.at[i, 'price'] = optimal_bid_price * (bp ** (i + 1))
+        for i in range(len(ask_order_levels)):
             ask_order_levels.at[i, 'price'] = optimal_ask_price * (sp ** (i + 1))
 
         # Log insufficient balance for clarity
