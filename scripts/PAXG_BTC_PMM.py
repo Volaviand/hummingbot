@@ -703,7 +703,7 @@ class SimplePMM(ScriptStrategyBase):
     #order_refresh_time = 30
     quote_order_amount = Decimal(0.0001)
     order_amount = Decimal(0.002)
-    max_order_amount = Decimal(0.008)
+    max_order_amount = Decimal(0.025)
     min_order_size_bid = Decimal(0)
     min_order_size_ask = Decimal(0)
 
@@ -752,7 +752,7 @@ class SimplePMM(ScriptStrategyBase):
         super().__init__(connectors)
 
         # Define Market Parameters and Settings
-        self.Kraken_QFL = KRAKENQFL('XLMEUR_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
+        self.Kraken_QFL = KRAKENQFL('PAXGXBT_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
 
 
         # Cooldown for how long an order stays in place. 
@@ -1261,7 +1261,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_XLM')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
 
 
@@ -1588,7 +1588,7 @@ class SimplePMM(ScriptStrategyBase):
         ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
         # Call Trade History
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_XLM')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
         s_bid = self._bid_baseline
         s_ask = self._ask_baseline
@@ -1797,7 +1797,7 @@ class SimplePMM(ScriptStrategyBase):
         
         #self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_XLM')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
@@ -1986,7 +1986,7 @@ class SimplePMM(ScriptStrategyBase):
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_XLM')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
         is_buy_data = breakeven_buy_price > 0
         is_sell_data = breakeven_sell_price > 0
