@@ -1016,8 +1016,7 @@ class SimplePMM(ScriptStrategyBase):
             ### Call Historical Calculations
             csv_df = self.Kraken_QFL.call_csv_history()
             api_df = self.Kraken_QFL.call_kraken_ohlc_data()
-            orderbook_data = self.OrderBook._order_book_snapshot(self.trading_pair)
-            print(orderbook_data)
+
             if csv_df is not None and not csv_df.empty:
                 # print(f"CSV DF :: \n{csv_df}")
                 if api_df is not None and not api_df.empty:
@@ -1049,6 +1048,8 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
+            orderbook_data = self.OrderBook._order_book_snapshot(self.trading_pair)
+            print(orderbook_data)
             # self.cancel_all_orders()
             self.cancel_bid_orders()
             self.cancel_ask_orders()
