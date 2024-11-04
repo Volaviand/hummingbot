@@ -30,7 +30,7 @@ from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
 from hummingbot.connector.budget_checker import BudgetChecker
 
 ## Order Book Data
-from hummingbot.connector.exchange.kraken.kraken_api_order_book_data_soure import KrakenAPIOrderBookDataSource
+from hummingbot.connector.exchange.kraken.kraken_api_order_book_data_source import KrakenAPIOrderBookDataSource
 import asyncio
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
