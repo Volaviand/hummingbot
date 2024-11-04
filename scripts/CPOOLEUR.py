@@ -1109,7 +1109,7 @@ class SimplePMM(ScriptStrategyBase):
         self.a_r_p = ask_reservation_price
 
         # Generate order sizes lists for both buy and sell sides
-        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=10)  # Limit to 5 levels as an example
+        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=6)  # Limit to 5 levels as an example
 
         # Initial prices
         buy_price = optimal_bid_price 
@@ -1620,13 +1620,13 @@ class SimplePMM(ScriptStrategyBase):
                     increment_multipler = (price_multiplier - 1) / max_orders
                     order_levels.at[i, 'price'] = \
                     self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
-                    starting_price * (price_multiplier + (increment_multipler * i )))
+                    starting_price * (1 + (increment_multipler * i )))
 
                 if price_multiplier < 1:
                     increment_multipler =  (1 - price_multiplier )/ max_orders
                     order_levels.at[i, 'price'] = \
                     self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
-                    starting_price * (price_multiplier - (increment_multipler * i )))
+                    starting_price * (1 - (increment_multipler * i )))
 
             return order_levels
 
