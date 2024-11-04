@@ -1619,12 +1619,17 @@ class SimplePMM(ScriptStrategyBase):
 
             for i in range(len(order_levels)):
                 if price_multiplier > 1:
-                    increment_multipler = (1 - price_multiplier) / max_orders
-                    order_levels.at[i, 'price'] = starting_price * (price_multiplier + (increment_multipler * i ))
-                if price_multiplier < 1:
-                    increment_multipler =  (price_multiplier - 1)/ max_orders
+                    increment_multipler = (price_multiplier - 1) / max_orders
+                    order_levels.at[i, 'price'] = \
+                    self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
+                    starting_price * (price_multiplier + (increment_multipler * i )))
 
-                    order_levels.at[i, 'price'] = starting_price * (price_multiplier - (increment_multipler * i ))
+                if price_multiplier < 1:
+                    increment_multipler =  (1 - price_multiplier )/ max_orders
+                    order_levels.at[i, 'price'] = \
+                    self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
+                    starting_price * (price_multiplier - (increment_multipler * i )))
+
             return order_levels
 
         # Main logic for determining order sizes and prices
