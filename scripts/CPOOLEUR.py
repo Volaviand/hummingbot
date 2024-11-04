@@ -1612,7 +1612,7 @@ class SimplePMM(ScriptStrategyBase):
                         order_levels.loc[level] = {'price': None, 'size': order_size}
                         total_size += order_size
 
-            return order_levels, max_orders
+            return order_levels, max_full_orders
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
@@ -1620,11 +1620,11 @@ class SimplePMM(ScriptStrategyBase):
             for i in range(len(order_levels)):
                 if price_multiplier > 1:
                     increment_multipler = (1 - price_multiplier) / max_orders
-                    order_levels.at[i, 'price'] = starting_price * (price_multiplier + increment_multipler * (i ))
+                    order_levels.at[i, 'price'] = starting_price * (price_multiplier + (increment_multipler * i ))
                 if price_multiplier < 1:
                     increment_multipler =  (price_multiplier - 1)/ max_orders
 
-                    order_levels.at[i, 'price'] = starting_price * (price_multiplier - increment_multipler * (i ))
+                    order_levels.at[i, 'price'] = starting_price * (price_multiplier - (increment_multipler * i ))
             return order_levels
 
         # Main logic for determining order sizes and prices
