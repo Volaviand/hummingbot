@@ -1727,14 +1727,14 @@ class SimplePMM(ScriptStrategyBase):
                 else:
                     if price_multiplier > 1:
 
-                        order_levels.at[i, 'price'] = starting_price # self.connectors[self.exchange].quantize_order_price(
-                                    #     self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
-                                    # )
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                        self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
+                                    )
                     if price_multiplier < 1:
 
-                        order_levels.at[i, 'price'] = starting_price # self.connectors[self.exchange].quantize_order_price(
-                                    #     self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
-                                    # )
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                        self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
+                                    )
 
             return order_levels
 
