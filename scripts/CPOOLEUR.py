@@ -1109,7 +1109,7 @@ class SimplePMM(ScriptStrategyBase):
         self.a_r_p = ask_reservation_price
 
         # Generate order sizes lists for both buy and sell sides
-        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=6)  # Limit to 5 levels as an example
+        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=7)  # Limit to 5 levels as an example
 
         # Initial prices
         buy_price = optimal_bid_price 
@@ -1588,17 +1588,17 @@ class SimplePMM(ScriptStrategyBase):
             total_size = 0
 
             max_full_orders = calculate_max_orders(min_order_size, max_order_size)
-
+            max_full_distance *= max_levels
             # If min and max sizes are the same, only place that order size
             if min_order_size == max_order_size:
-                for level in range(max_levels):
+                for level in range(max_full_distance):
                     if total_size + min_order_size > balance:
                         break  # Exit if we can't place another valid order
                     
                     order_levels.loc[level] = {'price': None, 'size': min_order_size}
                     total_size += min_order_size
             else:
-                for level in range(max_levels):
+                for level in range(max_full_distance):
                     if total_size + min_order_size > balance:
                         break  # Exit if we can't place another valid order
                     
@@ -1614,22 +1614,40 @@ class SimplePMM(ScriptStrategyBase):
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
-
+            # Assuming max_orders is your reset interval
             for i in range(len(order_levels)):
+                # Determine the current group of orders based on the max orders
+                current_group = i // max_orders
+
                 if price_multiplier > 1:
                     base_increment = (price_multiplier - 1) / max_orders
-                    increment_multiplier = base_increment / (1 + np.log(i + 1))  # Avoid division by zero for the first increment
+                    increment_multiplier = base_increment / (1 + np.log(i % max_orders + 1))  # Logarithmic adjustment
 
-                    order_levels.at[i, 'price'] = \
-                    self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
-                    starting_price * (1 + (increment_multipler * i )))
+                    if i % max_orders == 0 and i != 0:  # At the start of a new group
+                        # Use full multiplier
+                        order_levels.at[i, 'price'] = \
+                            self.connectors[self.exchange].quantize_order_price(self.trading_pair,
+                            starting_price * price_multiplier)  
+                    else:
+                        # Incrementally adjust from the last order price
+                        order_levels.at[i, 'price'] = \
+                            self.connectors[self.exchange].quantize_order_price(self.trading_pair,
+                            order_levels.at[i - 1, 'price'] * (1 + increment_multiplier))
 
-                if price_multiplier < 1:
-                    base_increment =  (1 - price_multiplier )/ max_orders
-                    increment_multiplier = base_increment / (1 + np.log(i + 1))  # Avoid division by zero for the first increment
-                    order_levels.at[i, 'price'] = \
-                    self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
-                    starting_price * (1 - (increment_multipler * i )))
+                elif price_multiplier < 1:
+                    base_increment = (1 - price_multiplier) / max_orders
+                    increment_multiplier = base_increment / (1 + np.log(i % max_orders + 1))
+
+                    if i % max_orders == 0 and i != 0:
+                        # Use full multiplier
+                        order_levels.at[i, 'price'] = \
+                            self.connectors[self.exchange].quantize_order_price(self.trading_pair,
+                            starting_price * price_multiplier)  
+                    else:
+                        # Incrementally adjust from the last order price
+                        order_levels.at[i, 'price'] = \
+                            self.connectors[self.exchange].quantize_order_price(self.trading_pair,
+                            order_levels.at[i - 1, 'price'] * (1 - increment_multiplier))
 
             return order_levels
 
