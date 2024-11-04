@@ -2027,6 +2027,11 @@ class SimplePMM(ScriptStrategyBase):
         optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
         optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
 
+
+        # Calculate the price just above the top bid and just below the top ask (Allow bot to place at widest possible spread)
+        price_above_bid = top_bid_price # (ceil(top_bid_price / bid_price_quantum) + 1) * bid_price_quantum
+        price_below_ask = top_ask_price # (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
+        
         if q > 0:
             optimal_bid_price = min( optimal_bid_price, price_above_bid)#, depth_vwap_bid)
             optimal_ask_price = max( optimal_ask_price, price_below_ask)#, depth_vwap_ask)
