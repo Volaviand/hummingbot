@@ -1083,10 +1083,7 @@ class SimplePMM(ScriptStrategyBase):
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
 
-            # Call Order Book Data
-            asks_df, bids_df = self.get_kraken_order_book(self.history_market)
-            print(asks_df.head())
-            print(bids_df.head())
+
             # self.cancel_all_orders()
             self.cancel_bid_orders()
             self.cancel_ask_orders()
@@ -1105,7 +1102,10 @@ class SimplePMM(ScriptStrategyBase):
                 # Reset the Trade Cycle Execution After Timers End
                 self.trade_in_progress = False
 
-
+                # Call Order Book Data
+                asks_df, bids_df = self.get_kraken_order_book(self.history_market)
+                print(asks_df.head())
+                print(bids_df.head())
 
 
                 # Open Orders if the halt timer is changed to False
