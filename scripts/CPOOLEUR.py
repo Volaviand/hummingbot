@@ -1581,33 +1581,41 @@ class SimplePMM(ScriptStrategyBase):
             order_levels = pd.DataFrame(columns=['price', 'size'])  # Create an empty DataFrame for order levels
             total_size = 0
 
-            # If min and max sizes are the same, only place that order size
-            if min_order_size == max_order_size:
-                for level in range(max_levels):
-                    if total_size + min_order_size > balance:
-                        break  # Exit if we can't place another valid order
-                    
-                    order_levels.loc[level] = {'price': None, 'size': min_order_size}
-                    total_size += min_order_size
-            else:
-                for level in range(max_levels):
-                    if total_size + min_order_size > balance:
-                        break  # Exit if we can't place another valid order
-                    
-                    order_size = min_order_size + (level * ((max_order_size - min_order_size) / (max_levels - 1)))
-                    order_size = min(order_size, balance - total_size)  # Prevent overshooting the balance
-                    order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
+            # Calculate total number of levels we can fill
+            levels_to_fill = balance // min_order_size
+            levels_filled = min(levels_to_fill, max_levels)
+            
+            for level in range(levels_filled):
+                if total_size + min_order_size > balance:
+                    break  # Exit if we can't place another valid order
+                
+                order_levels.loc[level] = {'price': None, 'size': min_order_size}
+                total_size += min_order_size
 
-                    if order_size >= min_order_size:
-                        order_levels.loc[level] = {'price': None, 'size': order_size}
-                        total_size += order_size
+            # Fill remaining levels with max size until balance is exhausted
+            while total_size < balance and len(order_levels) < max_levels:
+                order_size = min(max_order_size, balance - total_size)  # Ensure we don't exceed balance
+                if order_size < min_order_size:
+                    break  # Exit if we can't place a valid order
+                
+                order_levels.loc[len(order_levels)] = {'price': None, 'size': order_size}
+                total_size += order_size
 
             return order_levels
 
         # Function to calculate prices based on the order levels
-        def calculate_prices(order_levels, starting_price, price_multiplier):
+        def calculate_prices(order_levels, starting_price, profit_percentage, min_order_size):
+            # Calculate the price increment based on profit percentage
+            price_increment = starting_price * profit_percentage
+            
             for i in range(len(order_levels)):
-                order_levels.at[i, 'price'] = starting_price * (price_multiplier ** (i + 1))
+                if i == 0:
+                    order_levels.at[i, 'price'] = starting_price + price_increment  # First level price
+                else:
+                    # Decrease the profit percentage for subsequent levels
+                    adjusted_increment = price_increment * (min_order_size / order_levels['size'][i-1])
+                    order_levels.at[i, 'price'] = order_levels['price'][i-1] + adjusted_increment
+            
             return order_levels
 
         # Main logic for determining order sizes and prices
