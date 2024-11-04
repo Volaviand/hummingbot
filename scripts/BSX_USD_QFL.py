@@ -1675,13 +1675,9 @@ class SimplePMM(ScriptStrategyBase):
             # Retrieve current order book data
             asks_df, bids_df = self.get_kraken_order_book(self.history_market)
 
-            # Get the top prices from the order book for quantum calculations
-            top_bid_price = bids_df['Price'].iloc[0] if not bids_df.empty else starting_price
-            top_ask_price = asks_df['Price'].iloc[0] if not asks_df.empty else starting_price
-
             # Calculate the quantum for both bid and ask prices
-            bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, top_bid_price)
-            ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, top_ask_price)
+            bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
+            ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
 
             # Assuming max_orders is your reset interval
             for i in range(len(order_levels)):
@@ -1704,12 +1700,12 @@ class SimplePMM(ScriptStrategyBase):
                                 self.trading_pair, order_levels.at[i - 1, 'price'] * (1 + increment_multiplier)
                             )
 
-                        # Find the next price below the calculated price from bids_df (iterate from lowest price to highest)
-                        if not bids_df.empty:
-                            for index, row in bids_df[::-1].iterrows():  # Reverse iteration
-                                if row['Price'] < order_levels.at[i, 'price']:
+                        # Find the next price above the calculated price from asks_df (iterate from lowest to highest)
+                        if not asks_df.empty:
+                            for index, row in asks_df.iterrows():  # Normal iteration to find the lowest price above
+                                if row['Price'] > order_levels.at[i, 'price']:
                                     order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        Decimal(self.trading_pair, row['Price']) + bid_price_quantum
+                                        self.trading_pair, (floor(Decimal(row['Price']) / ask_price_quantum) - 1) * ask_price_quantum
                                     )
                                     break
 
@@ -1725,19 +1721,29 @@ class SimplePMM(ScriptStrategyBase):
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, order_levels.at[i - 1, 'price'] * (1 - increment_multiplier)
                             )
-
-                        # Find the next price above the calculated price from asks_df (iterate from lowest price to highest)
-                        if not asks_df.empty:
-                            for index, row in asks_df.iterrows():  # Normal iteration
-                                if row['Price'] > order_levels.at[i, 'price']:
+                        # Find the next price below the calculated price from bids_df (iterate from highest to lowest)
+                        if not bids_df.empty:
+                            for index, row in bids_df[::-1].iterrows():  # Reverse iteration to find the highest price below
+                                if row['Price'] < order_levels.at[i, 'price']:
                                     order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        Decimal(self.trading_pair, row['Price']) - ask_price_quantum
+                                        self.trading_pair, (ceil(Decimal(row['Price']) / bid_price_quantum) + 1) * bid_price_quantum
                                     )
                                     break
+
                 else:
-                    order_levels.at[i, 'price'] = starting_price
+                    if price_multiplier > 1:
+
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                        self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
+                                    )
+                    if price_multiplier < 1:
+
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                        self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
+                                    )
 
             return order_levels
+
 
 
         # Main logic for determining order sizes and prices
