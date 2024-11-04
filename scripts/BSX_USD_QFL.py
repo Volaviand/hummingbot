@@ -29,6 +29,8 @@ from hummingbot.core.event.events import OrderFilledEvent
 from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
 from hummingbot.connector.budget_checker import BudgetChecker
 
+## Order Book Data
+from hummingbot.connector.exchange.kraken.kraken_api_order_book_data_soure import KrakenAPIOrderBookDataSource
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
@@ -754,6 +756,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Define Market Parameters and Settings
         self.Kraken_QFL = KRAKENQFL('BSXUSD_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
+        self.OrderBook = KrakenAPIOrderBookDataSource(self.trading_pair)
 
         # Cooldown for how long an order stays in place. 
         self.create_timestamp = 0
@@ -1013,6 +1016,8 @@ class SimplePMM(ScriptStrategyBase):
             ### Call Historical Calculations
             csv_df = self.Kraken_QFL.call_csv_history()
             api_df = self.Kraken_QFL.call_kraken_ohlc_data()
+            orderbook_data = self.OrderBook._order_book_snapshot(self.trading_pair)
+            print(orderbook_data)
             if csv_df is not None and not csv_df.empty:
                 # print(f"CSV DF :: \n{csv_df}")
                 if api_df is not None and not api_df.empty:
