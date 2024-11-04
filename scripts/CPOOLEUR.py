@@ -814,6 +814,43 @@ class SimplePMM(ScriptStrategyBase):
         self._last_sell_price = 0
 
         self.trade_position_text = ""
+        
+    def get_kraken_order_book(self, pair, count=500):
+        # Define the API endpoint and parameters
+        url = f"https://api.kraken.com/0/public/Depth?pair={pair}&count={count}"
+        
+        # Set headers
+        headers = {
+            'Accept': 'application/json'
+        }
+        
+        # Make the GET request
+        response = requests.get(url, headers=headers)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            data = response.json()
+            # Check for any errors in the response
+            if not data["error"]:
+                order_book = data["result"][pair]
+                
+                # Convert asks and bids to DataFrames and ensure numeric types for Price and Volume
+                asks_df = pd.DataFrame(order_book['asks'], columns=['Price', 'Volume', 'Timestamp'])
+                asks_df['Price'] = pd.to_numeric(asks_df['Price'])
+                asks_df['Volume'] = pd.to_numeric(asks_df['Volume'])
+                asks_df = asks_df.sort_values(by='Price', ascending=False).reset_index(drop=True)
+                
+                bids_df = pd.DataFrame(order_book['bids'], columns=['Price', 'Volume', 'Timestamp'])
+                bids_df['Price'] = pd.to_numeric(bids_df['Price'])
+                bids_df['Volume'] = pd.to_numeric(bids_df['Volume'])
+                
+                return asks_df, bids_df
+            else:
+                print(f"API Error: {data['error']}")
+        else:
+            print(f"HTTP Error: {response.status_code}")
+        
+        return None, None
 
     def call_trade_history(self, file_name='trades_CPOO.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
@@ -1629,42 +1666,75 @@ class SimplePMM(ScriptStrategyBase):
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
+            # Retrieve current order book data
+            asks_df, bids_df = self.get_kraken_order_book(self.history_market)
+
+            # Calculate the quantum for both bid and ask prices
+            bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
+            ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
+
             # Assuming max_orders is your reset interval
             for i in range(len(order_levels)):
                 # Determine the current group of orders based on the max orders
                 current_group = i // max_orders
-                if i>0:
+
+                if i > 0:
+                    # Calculate the initial price based on multipliers
                     if price_multiplier > 1:
                         base_increment = (price_multiplier - 1) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))  # Logarithmic adjustment
 
                         if i % max_orders == 0 and i != 0:  # At the start of a new group
-                            # Use full multiplier
-                            order_levels.at[i, 'price'] = \
-                                self.connectors[self.exchange].quantize_order_price(self.trading_pair,
-                                starting_price * (price_multiplier**current_group))  
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, starting_price * (price_multiplier ** current_group)
+                            )  
                         else:
                             # Incrementally adjust from the last order price
-                            order_levels.at[i, 'price'] = \
-                                self.connectors[self.exchange].quantize_order_price(self.trading_pair,
-                                order_levels.at[i - 1, 'price'] * (1 + increment_multiplier))
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, order_levels.at[i - 1, 'price'] * (1 + increment_multiplier)
+                            )
+
+                        # Find the next price above the calculated price from asks_df (iterate from lowest to highest)
+                        if not asks_df.empty:
+                            min_above = asks_df[asks_df['Price'] > order_levels.at[i, 'price']]['Price'].min()
+                            if pd.notna(min_above):  # Ensure there's a valid minimum
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, (floor(Decimal(min_above) / ask_price_quantum) - 1) * ask_price_quantum
+                                )
+                                
 
                     elif price_multiplier < 1:
                         base_increment = (1 - price_multiplier) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
 
                         if i % max_orders == 0 and i != 0:
-                            # Use full multiplier
-                            order_levels.at[i, 'price'] = \
-                                self.connectors[self.exchange].quantize_order_price(self.trading_pair,
-                                starting_price * (price_multiplier**current_group))  
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, starting_price * (price_multiplier ** current_group)
+                            )  
                         else:
-                            # Incrementally adjust from the last order price
-                            order_levels.at[i, 'price'] = \
-                                self.connectors[self.exchange].quantize_order_price(self.trading_pair,
-                                order_levels.at[i - 1, 'price'] * (1 - increment_multiplier))
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, order_levels.at[i - 1, 'price'] * (1 - increment_multiplier)
+                            )
+                        # Find the next price below the calculated price from bids_df (iterate from highest to lowest)
+                        if not bids_df.empty:
+                            max_below = bids_df[bids_df['Price'] < order_levels.at[i, 'price']]['Price'].max()
+                            if pd.notna(max_below):  # Ensure there's a valid maximum
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, (ceil(Decimal(max_below) / bid_price_quantum) + 1) * bid_price_quantum
+                                )
+                                
+
                 else:
-                    order_levels.at[i, 'price'] = starting_price
+                    if price_multiplier > 1:
+
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                        self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
+                                    )
+                    if price_multiplier < 1:
+
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                        self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
+                                    )
 
             return order_levels
 
@@ -1953,9 +2023,9 @@ class SimplePMM(ScriptStrategyBase):
             top_ask_price
         )
 
-        # Calculate the price just above the top bid and just below the top ask (Allow bot to place at widest possible spread)
-        price_above_bid = (ceil(top_bid_price / bid_price_quantum) + 1) * bid_price_quantum
-        price_below_ask = (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
+        # Spread calculation price vs the minimum profit price for entries
+        optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
+        optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
 
         if q > 0:
             optimal_bid_price = min( optimal_bid_price, price_above_bid)#, depth_vwap_bid)
