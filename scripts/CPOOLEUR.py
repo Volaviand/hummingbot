@@ -1707,8 +1707,8 @@ class SimplePMM(ScriptStrategyBase):
                 msg_a = f"Not Enough Balance for ask trade: {maker_base_balance:.8f}"
                 self.log_with_clock(logging.INFO, msg_a)
 
-            print(bid_order_levels)
-            print(ask_order_levels)
+            # print(bid_order_levels)
+            # print(ask_order_levels)
             return bid_order_levels, ask_order_levels
 
         # Example usage in your main function or workflow
