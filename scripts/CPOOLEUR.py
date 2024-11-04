@@ -1129,42 +1129,40 @@ class SimplePMM(ScriptStrategyBase):
         # Loop through bid levels
         for i in range(len(bid_order_levels)):
             order_size_bid = bid_order_levels.at[i, 'size']
-            if buy_price <= bid_reservation_price and cumulative_order_size_bid + order_size_bid <= quote_balance_in_base:
+            order_price_bid = bid_order_levels.at[i, 'price']  # Use the price directly from the DataFrame
+
+            # Check if there's enough balance to place the order
+            if cumulative_order_size_bid + order_size_bid <= quote_balance_in_base:
                 buy_order = OrderCandidate(
                     trading_pair=self.trading_pair,
                     is_maker=True,
                     order_type=OrderType.LIMIT,
                     order_side=TradeType.BUY,
                     amount=Decimal(order_size_bid),
-                    price=buy_price,
+                    price=order_price_bid,
                     from_total_balances=False
                 )
                 order_counter.append(buy_order)
-                cumulative_order_size_bid += order_size_bid
-
-                # Update buy price for the next level
-                buy_price *= buy_multiplier
-                buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, buy_price)
+                cumulative_order_size_bid += order_size_bid  # Update cumulative order size
 
         # Loop through ask levels
         for i in range(len(ask_order_levels)):
             order_size_ask = ask_order_levels.at[i, 'size']
-            if sell_price >= ask_reservation_price and cumulative_order_size_ask + order_size_ask <= maker_base_balance:
+            order_price_ask = ask_order_levels.at[i, 'price']  # Use the price directly from the DataFrame
+
+            # Check if there's enough balance to place the order
+            if cumulative_order_size_ask + order_size_ask <= maker_base_balance:
                 sell_order = OrderCandidate(
                     trading_pair=self.trading_pair,
                     is_maker=True,
                     order_type=OrderType.LIMIT,
                     order_side=TradeType.SELL,
                     amount=Decimal(order_size_ask),
-                    price=sell_price,
+                    price=order_price_ask,
                     from_total_balances=True
                 )
                 order_counter.append(sell_order)
-                cumulative_order_size_ask += order_size_ask
-
-                # Update sell price for the next level
-                sell_price *= sell_multiplier
-                sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, sell_price)
+                cumulative_order_size_ask += order_size_ask  # Update cumulative order size
 
         return order_counter
 
