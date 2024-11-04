@@ -1617,13 +1617,16 @@ class SimplePMM(ScriptStrategyBase):
 
             for i in range(len(order_levels)):
                 if price_multiplier > 1:
-                    increment_multipler = (price_multiplier - 1) / max_orders
+                    base_increment = (price_multiplier - 1) / max_orders
+                    increment_multiplier = base_increment / (1 + np.log(i + 1))  # Avoid division by zero for the first increment
+
                     order_levels.at[i, 'price'] = \
                     self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
                     starting_price * (1 + (increment_multipler * i )))
 
                 if price_multiplier < 1:
-                    increment_multipler =  (1 - price_multiplier )/ max_orders
+                    base_increment =  (1 - price_multiplier )/ max_orders
+                    increment_multiplier = base_increment / (1 + np.log(i + 1))  # Avoid division by zero for the first increment
                     order_levels.at[i, 'price'] = \
                     self.connectors[self.exchange].quantize_order_price(self.trading_pair, \
                     starting_price * (1 - (increment_multipler * i )))
@@ -1658,7 +1661,7 @@ class SimplePMM(ScriptStrategyBase):
                     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
 
             # Calculate prices for both bid and ask order levels
-            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders )
+            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
             ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
 
             # Log insufficient balance for clarity
