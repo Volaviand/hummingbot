@@ -1094,6 +1094,7 @@ class SimplePMM(ScriptStrategyBase):
         # with open('profiling_results.txt', 'a') as f:
         #     f.write(s.getvalue())
 
+
     def create_proposal(self) -> List[OrderCandidate]:
         bp, sp = self.determine_log_multipliers()
         # Fetch balances and optimal bid/ask prices
@@ -1108,14 +1109,11 @@ class SimplePMM(ScriptStrategyBase):
         self.a_r_p = ask_reservation_price
 
         # Generate order sizes lists for both buy and sell sides
-        bid_order_sizes, ask_order_sizes = self.percentage_order_size( max_levels=5)  # Limit to 5 levels as an example
+        bid_order_levels, ask_order_levels = self.determine_entry_placement(max_levels=5)  # Limit to 5 levels as an example
 
         # Initial prices
         buy_price = optimal_bid_price 
         sell_price = optimal_ask_price
-
-        # Number of levels to create (customizable)
-        num_levels = 5  # e.g., 3 buy and 3 sell levels
 
         # Multiplier values for buy and sell price adjustments
         buy_multiplier = bp  # Reduce buy price by bp%
@@ -1128,12 +1126,9 @@ class SimplePMM(ScriptStrategyBase):
         cumulative_order_size_bid = 0
         cumulative_order_size_ask = 0
 
-        # Store orders
-        order_counter = []
-
-        # Loop through bid levels (up to the number of generated bid order sizes)
-        cumulative_order_size_bid = 0
-        for i, order_size_bid in enumerate(bid_order_sizes):
+        # Loop through bid levels
+        for i in range(len(bid_order_levels)):
+            order_size_bid = bid_order_levels.at[i, 'size']
             if buy_price <= bid_reservation_price and cumulative_order_size_bid + order_size_bid <= quote_balance_in_base:
                 buy_order = OrderCandidate(
                     trading_pair=self.trading_pair,
@@ -1151,9 +1146,9 @@ class SimplePMM(ScriptStrategyBase):
                 buy_price *= buy_multiplier
                 buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, buy_price)
 
-        # Loop through ask levels (up to the number of generated ask order sizes)
-        cumulative_order_size_ask = 0
-        for i, order_size_ask in enumerate(ask_order_sizes):
+        # Loop through ask levels
+        for i in range(len(ask_order_levels)):
+            order_size_ask = ask_order_levels.at[i, 'size']
             if sell_price >= ask_reservation_price and cumulative_order_size_ask + order_size_ask <= maker_base_balance:
                 sell_order = OrderCandidate(
                     trading_pair=self.trading_pair,
@@ -1171,8 +1166,8 @@ class SimplePMM(ScriptStrategyBase):
                 sell_price *= sell_multiplier
                 sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, sell_price)
 
-
         return order_counter
+
 
 
 
@@ -1544,10 +1539,16 @@ class SimplePMM(ScriptStrategyBase):
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
     
-    def percentage_order_size(self, max_levels=5):
+
+    def determine_entry_placement(self, max_levels=5):
         # Retrieve current positions and calculate minimum order sizes
         q, base_balancing_volume, quote_balancing_volume, total_balance_in_base, entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
-       
+        
+        bp, sp = self.determine_log_multipliers()
+
+        optimal_bid_price, optimal_ask_price, bid_reservation_price,\
+        ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+
         # Call Trade History
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_CPOO')
 
@@ -1561,7 +1562,6 @@ class SimplePMM(ScriptStrategyBase):
         is_sell_net = net_value < 0
         is_neutral_net = net_value == 0 
 
-
         # Set initial minimum order sizes based on configuration or calculations
         self.min_order_size_bid = self.order_amount
         self.min_order_size_ask = self.order_amount
@@ -1573,76 +1573,71 @@ class SimplePMM(ScriptStrategyBase):
         # Define maximum order size (25th percentile, for instance)
         max_order_size = self.max_order_amount
 
-        # Helper function to calculate orders for one side (buy or sell) with a max level limit
-        def calculate_order_sizes(balance, min_order_size, max_order_size, max_levels):
-            order_sizes = []
-            cumulative_size = 0
+        # Calculate order sizes for both sides with dynamic levels
+        order_levels = pd.DataFrame(columns=['price', 'size'])
 
-            while cumulative_size < balance and len(order_sizes) < max_levels:
-                remaining_balance = balance - cumulative_size
-                if remaining_balance >= max_order_size:
-                    order_size = max_order_size
-                elif remaining_balance >= min_order_size:
-                    order_size = remaining_balance
-                else:
-                    break  # Exit if remaining balance is below the minimum order size
+        # Calculate order sizes
+        def calculate_dynamic_order_sizes(balance, min_order_size, max_order_size, max_levels):
+            total_size = 0
+            for level in range(max_levels):
+                # Incrementally determine the order size for each level
+                if total_size + min_order_size > balance:
+                    break
+                
+                order_size = min_order_size + (level * ((max_order_size - min_order_size) / (max_levels - 1)))
+                order_size = min(order_size, balance - total_size)  # Prevent overshooting the balance
+                order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
+                
+                if order_size >= min_order_size:
+                    total_size += order_size
+                    order_levels.loc[level] = {
+                        'price': None,  # Placeholder for price
+                        'size': order_size
+                    }
+            return order_levels
 
-                # Quantize and add to list if it meets minimum size
-                quantized_order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
-                if quantized_order_size >= min_order_size:
-                    order_sizes.append(quantized_order_size)
-                    cumulative_size += quantized_order_size
-                else:
-                    break  # No valid order if below min size after quantization
-
-            return order_sizes
-
-
-
-         # There is no data, Use baselines
+        # Depending on the cycle, calculate order sizes
         if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
-            # Calculate order sizes for both buy and sell sides with the max level constraint
-            bid_order_sizes = calculate_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-            ask_order_sizes = calculate_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
-    
-        # You have started a Buy Cycle, use Bid BE
+            # Use baselines
+            bid_order_levels = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
+            ask_order_levels = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+
+        # Additional logic for handling active buy/sell cycles
         elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
-            # Calculate order sizes for both buy and sell sides with the max level constraint
-            bid_order_sizes = calculate_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-            ask_order_sizes = calculate_order_sizes(maker_base_balance, self.min_order_size_ask, max_order_size, max_levels)
+            bid_order_levels = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
+            ask_order_levels = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_order_size, max_levels)
 
-        # You have started a Sell Cycle, use Ask BE
         elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
-            # Calculate order sizes for both buy and sell sides with the max level constraint
-            bid_order_sizes = calculate_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_order_size, max_levels)
-            ask_order_sizes = calculate_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+            bid_order_levels = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_order_size, max_levels)
+            ask_order_levels = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
 
-        # You are mid trade, use net values to determine locations
+        # Mid trade logic
         elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
-            if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
-                # Calculate order sizes for both buy and sell sides with the max level constraint
-                bid_order_sizes = calculate_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-                ask_order_sizes = calculate_order_sizes(maker_base_balance, self.min_order_size_ask, max_order_size, max_levels)
+            if is_buy_net: 
+                bid_order_levels = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
+                ask_order_levels = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_order_size, max_levels)
+            elif is_sell_net: 
+                bid_order_levels = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_order_size, max_levels)
+                ask_order_levels = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+            elif is_neutral_net: 
+                bid_order_levels = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
+                ask_order_levels = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
 
-            elif is_sell_net: # Mid Sell Trade, Sell Above BE, Buy for profit
-                # Calculate order sizes for both buy and sell sides with the max level constraint
-                bid_order_sizes = calculate_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_order_size, max_levels)
-                ask_order_sizes = calculate_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
-
-            elif is_neutral_net: # Price is perfectly neutral, use prospective levels
-                # Calculate order sizes for both buy and sell sides with the max level constraint
-                bid_order_sizes = calculate_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-                ask_order_sizes = calculate_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+        # Populate prices based on the order levels calculated
+        for i in range(len(bid_order_levels)):
+            bid_order_levels.at[i, 'price'] = optimal_bid_price * (bp ** (i + 1))
+            ask_order_levels.at[i, 'price'] = optimal_ask_price * (sp ** (i + 1))
 
         # Log insufficient balance for clarity
-        if not bid_order_sizes:
+        if bid_order_levels['size'].sum() < self.min_order_size_bid:
             msg_b = f"Not Enough Balance for bid trade: {quote_balance_in_base:.8f}"
             self.log_with_clock(logging.INFO, msg_b)
-        if not ask_order_sizes:
+        if ask_order_levels['size'].sum() < self.min_order_size_ask:
             msg_a = f"Not Enough Balance for ask trade: {maker_base_balance:.8f}"
             self.log_with_clock(logging.INFO, msg_a)
 
-        return bid_order_sizes, ask_order_sizes
+        return bid_order_levels, ask_order_levels
+
 
 
     
