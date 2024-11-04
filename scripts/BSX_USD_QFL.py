@@ -1055,7 +1055,7 @@ class SimplePMM(ScriptStrategyBase):
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
             # Use asyncio.run to execute the async method synchronously
-            orderbook_data = asyncio.run(fetch_orderbook_data())            
+            orderbook_data = asyncio.run(self.fetch_orderbook_data())            
             print(orderbook_data)
             # self.cancel_all_orders()
             self.cancel_bid_orders()
