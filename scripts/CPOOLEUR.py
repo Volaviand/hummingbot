@@ -1727,14 +1727,14 @@ class SimplePMM(ScriptStrategyBase):
                 else:
                     if price_multiplier > 1:
 
-                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
-                                    )
+                        order_levels.at[i, 'price'] = starting_price # self.connectors[self.exchange].quantize_order_price(
+                                    #     self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
+                                    # )
                     if price_multiplier < 1:
 
-                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
-                                    )
+                        order_levels.at[i, 'price'] = starting_price # self.connectors[self.exchange].quantize_order_price(
+                                    #     self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
+                                    # )
 
             return order_levels
 
@@ -2031,7 +2031,7 @@ class SimplePMM(ScriptStrategyBase):
         # Calculate the price just above the top bid and just below the top ask (Allow bot to place at widest possible spread)
         price_above_bid = top_bid_price # (ceil(top_bid_price / bid_price_quantum) + 1) * bid_price_quantum
         price_below_ask = top_ask_price # (floor(top_ask_price / ask_price_quantum) - 1) * ask_price_quantum
-        
+
         if q > 0:
             optimal_bid_price = min( optimal_bid_price, price_above_bid)#, depth_vwap_bid)
             optimal_ask_price = max( optimal_ask_price, price_below_ask)#, depth_vwap_ask)
