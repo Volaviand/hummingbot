@@ -1104,7 +1104,7 @@ class SimplePMM(ScriptStrategyBase):
 
                 # Call Order Book Data
                 asks_df, bids_df = self.get_kraken_order_book(self.history_market)
-                print(asks_df.head())
+                print(asks_df.tail())
                 print(bids_df.head())
 
 
