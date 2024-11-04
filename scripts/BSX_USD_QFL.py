@@ -31,7 +31,6 @@ from hummingbot.connector.budget_checker import BudgetChecker
 
 ## Order Book Data
 from hummingbot.connector.exchange.kraken.kraken_api_order_book_data_source import KrakenAPIOrderBookDataSource
-import asyncio
 
 from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
