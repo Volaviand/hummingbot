@@ -815,6 +815,44 @@ class SimplePMM(ScriptStrategyBase):
 
         self.trade_position_text = ""
 
+    def get_kraken_order_book(self, pair, count=500):
+        # Define the API endpoint and parameters
+        url = f"https://api.kraken.com/0/public/Depth?pair={pair}&count={count}"
+        
+        # Set headers
+        headers = {
+            'Accept': 'application/json'
+        }
+        
+        # Make the GET request
+        response = requests.get(url, headers=headers)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            data = response.json()
+            # Check for any errors in the response
+            if not data["error"]:
+                order_book = data["result"][pair]
+                
+                # Convert asks and bids to DataFrames and ensure numeric types for Price and Volume
+                asks_df = pd.DataFrame(order_book['asks'], columns=['Price', 'Volume', 'Timestamp'])
+                asks_df['Price'] = pd.to_numeric(asks_df['Price'])
+                asks_df['Volume'] = pd.to_numeric(asks_df['Volume'])
+                asks_df = asks_df.sort_values(by='Price', ascending=False).reset_index(drop=True)
+                
+                bids_df = pd.DataFrame(order_book['bids'], columns=['Price', 'Volume', 'Timestamp'])
+                bids_df['Price'] = pd.to_numeric(bids_df['Price'])
+                bids_df['Volume'] = pd.to_numeric(bids_df['Volume'])
+                
+                return asks_df, bids_df
+            else:
+                print(f"API Error: {data['error']}")
+        else:
+            print(f"HTTP Error: {response.status_code}")
+        
+        return None, None
+
+
     def call_trade_history(self, file_name='trades_BSX_USD.csv'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
@@ -1044,6 +1082,11 @@ class SimplePMM(ScriptStrategyBase):
 
         # Ensure enough time has passed since the last order fill before placing new orders
         if self.create_timestamp <= self.current_timestamp:
+
+            # Call Order Book Data
+            asks_df, bids_df = self.get_kraken_order_book(self.history_market)
+            print(asks_df.head())
+            print(bids_df.head())
             # self.cancel_all_orders()
             self.cancel_bid_orders()
             self.cancel_ask_orders()
