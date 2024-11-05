@@ -1648,7 +1648,7 @@ class SimplePMM(ScriptStrategyBase):
             num_of_orders = 5
 
             # Handle the case where One side doesn't have an imbalance
-            if balance <= min_order_size:
+            if balance >= min_order_size:
 
                 max_full_orders = Decimal(num_of_orders) 
                 # Control the order depth downwards
