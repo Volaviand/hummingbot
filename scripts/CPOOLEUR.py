@@ -1628,7 +1628,7 @@ class SimplePMM(ScriptStrategyBase):
 
         # Function to calculate order sizes
         def calculate_dynamic_order_sizes(balance, min_order_size, max_order_size, max_levels):
-            order_levels = pd.DataFrame(columns=['price', 'size'])  # Create an empty DataFrame for order levels
+            order_levels = pd.DataFrame(columns=['price', 'size', 'flag'])  # Create an empty DataFrame for order levels
             total_size = 0
 
             # Handle the case where min and max sizes are the same
