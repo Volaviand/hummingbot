@@ -1566,14 +1566,19 @@ class SimplePMM(ScriptStrategyBase):
          
         else :
             ## Adjust this logic just for one sided entries :: if you are completely sold out, then you should not have the capability to sell in the first place. 
-            base_balancing_volume = self.min_order_size_bid
-            quote_balancing_volume = self.min_order_size_ask
+            base_balancing_volume = self.order_amount
+            quote_balancing_volume = self.self.order_amount
+
 
 
 
         
         base_balancing_volume = Decimal(base_balancing_volume)
         quote_balancing_volume = Decimal(quote_balancing_volume)
+        # Quantize order sizes according to the exchange's rules
+        self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, quote_balancing_volume)
+        self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, base_balancing_volume)
+        
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
     
@@ -1600,13 +1605,7 @@ class SimplePMM(ScriptStrategyBase):
         is_sell_net = net_value < 0
         is_neutral_net = net_value == 0 
 
-        # Set initial minimum order sizes based on configuration or calculations
-        self.min_order_size_bid = self.order_amount
-        self.min_order_size_ask = self.order_amount
 
-        # Quantize order sizes according to the exchange's rules
-        self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
-        self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_ask)
 
         # Define maximum order size (25th percentile, for instance)
         max_order_size = self.max_order_amount
