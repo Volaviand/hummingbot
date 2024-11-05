@@ -1645,14 +1645,12 @@ class SimplePMM(ScriptStrategyBase):
             order_levels = pd.DataFrame(columns=['price', 'size', 'flag'])  # Create an empty DataFrame for order levels
             total_size = 0
 
-            num_of_orders = 5
-
             # Handle the case where One side doesn't have an imbalance
             if balance <= min_order_size:
 
-                max_full_orders = Decimal(num_of_orders) 
+                max_full_orders = Decimal(max_levels) 
                 # Control the order depth downwards
-                max_full_distance = int(num_of_orders) 
+                max_full_distance = int(max_levels) 
 
                 trade_direction_flag = True
                 for level in range(max_full_distance):
@@ -1668,7 +1666,7 @@ class SimplePMM(ScriptStrategyBase):
                     # total_size += min_order_size
             else:
                 max_full_orders = calculate_max_orders(min_order_size, max_order_size)
-                max_full_distance = max_levels * max_full_orders
+                max_full_distance = min(max_levels , max_full_orders)
                 max_full_distance = int(max_full_distance)
 
                 trade_direction_flag = False
