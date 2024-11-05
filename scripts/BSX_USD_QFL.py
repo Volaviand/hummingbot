@@ -858,7 +858,7 @@ class SimplePMM(ScriptStrategyBase):
         
         return None, None
 
-    def call_trade_history(self, file_name='trades_CPOO'):
+    def call_trade_history(self, file_name='trades_BSX_USD'):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
         # Start with default values
