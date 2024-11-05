@@ -1776,8 +1776,8 @@ class SimplePMM(ScriptStrategyBase):
             # Find the max of imbalance vs trade cycle completion to place orders. 
             # If they are together in side, they compliment
             # If they are oppsite, they will spread out the orders / play on each other as price moves. 
-            max_quote_q_net = quote_balance_in_base # max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
-            max_base_q_net = maker_base_balance # max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
+            max_quote_q_net = max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
+            max_base_q_net = max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
             # # Depending on the cycle, calculate order sizes
             # if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
             #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balancing_volume, self.min_order_size_bid, max_quote_spread, max_levels)
