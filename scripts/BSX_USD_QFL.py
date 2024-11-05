@@ -1744,7 +1744,7 @@ class SimplePMM(ScriptStrategyBase):
                                 )
                             else:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (increment_multiplier)
+                                    self.trading_pair, starting_price * (increment_multiplier)
                                 )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1770,7 +1770,7 @@ class SimplePMM(ScriptStrategyBase):
                                 )
                             else:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (increment_multiplier)
+                                    self.trading_pair, starting_price * (increment_multiplier)
                                 )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
