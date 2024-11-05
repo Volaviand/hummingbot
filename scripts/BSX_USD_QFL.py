@@ -1742,7 +1742,7 @@ class SimplePMM(ScriptStrategyBase):
 
                         # Apply cumulative increments for logarithmic growth
                         for k in range(1, i + 1):
-                            cumulative_multiplier += sell_base_increment / (1 + Decimal.ln(k + 1))
+                            cumulative_multiplier += sell_base_increment / (1 + Decimal.ln(Decimal(k) + Decimal(1.0)))
 
                         if order_levels.at[i,'flag'] == False:
                             if i % max_orders == 0:
@@ -1774,7 +1774,7 @@ class SimplePMM(ScriptStrategyBase):
 
                         # Apply cumulative increments for logarithmic growth
                         for k in range(1, i + 1):
-                            cumulative_multiplier -= buy_base_increment / (1 + Decimal.ln(k + 1))
+                            cumulative_multiplier -= buy_base_increment / (1 + Decimal.ln(Decimal(k) + Decimal(1.0)))
 
                         if order_levels.at[i,'flag'] == False:
 
