@@ -805,7 +805,10 @@ class SimplePMM(ScriptStrategyBase):
         self.a_d = 0
         self.q_imbalance = 0
         self.inventory_diff = 0
-        
+        self.imbalance_buy_amount = 0
+        self.imbalance_sell_amount = 0
+
+
         self.b_be = 0
         self.s_be = 0
         self.pnl = 0
@@ -1537,8 +1540,19 @@ class SimplePMM(ScriptStrategyBase):
         self.inventory_diff = inventory_difference
 
 
-        # Total Abs(imbalance)
-        total_imbalance = abs(inventory_difference)
+        # Get the total amount that one would need to buy or sell to balance
+        if self.invetory_diff < 0:
+            self.imbalance_buy_amount = abs(self.invetory_diff)
+            self.imbalance_sell_amount = 0
+
+        elif self.inventory_diff > 0:
+            self.imbalance_buy_amount = 0
+            self.imbalance_sell_amount = self.invetory_diff
+
+        else:
+            self.imbalance_buy_amount = 0
+            self.imbalance_sell_amount = 0
+
 
         # Log entry sizes
         def log_transform(q, M_0, k):
@@ -1556,15 +1570,15 @@ class SimplePMM(ScriptStrategyBase):
         if q > 0 :
             # In order to balance the base, I want to sell more of ask to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
-            base_balancing_volume =   total_imbalance # abs(self.min_order_size_ask) *  Decimal.exp(self.order_shape_factor * q) #
-            quote_balancing_volume =  max ( self.order_amount, abs(self.order_amount) * Decimal.exp(-self.order_shape_factor * q) )
+            base_balancing_volume =   abs(self.order_amount) *  Decimal.exp(self.order_shape_factor * q) #
+            quote_balancing_volume =  max(self.order_amount, abs(self.order_amount) * Decimal.exp(-self.order_shape_factor * q) )
 
         elif q < 0 :
-            base_balancing_volume = max( self.order_amount, abs(self.order_amount) *  Decimal.exp(self.order_shape_factor * q))
+            base_balancing_volume = max(self.order_amount, abs(self.order_amount) *  Decimal.exp(self.order_shape_factor * q))
 
             # In order to balance the Quote, I want to buy more of bid to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
-            quote_balancing_volume = total_imbalance # abs(self.min_order_size_bid) * Decimal.exp(self.order_shape_factor * q) 
+            quote_balancing_volume =  abs(self.order_amount) * Decimal.exp(self.order_shape_factor * q) 
 
 
          
@@ -1605,8 +1619,8 @@ class SimplePMM(ScriptStrategyBase):
         is_neutral_net = net_value == 0 
 
         # Set initial minimum order sizes based on the cycle net position to complete a cycle
-        self.min_order_size_bid = self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a < 0 else 0)
-        self.min_order_size_ask = self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a > 0 else 0)
+        self.min_order_size_bid = quote_balancing_volume # self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a < 0 else 0)
+        self.min_order_size_ask = base_balancing_volume # self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a > 0 else 0)
 
         # Quantize order sizes according to the exchange's rules
         self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
@@ -1631,25 +1645,27 @@ class SimplePMM(ScriptStrategyBase):
             order_levels = pd.DataFrame(columns=['price', 'size', 'flag'])  # Create an empty DataFrame for order levels
             total_size = 0
 
-            # Handle the case where min and max sizes are the same
-            if min_order_size == max_order_size:
-                max_full_orders = Decimal(5) # calculate_max_orders(min_order_size, max_order_size)
-                max_full_distance = 5 # max_levels * max_full_orders
-                # Control the order depth downwards to 5 orders
-                max_full_distance = int(5) # int(max_full_distance)
+            num_of_orders = 5
+
+            # Handle the case where One side doesn't have an imbalance
+            if balance <= min_order_size:
+
+                max_full_orders = Decimal(num_of_orders) 
+                # Control the order depth downwards
+                max_full_distance = int(num_of_orders) 
 
                 trade_direction_flag = True
                 for level in range(max_full_distance):
-                    remaining_balance = balance - total_size
+                    # remaining_balance = balance - total_size
 
-                    if remaining_balance < min_order_size:
-                        # Add the remainder to the last order if it's too small to be an independent order
-                        if level > 0:  # Ensure there's at least one previous order
-                            order_levels.at[level - 1, 'size'] += remaining_balance
-                        break  # Exit the loop after adjusting the last order
+                    # if remaining_balance < min_order_size:
+                    #     # Add the remainder to the last order if it's too small to be an independent order
+                    #     if level > 0:  # Ensure there's at least one previous order
+                    #         order_levels.at[level - 1, 'size'] += remaining_balance
+                    #     break  # Exit the loop after adjusting the last order
 
                     order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag' : trade_direction_flag }
-                    total_size += min_order_size
+                    # total_size += min_order_size
             else:
                 max_full_orders = calculate_max_orders(min_order_size, max_order_size)
                 max_full_distance = max_levels * max_full_orders
@@ -1721,16 +1737,19 @@ class SimplePMM(ScriptStrategyBase):
                     if price_multiplier > 1:
                         base_increment = (price_multiplier - 1) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
-
-                        if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
+                        if order_levels.at[i,'flag'] == False:
+                            if i % max_orders == 0:
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, starting_price * (price_multiplier ** i/current_group)
+                                )
+                            else:
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (1 + increment_multiplier)
+                                )
+                        else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
-                        else:
-                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                self.trading_pair, order_levels.at[i - 1, 'price'] * (1 + increment_multiplier)
-                            )
-
                         if not asks_df.empty:
                             min_above_price = find_price_with_cumulative_volume(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
@@ -1743,16 +1762,20 @@ class SimplePMM(ScriptStrategyBase):
                     elif price_multiplier < 1:
                         base_increment = (1 - price_multiplier) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
+                        if order_levels.at[i,'flag'] == False:
 
-                        if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
+                            if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, starting_price * (price_multiplier ** i/current_group)
+                                )
+                            else:
+                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (1 - increment_multiplier)
+                                )
+                        else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
-                        else:
-                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                self.trading_pair, order_levels.at[i - 1, 'price'] * (1 - increment_multiplier)
-                            )
-
                         if not bids_df.empty:
                             max_below_price = find_price_with_cumulative_volume(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
@@ -1785,34 +1808,34 @@ class SimplePMM(ScriptStrategyBase):
             # If they are oppsite, they will spread out the orders / play on each other as price moves. 
             max_quote_q_net = max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
             max_base_q_net = max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
-            # Depending on the cycle, calculate order sizes
-            if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
-                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+            # # Depending on the cycle, calculate order sizes
+            # if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
+            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
-            elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
-                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(base_balancing_volume, self.min_order_size_ask, max_base_spread, max_levels)
+            # elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
+            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
-            elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
-                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balancing_volume, self.min_order_size_bid, max_quote_spread, max_levels)
-                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+            # elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
+            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
-            # Mid trade logic
-            elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
-                if is_buy_net: 
-                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(base_balancing_volume, self.min_order_size_ask, max_base_spread, max_levels)
-                elif is_sell_net: 
-                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balancing_volume, self.min_order_size_bid, max_quote_spread, max_levels)
-                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
-                elif is_neutral_net: 
-                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, self.min_order_size_bid, max_levels)
-                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
+            # # Mid trade logic
+            # elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
+            #     if is_buy_net: 
+            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+            #     elif is_sell_net: 
+            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+            #     elif is_neutral_net: 
+            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
-            # # Simplify code
-            # bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(max_quote_q_net, self.min_order_size_bid, max_quote_spread, max_levels)
-            # ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(max_base_q_net, self.min_order_size_ask, max_base_spread, max_levels)
+            # Simplify code
+            bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+            ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
             # Calculate prices for both bid and ask order levels
             bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
