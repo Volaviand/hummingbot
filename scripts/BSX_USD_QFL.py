@@ -1640,7 +1640,7 @@ class SimplePMM(ScriptStrategyBase):
             max_full_orders = max_order_size // min_order_size
             return max_full_orders
 
-        # Function to calculate order sizes
+        # Function to calculate dynamic order sizes
         def calculate_dynamic_order_sizes(balance, min_order_size, max_order_size, max_levels):
             order_levels = pd.DataFrame(columns=['price', 'size', 'flag'])  # Create an empty DataFrame for order levels
             total_size = 0
@@ -1649,48 +1649,44 @@ class SimplePMM(ScriptStrategyBase):
 
             # Handle the case where One side doesn't have an imbalance
             if balance <= min_order_size:
-
                 max_full_orders = Decimal(num_of_orders) 
-                # Control the order depth downwards
-                max_full_distance = int(num_of_orders) 
+                max_full_distance = int(num_of_orders)
 
                 trade_direction_flag = True
                 for level in range(max_full_distance):
-                    # remaining_balance = balance - total_size
+                    # Assign fixed min_order_size as no imbalance exists
+                    order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag': trade_direction_flag}
 
-                    # if remaining_balance < min_order_size:
-                    #     # Add the remainder to the last order if it's too small to be an independent order
-                    #     if level > 0:  # Ensure there's at least one previous order
-                    #         order_levels.at[level - 1, 'size'] += remaining_balance
-                    #     break  # Exit the loop after adjusting the last order
-
-                    order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag' : trade_direction_flag }
-                    # total_size += min_order_size
             else:
-                max_full_orders = calculate_max_orders(min_order_size, max(max_order_size, balance))
+                max_full_orders = calculate_max_orders(min_order_size, max_order_size)
                 max_full_distance = max_levels * max_full_orders
                 max_full_distance = int(max_full_distance)
 
                 trade_direction_flag = False
-                # Handle the case where min and max sizes differ
                 for level in range(max_full_distance):
                     remaining_balance = balance - total_size
 
+                    # Check if remaining balance is below minimum order size
                     if remaining_balance < min_order_size:
-                        # Add the remainder to the last order if it's too small to be an independent order
+                        # If at least one previous order, add remaining balance to it
                         if level > 0:
                             order_levels.at[level - 1, 'size'] += remaining_balance
-                        break  # Exit loop after adjusting the last order
+                        else:
+                            # If this is the first level, create a single order with full remaining balance
+                            order_levels.loc[level] = {'price': None, 'size': remaining_balance, 'flag': trade_direction_flag}
+                        break  # Exit loop since we've allocated all remaining balance
 
-                    order_size = min_order_size  # You can add custom sizing logic here if desired
-                    order_size = min(order_size, remaining_balance)  # Prevent overshooting the balance
+                    # Calculate order size, ensuring it doesn’t exceed remaining balance
+                    order_size = min(min_order_size, remaining_balance)
                     order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
 
+                    # Only create the order if it meets the minimum size requirement
                     if order_size >= min_order_size:
-                        order_levels.loc[level] = {'price': None, 'size': order_size, 'flag' : trade_direction_flag}
-                        total_size += order_size
+                        order_levels.loc[level] = {'price': None, 'size': order_size, 'flag': trade_direction_flag}
+                        total_size += order_size  # Update the total size
 
             return order_levels, max_full_orders
+
 
 
 
