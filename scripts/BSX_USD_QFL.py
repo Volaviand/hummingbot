@@ -1736,7 +1736,7 @@ class SimplePMM(ScriptStrategyBase):
                 if i > 0:
                     if price_multiplier > 1:
                         base_increment = ((price_multiplier - 1) / max_orders) * i
-                        increment_multiplier = price_multiplier + (Decimal.ln(1 + (base_increment)))
+                        increment_multiplier = 1 + (Decimal.ln(1 + (base_increment)))
                         if order_levels.at[i,'flag'] == False:
                             if i % max_orders == 0:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1744,7 +1744,7 @@ class SimplePMM(ScriptStrategyBase):
                                 )
                             else:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, starting_price * (increment_multiplier)
+                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (increment_multiplier)
                                 )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1761,7 +1761,7 @@ class SimplePMM(ScriptStrategyBase):
 
                     elif price_multiplier < 1:
                         base_increment = ((1 - price_multiplier ) / max_orders) * i
-                        increment_multiplier = price_multiplier - (Decimal.ln(1 + (base_increment)))
+                        increment_multiplier =  1 - (Decimal.ln(1 + (base_increment)))
                         if order_levels.at[i,'flag'] == False:
 
                             if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
@@ -1770,7 +1770,7 @@ class SimplePMM(ScriptStrategyBase):
                                 )
                             else:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, starting_price * (increment_multiplier)
+                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (increment_multiplier)
                                 )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
