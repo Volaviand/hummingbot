@@ -1585,7 +1585,7 @@ class SimplePMM(ScriptStrategyBase):
         ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
         # Call Trade History
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_CPOO')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
 
         s_bid = self._bid_baseline
         s_ask = self._ask_baseline
@@ -1664,6 +1664,33 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
+        def find_price_with_cumulative_volume(df, current_price, quantile=0.5, side='ask'):
+            """
+            Find the next price level that accumulates a specified volume threshold based on a quantile.
+            
+            :param df: DataFrame containing price and volume columns
+            :param current_price: The starting price to compare against
+            :param quantile: Quantile to determine the dynamic volume threshold
+            :param side: 'ask' for prices above, 'bid' for prices below
+            :return: Target price based on cumulative volume
+            """
+            # Calculate the volume threshold based on the specified quantile of volumes in the filtered dataframe
+            dynamic_threshold = df[df['Price'] > current_price]['Volume'].quantile(quantile) if side == 'ask' else \
+                                df[df['Price'] < current_price]['Volume'].quantile(quantile)
+
+            cumulative_volume = 0
+            # Sort prices based on 'ask' or 'bid' side
+            price_vol_df = (df[df['Price'] > current_price].sort_values(by='Price') if side == 'ask'
+                            else df[df['Price'] < current_price].sort_values(by='Price', ascending=False))
+
+            for _, row in price_vol_df.iterrows():
+                cumulative_volume += row['Volume']
+                if cumulative_volume >= dynamic_threshold:
+                    return row['Price']
+
+            return None  # No price level met the cumulative volume
+
+
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
             # Retrieve current order book data
@@ -1673,68 +1700,63 @@ class SimplePMM(ScriptStrategyBase):
             bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
             ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
 
-            # Assuming max_orders is your reset interval
             for i in range(len(order_levels)):
-                # Determine the current group of orders based on the max orders
                 current_group = i // max_orders
 
                 if i > 0:
-                    # Calculate the initial price based on multipliers
                     if price_multiplier > 1:
                         base_increment = (price_multiplier - 1) / max_orders
-                        increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))  # Logarithmic adjustment
+                        increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
 
-                        if i % max_orders == 0 and i != 0:  # At the start of a new group
+                        if i % max_orders == 0:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, starting_price * (price_multiplier ** current_group)
-                            )  
+                            )
                         else:
-                            # Incrementally adjust from the last order price
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, order_levels.at[i - 1, 'price'] * (1 + increment_multiplier)
                             )
 
-                        # Find the next price above the calculated price from asks_df (iterate from lowest to highest)
                         if not asks_df.empty:
-                            min_above = asks_df[asks_df['Price'] > order_levels.at[i, 'price']]['Price'].min()
-                            if pd.notna(min_above):  # Ensure there's a valid minimum
+                            min_above_price = find_price_with_cumulative_volume(
+                                asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
+                            )
+                            if min_above_price:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, (floor(Decimal(min_above) / ask_price_quantum) - 1) * ask_price_quantum
+                                    self.trading_pair, (floor(Decimal(min_above_price) / ask_price_quantum) - 1) * ask_price_quantum
                                 )
-                                
 
                     elif price_multiplier < 1:
                         base_increment = (1 - price_multiplier) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
 
-                        if i % max_orders == 0 and i != 0:
+                        if i % max_orders == 0:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, starting_price * (price_multiplier ** current_group)
-                            )  
+                            )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, order_levels.at[i - 1, 'price'] * (1 - increment_multiplier)
                             )
-                        # Find the next price below the calculated price from bids_df (iterate from highest to lowest)
+
                         if not bids_df.empty:
-                            max_below = bids_df[bids_df['Price'] < order_levels.at[i, 'price']]['Price'].max()
-                            if pd.notna(max_below):  # Ensure there's a valid maximum
+                            max_below_price = find_price_with_cumulative_volume(
+                                bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
+                            )
+                            if max_below_price:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, (ceil(Decimal(max_below) / bid_price_quantum) + 1) * bid_price_quantum
+                                    self.trading_pair, (ceil(Decimal(max_below_price) / bid_price_quantum) + 1) * bid_price_quantum
                                 )
-                                
 
                 else:
                     if price_multiplier > 1:
-
                         order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
-                                    )
+                            self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
+                        )
                     if price_multiplier < 1:
-
                         order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                        self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
-                                    )
+                            self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
+                        )
 
             return order_levels
 
@@ -1784,7 +1806,6 @@ class SimplePMM(ScriptStrategyBase):
         # Example usage in your main function or workflow
         bid_order_levels, ask_order_levels = create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels)
         return bid_order_levels, ask_order_levels
-
 
 
     
