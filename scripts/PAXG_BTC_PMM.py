@@ -1695,7 +1695,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Function to calculate prices based on the order levels
-        def calculate_prices(order_levels, starting_price, price_multiplier, max_orders:
+        def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
             # Retrieve current order book data
             asks_df, bids_df = self.get_kraken_order_book(self.history_market)
 
