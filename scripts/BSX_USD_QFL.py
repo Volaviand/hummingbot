@@ -1591,7 +1591,7 @@ class SimplePMM(ScriptStrategyBase):
         ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
         # Call Trade History
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_PAXG_BTC')
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history('trades_BSX_USD')
 
         s_bid = self._bid_baseline
         s_ask = self._ask_baseline
