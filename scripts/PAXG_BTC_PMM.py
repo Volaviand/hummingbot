@@ -1605,8 +1605,8 @@ class SimplePMM(ScriptStrategyBase):
         is_neutral_net = net_value == 0 
 
         # Set initial minimum order sizes based on the cycle net position to complete a cycle
-        self.min_order_size_bid = max(self.order_amount, abs(self.n_v_a) if self.n_v_a < 0 else 0)
-        self.min_order_size_ask = max(self.order_amount, abs(self.n_v_a) if self.n_v_a > 0 else 0)
+        self.min_order_size_bid = self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a < 0 else 0)
+        self.min_order_size_ask = self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a > 0 else 0)
 
         # Quantize order sizes according to the exchange's rules
         self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
@@ -1773,7 +1773,11 @@ class SimplePMM(ScriptStrategyBase):
             max_quote_spread = max(quote_balancing_volume, max_order_size )
             max_base_spread = max(base_balancing_volume, max_order_size )
 
-
+            # Find the max of imbalance vs trade cycle completion to place orders. 
+            # If they are together in side, they compliment
+            # If they are oppsite, they will spread out the orders / play on each other as price moves. 
+            max_quote_q_net = max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
+            max_base_q_net = max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
             # # Depending on the cycle, calculate order sizes
             # if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
             #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balancing_volume, self.min_order_size_bid, max_quote_spread, max_levels)
@@ -1800,8 +1804,8 @@ class SimplePMM(ScriptStrategyBase):
             #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(base_balancing_volume, self.min_order_size_ask, max_base_spread, max_levels)
 
             # Simplify code
-            bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balancing_volume, self.min_order_size_bid, max_quote_spread, max_levels)
-            ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(base_balancing_volume, self.min_order_size_ask, max_base_spread, max_levels)
+            bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(max_quote_q_net, self.min_order_size_bid, max_quote_spread, max_levels)
+            ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(max_base_q_net, self.min_order_size_ask, max_base_spread, max_levels)
 
             # Calculate prices for both bid and ask order levels
             bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
