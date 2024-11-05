@@ -1654,12 +1654,19 @@ class SimplePMM(ScriptStrategyBase):
 
                 trade_direction_flag = True
                 for level in range(max_full_distance):
+                    # remaining_balance = balance - total_size
+
+                    # if remaining_balance < min_order_size:
+                    #     # Add the remainder to the last order if it's too small to be an independent order
+                    #     if level > 0:  # Ensure there's at least one previous order
+                    #         order_levels.at[level - 1, 'size'] += remaining_balance
+                    #     break  # Exit the loop after adjusting the last order
 
                     order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag' : trade_direction_flag }
                     # total_size += min_order_size
             else:
-                max_full_orders = calculate_max_orders(min_order_size, balance)
-                max_full_distance = min(max_levels , max_full_orders)
+                max_full_orders = Decimal(5) #calculate_max_orders(min_order_size, max_order_size)
+                max_full_distance = 5 # max_levels * max_full_orders
                 max_full_distance = int(max_full_distance)
 
                 trade_direction_flag = False
@@ -1730,7 +1737,6 @@ class SimplePMM(ScriptStrategyBase):
                     if price_multiplier > 1:
                         base_increment = (price_multiplier - 1) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
-
                         if order_levels.at[i,'flag'] == False:
                             if i % max_orders == 0:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1744,7 +1750,6 @@ class SimplePMM(ScriptStrategyBase):
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
-
                         if not asks_df.empty:
                             min_above_price = find_price_with_cumulative_volume(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
@@ -1757,8 +1762,8 @@ class SimplePMM(ScriptStrategyBase):
                     elif price_multiplier < 1:
                         base_increment = (1 - price_multiplier) / max_orders
                         increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
-
                         if order_levels.at[i,'flag'] == False:
+
                             if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                     self.trading_pair, starting_price * (price_multiplier ** current_group)
@@ -1771,7 +1776,6 @@ class SimplePMM(ScriptStrategyBase):
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
-                            
                         if not bids_df.empty:
                             max_below_price = find_price_with_cumulative_volume(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
