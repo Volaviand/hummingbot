@@ -1667,31 +1667,32 @@ class SimplePMM(ScriptStrategyBase):
 
 
 
-        # Helper function to find the next price with cumulative volume threshold
-        def find_price_with_cumulative_volume(df, current_price, volume_threshold, side='ask'):
+        def find_price_with_cumulative_volume(df, current_price, quantile=0.5, side='ask'):
             """
-            Find the next price level that accumulates the specified volume threshold.
+            Find the next price level that accumulates a specified volume threshold based on a quantile.
             
             :param df: DataFrame containing price and volume columns
             :param current_price: The starting price to compare against
-            :param volume_threshold: Cumulative volume target
+            :param quantile: Quantile to determine the dynamic volume threshold
             :param side: 'ask' for prices above, 'bid' for prices below
             :return: Target price based on cumulative volume
             """
-            if side == 'ask':
-                # Filter for prices above the current price, sort ascending
-                price_vol_df = df[df['Price'] > current_price].sort_values(by='Price')
-            else:
-                # Filter for prices below the current price, sort descending
-                price_vol_df = df[df['Price'] < current_price].sort_values(by='Price', ascending=False)
-            
+            # Calculate the volume threshold based on the specified quantile of volumes in the filtered dataframe
+            dynamic_threshold = df[df['Price'] > current_price]['Volume'].quantile(quantile) if side == 'ask' else \
+                                df[df['Price'] < current_price]['Volume'].quantile(quantile)
+
             cumulative_volume = 0
+            # Sort prices based on 'ask' or 'bid' side
+            price_vol_df = (df[df['Price'] > current_price].sort_values(by='Price') if side == 'ask'
+                            else df[df['Price'] < current_price].sort_values(by='Price', ascending=False))
+
             for _, row in price_vol_df.iterrows():
                 cumulative_volume += row['Volume']
-                if cumulative_volume >= volume_threshold:
+                if cumulative_volume >= dynamic_threshold:
                     return row['Price']
-            
-            return None  # In case we do not meet the volume threshold
+
+            return None  # No price level met the cumulative volume
+
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders, volume_threshold=100):
@@ -1721,7 +1722,7 @@ class SimplePMM(ScriptStrategyBase):
 
                         if not asks_df.empty:
                             min_above_price = find_price_with_cumulative_volume(
-                                asks_df, order_levels.at[i, 'price'], volume_threshold, side='ask'
+                                asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                             if min_above_price:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1743,7 +1744,7 @@ class SimplePMM(ScriptStrategyBase):
 
                         if not bids_df.empty:
                             max_below_price = find_price_with_cumulative_volume(
-                                bids_df, order_levels.at[i, 'price'], volume_threshold, side='bid'
+                                bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
                             if max_below_price:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
