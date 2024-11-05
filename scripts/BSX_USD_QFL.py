@@ -1730,6 +1730,8 @@ class SimplePMM(ScriptStrategyBase):
             bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
             ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
 
+            print(f'{price_multiplier} : {len(order_levels)}')
+
             for i in range(len(order_levels)):
                 current_group = i // max_orders
 
