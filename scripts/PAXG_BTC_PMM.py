@@ -1765,30 +1765,32 @@ class SimplePMM(ScriptStrategyBase):
 
         # Main logic for determining order sizes and prices
         def create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels):
+            max_quote_imbalance = max(quote_balancing_volume, max_order_size )
+            max_base_imbalance = max(base_balancing_volume, max_order_size )
             # Depending on the cycle, calculate order sizes
             if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
-                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, quote_balancing_volume, max_levels)
-                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, base_balancing_volume, max_levels)
+                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_quote_imbalance, max_levels)
+                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_base_imbalance, max_levels)
 
             elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
-                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, quote_balancing_volume, max_levels)
-                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_order_size, max_levels)
+                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_quote_imbalance, max_levels)
+                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_base_imbalance, max_levels)
 
             elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
-                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_order_size, max_levels)
-                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, base_balancing_volume, max_levels)
+                bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_quote_imbalance, max_levels)
+                ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_base_imbalance, max_levels)
 
             # Mid trade logic
             elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
                 if is_buy_net: 
-                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, quote_balancing_volume, max_levels)
-                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_order_size, max_levels)
+                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_quote_imbalance, max_levels)
+                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_base_imbalance, max_levels)
                 elif is_sell_net: 
-                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_order_size, max_levels)
-                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, base_balancing_volume, max_levels)
+                    bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, max_quote_imbalance, max_levels)
+                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_base_imbalance, max_levels)
                 elif is_neutral_net: 
                     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(quote_balance_in_base, self.min_order_size_bid, quote_balancing_volume, max_levels)
-                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, base_balancing_volume, max_levels)
+                    ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, max_base_imbalance, max_levels)
 
             # Calculate prices for both bid and ask order levels
             bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
