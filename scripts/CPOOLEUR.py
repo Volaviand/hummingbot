@@ -1633,8 +1633,9 @@ class SimplePMM(ScriptStrategyBase):
 
             # Handle the case where min and max sizes are the same
             if min_order_size == max_order_size:
-                max_full_orders = calculate_max_orders(min_order_size, max_order_size*5)
+                max_full_orders = 5 # calculate_max_orders(min_order_size, max_order_size)
                 max_full_distance = max_levels * max_full_orders
+                # Control the order depth downwards to 5 orders
                 max_full_distance = int(max_full_distance)
 
                 trade_direction_flag = True
