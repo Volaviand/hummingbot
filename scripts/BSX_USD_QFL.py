@@ -1542,12 +1542,12 @@ class SimplePMM(ScriptStrategyBase):
 
         # Get the total amount that one would need to buy or sell to balance
         if self.inventory_diff < 0:
-            self.imbalance_buy_amount = abs(self.inventory_diff)
-            self.imbalance_sell_amount = 0
+            self.imbalance_buy_amount = 0
+            self.imbalance_sell_amount = abs(self.inventory_diff)
 
         elif self.inventory_diff > 0:
-            self.imbalance_buy_amount = 0
-            self.imbalance_sell_amount = self.inventory_diff
+            self.imbalance_buy_amount = abs(self.inventory_diff)
+            self.imbalance_sell_amount = 0
 
         else:
             self.imbalance_buy_amount = 0
