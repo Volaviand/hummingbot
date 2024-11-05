@@ -1667,7 +1667,7 @@ class SimplePMM(ScriptStrategyBase):
                     order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag' : trade_direction_flag }
                     # total_size += min_order_size
             else:
-                max_full_orders = calculate_max_orders(min_order_size, max(max_order_size, min_order_size * 2))
+                max_full_orders = calculate_max_orders(min_order_size, max(max_order_size, balance))
                 max_full_distance = max_levels * max_full_orders
                 max_full_distance = int(max_full_distance)
 
