@@ -1665,9 +1665,9 @@ class SimplePMM(ScriptStrategyBase):
                     order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag' : trade_direction_flag }
                     # total_size += min_order_size
             else:
-                max_full_orders = Decimal(5) #calculate_max_orders(min_order_size, max_order_size)
-                max_full_distance = 5 # max_levels * max_full_orders
-                max_full_distance = int(max_full_distance)
+                max_full_orders = Decimal(max_levels) #calculate_max_orders(min_order_size, max_order_size)
+                # max_full_distance = 5 # max_levels * max_full_orders
+                max_full_distance = int(max_levels)
 
                 trade_direction_flag = False
                 # Handle the case where min and max sizes differ
@@ -1728,15 +1728,22 @@ class SimplePMM(ScriptStrategyBase):
             bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
             ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
 
-            print(f'{price_multiplier} : {len(order_levels)}')
-
+            # print(f'{price_multiplier} : {len(order_levels)}')
+            sell_base_increment = (price_multiplier - 1) / max_orders
+            buy_base_increment = (1 - price_multiplier) / max_orders
             for i in range(len(order_levels)):
                 current_group = i // max_orders
 
                 if i > 0:
                     if price_multiplier > 1:
-                        base_increment = (price_multiplier - 1) / max_orders
-                        increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
+                        # base_increment = (price_multiplier - 1) / max_orders
+                        # increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
+                        cumulative_multiplier = price_multiplier  # Start with base price multiplier
+
+                        # Apply cumulative increments for logarithmic growth
+                        for k in range(1, i + 1):
+                            cumulative_multiplier += sell_base_increment / (1 + Decimal.ln(k + 1))
+
                         if order_levels.at[i,'flag'] == False:
                             if i % max_orders == 0:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1744,7 +1751,7 @@ class SimplePMM(ScriptStrategyBase):
                                 )
                             else:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (1 + increment_multiplier)
+                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (cumulative_multiplier)
                                 )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
@@ -1760,8 +1767,15 @@ class SimplePMM(ScriptStrategyBase):
                                 )
 
                     elif price_multiplier < 1:
-                        base_increment = (1 - price_multiplier) / max_orders
-                        increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
+                        # base_increment = (1 - price_multiplier) / max_orders
+                        # increment_multiplier = base_increment / (1 + Decimal.ln(i % max_orders + 1))
+
+                        cumulative_multiplier = price_multiplier  # Start with base price multiplier
+
+                        # Apply cumulative increments for logarithmic growth
+                        for k in range(1, i + 1):
+                            cumulative_multiplier -= buy_base_increment / (1 + Decimal.ln(k + 1))
+
                         if order_levels.at[i,'flag'] == False:
 
                             if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
@@ -1770,7 +1784,7 @@ class SimplePMM(ScriptStrategyBase):
                                 )
                             else:
                                 order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, order_levels.at[i - 1, 'price'] * (1 - increment_multiplier)
+                                    self.trading_pair, order_levels.at[i - 1, 'price'] * ( cumulative_multiplier)
                                 )
                         else:
                             order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
