@@ -1695,7 +1695,7 @@ class SimplePMM(ScriptStrategyBase):
 
 
         # Function to calculate prices based on the order levels
-        def calculate_prices(order_levels, starting_price, price_multiplier, max_orders, volume_threshold=100):
+        def calculate_prices(order_levels, starting_price, price_multiplier, max_orders:
             # Retrieve current order book data
             asks_df, bids_df = self.get_kraken_order_book(self.history_market)
 
@@ -1791,8 +1791,8 @@ class SimplePMM(ScriptStrategyBase):
                     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(maker_base_balance, self.min_order_size_ask, self.min_order_size_ask, max_levels)
 
             # Calculate prices for both bid and ask order levels
-            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders, self.max_order_amount)
-            ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders, self.max_order_amount)
+            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
+            ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
 
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
