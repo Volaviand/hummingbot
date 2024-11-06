@@ -1765,8 +1765,8 @@ class SimplePMM(ScriptStrategyBase):
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                                
-                        # Quantize all prices        
-                        order_levels.at[i, 'price'] = quantize_and_trail(min_above_price,side='ask')
+                            # Quantize all prices        
+                            order_levels.at[i, 'price'] = quantize_and_trail(min_above_price,side='ask')
                                
 
                     elif price_multiplier < 1:
@@ -1791,8 +1791,8 @@ class SimplePMM(ScriptStrategyBase):
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
 
-                        # Quantize all prices        
-                        order_levels.at[i, 'price'] = quantize_and_trail(max_below_price,side='bid')
+                            # Quantize all prices        
+                            order_levels.at[i, 'price'] = quantize_and_trail(max_below_price,side='bid')
 
                 else:
                     if price_multiplier > 1:
