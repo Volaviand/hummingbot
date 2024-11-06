@@ -697,15 +697,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
       
         # Call the parent class's constructor to handle the connectors
         # super().__init__(connectors)
-<<<<<<< HEAD
         
-=======
-
-        # Define your market before the super attempts to call it
-        self.markets = {exchange: {trading_pair}}
-        super().__init__(connectors={})  # Pass an empty dictionary or None if the parent expects it.
-        print(f'Connector : {self.connectors}')
->>>>>>> 7da4c85301985cd73d70e872d1509f368758e13a
 
 
         # Extract all parameters from the config
