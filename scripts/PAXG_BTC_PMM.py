@@ -1,6 +1,7 @@
 # Import Selected BOT
 from scripts.QFL_logic.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
+from hummingbot.connector.connector_base import ConnectorBase, Dict
 
 
 # Possible Parameters::
@@ -27,7 +28,7 @@ from decimal import Decimal
     # trading_style: str = 'QFL'):
 
 # Initialize bot with one configuration
-PAXG_BTC_Bot = KRAKENQFLBOT(
+KRAKENQFLBOT(\
     trading_pair= "PAXG-BTC",
     exchange= "kraken",
     base_asset= "PAXG",

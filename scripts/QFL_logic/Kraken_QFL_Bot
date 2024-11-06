@@ -716,7 +716,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         # Initialize Base Class
         super().__init__(connectors)
-        self.connectors = connectors
+        # self.connectors = connectors
         markets = {exchange: {trading_pair}}
 
         # Chart Names
