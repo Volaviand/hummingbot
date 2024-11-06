@@ -724,7 +724,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         # Define your market before the super attempts to call it
-        markets = {self.exchange: {self.trading_pair}}
+        self.markets = {self.exchange: {self.trading_pair}}
         super().__init__(connectors)  # Pass an empty dictionary or None if the parent expects it.
         print(f'Connector : {self.connectors}')
 
