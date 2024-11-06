@@ -29,7 +29,7 @@ from decimal import Decimal
     # trading_style: str = 'QFL'):
 
 # Initialize bot with one configuration
-bot = KRAKENQFLBOT(
+KRAKENQFLBOT(
     trading_pair= "PAXG-BTC",
     exchange= "kraken",
     base_asset= "PAXG",
@@ -52,7 +52,7 @@ bot = KRAKENQFLBOT(
     # Styles = QFL , Account Building
     trading_style = 'QFL')
 
-bot.start()
+
 # import logging
 # import math 
 # from math import floor, ceil
