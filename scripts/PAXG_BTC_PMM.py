@@ -1,5 +1,5 @@
 # Import Selected BOT
-from hummingbot.scripts.QFL_logic.Kraken_QFL_Bot import KRAKENQFLBOT
+from scripts.QFL_logic.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
 
 
