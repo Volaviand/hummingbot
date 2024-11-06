@@ -47,6 +47,8 @@ import csv
 sys.path.append('/home/tyler/quant/API_call_tests/')
 # from Kraken_Calculations import BuyTrades, SellTrades
 
+# Calling Config
+from hummingbot.qfl.PAXG_BTC_config import STRATEGY_CONFIG
 ########## Profiling example to find time/speed of code
 
 # import cProfile
@@ -691,66 +693,48 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     """
     
     def __init__(self, 
-    # connectors: Dict[str, ConnectorBase],  # Default to None
-    trading_pair: str = "PAXG-BTC",
-    exchange: str = "kraken",
-    base_asset: str = "PAXG",
-    quote_asset: str = "BTC",
-    history_market: str = "PAXGXBT",
-    min_profitability: Decimal = Decimal(0.015),
-    buy_p: Decimal = Decimal(0.975),
-    sell_p: Decimal = Decimal(1.025),
-    quote_order_amount: Decimal = Decimal(0.0001),
-    order_amount: Decimal = Decimal(0.002),
-    max_order_amount: Decimal = Decimal(0.01),
-    maximum_orders: int = 50,
-    inv_target_percent: Decimal = Decimal(0.50),
-    order_shape_factor: Decimal = Decimal(2.0),
-    history_name: str = 'PAXGXBT_60.csv',
-    trade_history_name: str = 'trades.PAXG_BTC',
-    chart_period: str = '60',
-    volatility_periods: int = 168,
-    rolling_periods: int = 12 ,
-    trading_style: str = 'QFL'):
+    connectors: Dict[str, ConnectorBase], **kwargs):
       
         # Call the parent class's constructor to handle the connectors
         # super().__init__(connectors)
+<<<<<<< HEAD
+        
+=======
 
         # Define your market before the super attempts to call it
         self.markets = {exchange: {trading_pair}}
         super().__init__(connectors={})  # Pass an empty dictionary or None if the parent expects it.
         print(f'Connector : {self.connectors}')
+>>>>>>> 7da4c85301985cd73d70e872d1509f368758e13a
 
 
-        # Chart Names
-        self.trading_pair = trading_pair
-        self.exchange =  exchange
-        self.base_asset = base_asset
-        self.quote_asset =  quote_asset
-        self.history_market =  history_market
+        # Extract all parameters from the config
+        self.trading_pair = STRATEGY_CONFIG['trading_pair']
+        self.exchange = STRATEGY_CONFIG['exchange']
+        self.base_asset = STRATEGY_CONFIG['base_asset']
+        self.quote_asset = STRATEGY_CONFIG['quote_asset']
+        self.history_market = STRATEGY_CONFIG['history_market']
+        self.min_profitability = STRATEGY_CONFIG['min_profitability']
+        self.buy_p = STRATEGY_CONFIG['buy_p']
+        self.sell_p = STRATEGY_CONFIG['sell_p']
+        self.quote_order_amount = STRATEGY_CONFIG['quote_order_amount']
+        self.order_amount = STRATEGY_CONFIG['order_amount']
+        self.max_order_amount = STRATEGY_CONFIG['max_order_amount']
+        self.maximum_orders = STRATEGY_CONFIG['maximum_orders']
+        self.inv_target_percent = STRATEGY_CONFIG['inv_target_percent']
+        self.order_shape_factor = STRATEGY_CONFIG['order_shape_factor']
+        self.history_name = STRATEGY_CONFIG['history_name']
+        self.trade_history_name = STRATEGY_CONFIG['trade_history_name']
+        self.chart_period = STRATEGY_CONFIG['chart_period']
+        self.volatility_periods = STRATEGY_CONFIG['volatility_periods']
+        self.rolling_periods = STRATEGY_CONFIG['rolling_periods']
+        self.trading_style = STRATEGY_CONFIG['trading_style']
 
-        # Min Profit Targets
-        self.min_profitability =  min_profitability
-        # Max Profit Targets
-        self.buy_p = buy_p
-        self.sell_p = sell_p
-        # Orders
-        self.quote_order_amount =  quote_order_amount
-        self.order_amount =  order_amount
-        self.max_order_amount =  max_order_amount
-        self.maximum_orders = maximum_orders
-        # Inventory
-        self.inv_target_percent = inv_target_percent
-        self.order_shape_factor =  order_shape_factor
 
-        # Historical
-        self.history_name = history_name
-        self.trade_history_name = trade_history_name
-        self.chart_period =  chart_period
-        self.volatility_periods =  volatility_periods
-        self.rolling_periods =  rolling_periods
-
-        self.trading_style = trading_style
+        # Define your market before the super attempts to call it
+        markets = {self.exchange: {self.trading_pair}}
+        super().__init__(connectors)  # Pass an empty dictionary or None if the parent expects it.
+        print(f'Connector : {self.connectors}')
 
 
         ## Initialize other global variables
@@ -780,8 +764,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         print(f"Using historical data file: {history_name} with chart period: {chart_period}, trade_history: {self.trade_history_name}")
 
         # Call Historical Data and set parameters for bot
-        self.Kraken_QFL = KRAKENQFLHISTORY(history_name, history_market, chart_period, volatility_periods, rolling_periods, trading_style)
-        print(f"Initializing Kraken History with Chart File: {history_name}, Trading File: {self.exchange}")
+        self.Kraken_QFL = KRAKENQFLHISTORY(self.history_name, self.history_market, self.chart_period, self.volatility_periods, self.rolling_periods, self.trading_style)
+        print(f"Initializing Kraken History with Chart File: {self.history_name}, Trading File: {self.exchange}")
 
 
         # Cooldown for how long an order stays in place. 
