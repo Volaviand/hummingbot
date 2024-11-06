@@ -691,7 +691,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     """
     
     def __init__(self, 
-    connectors: Dict[str, ConnectorBase] = None,  # Default to None
+    # connectors: Dict[str, ConnectorBase],  # Default to None
     trading_pair: str = "PAXG-BTC",
     exchange: str = "kraken",
     base_asset: str = "PAXG",
