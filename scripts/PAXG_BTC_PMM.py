@@ -714,7 +714,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
     # bid_spread = 0.05
     # ask_spread = 0.05
-    min_profitability = 0.015
+    # min_profitability = 0.015
     target_profitability = min_profitability
 
 
@@ -724,27 +724,27 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     trade_in_progress = False
 
 
-    #order_refresh_time = 30
-    quote_order_amount = Decimal(0.0001)
-    order_amount = Decimal(0.002)
-    max_order_amount = Decimal(0.01)
-    min_order_size_bid = Decimal(0)
-    min_order_size_ask = Decimal(0)
+    # #order_refresh_time = 30
+    # quote_order_amount = Decimal(0.0001)
+    # order_amount = Decimal(0.002)
+    # max_order_amount = Decimal(0.01)
+    # min_order_size_bid = Decimal(0)
+    # min_order_size_ask = Decimal(0)
 
 
-    trading_pair = "PAXG-BTC"
-    exchange = "kraken"
-    base_asset = "PAXG"
-    quote_asset = "BTC"
-    history_market = 'PAXGXBT'
+    # trading_pair = "PAXG-BTC"
+    # exchange = "kraken"
+    # base_asset = "PAXG"
+    # quote_asset = "BTC"
+    # history_market = 'PAXGXBT'
 
     #Maximum amount of orders  Bid + Ask
-    maximum_orders = 50
+    # maximum_orders = 50
 
-    inv_target_percent = Decimal(0.50)   
+    # inv_target_percent = Decimal(0.50)   
 
     ## how fast/gradual does inventory rebalance? bigger= more rebalance
-    order_shape_factor = Decimal(2.0) 
+    # order_shape_factor = Decimal(2.0) 
     # Here you can use for example the LastTrade price to use in your strategy
     #MidPrice 
     #BestBid 
@@ -754,7 +754,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     #InventoryCost 
     #Custom 
     # _last_trade_price = None
-    _vwap_midprice = None
+    # _vwap_midprice = None
     #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
