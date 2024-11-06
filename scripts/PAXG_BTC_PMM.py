@@ -1,7 +1,7 @@
 import os
 print(os.getcwd())  # Check the current working directory
 import sys
-sys.path.append('home/tyler/hummingbot/hummingbot')
+sys.path.append('/home/tyler/hummingbot/hummingbot')
 # Import Selected BOT
 from qfl.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
