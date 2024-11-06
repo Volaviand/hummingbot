@@ -1,7 +1,6 @@
 # Import Selected BOT
 from scripts.QFL_logic.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
-from hummingbot.connector.connector_base import ConnectorBase, Dict
 
 
 # Possible Parameters::
