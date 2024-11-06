@@ -56,7 +56,7 @@ from hummingbot.qfl.PAXG_BTC_config import STRATEGY_CONFIG
 # import cProfile
 # import pstats
 # import io
-class RUNKRAKENBOT:
+class RUNKRAKENBOT(ScriptStrategyBase):
     def __init__(self, config_file_key: str):
         self.config_file_key = config_file_key
 
