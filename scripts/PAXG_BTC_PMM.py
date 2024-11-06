@@ -1,5 +1,5 @@
 # Import Selected BOT
-from Kraken_QFL_Bot import KRAKENQFLBOT
+from hummingbot.scripts.qfl.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
 print("Import successful!")
 # from hummingbot.connector.connector_base import ConnectorBase, Dict
