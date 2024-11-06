@@ -691,41 +691,38 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
     """
-    
-    def __init__(self, 
-    connectors: Dict[str, ConnectorBase], **kwargs):
-      
-        # Call the parent class's constructor to handle the connectors
-        # super().__init__(connectors)
         
 
 
-        # Extract all parameters from the config
-        self.trading_pair = STRATEGY_CONFIG['trading_pair']
-        self.exchange = STRATEGY_CONFIG['exchange']
-        self.base_asset = STRATEGY_CONFIG['base_asset']
-        self.quote_asset = STRATEGY_CONFIG['quote_asset']
-        self.history_market = STRATEGY_CONFIG['history_market']
-        self.min_profitability = STRATEGY_CONFIG['min_profitability']
-        self.buy_p = STRATEGY_CONFIG['buy_p']
-        self.sell_p = STRATEGY_CONFIG['sell_p']
-        self.quote_order_amount = STRATEGY_CONFIG['quote_order_amount']
-        self.order_amount = STRATEGY_CONFIG['order_amount']
-        self.max_order_amount = STRATEGY_CONFIG['max_order_amount']
-        self.maximum_orders = STRATEGY_CONFIG['maximum_orders']
-        self.inv_target_percent = STRATEGY_CONFIG['inv_target_percent']
-        self.order_shape_factor = STRATEGY_CONFIG['order_shape_factor']
-        self.history_name = STRATEGY_CONFIG['history_name']
-        self.trade_history_name = STRATEGY_CONFIG['trade_history_name']
-        self.chart_period = STRATEGY_CONFIG['chart_period']
-        self.volatility_periods = STRATEGY_CONFIG['volatility_periods']
-        self.rolling_periods = STRATEGY_CONFIG['rolling_periods']
-        self.trading_style = STRATEGY_CONFIG['trading_style']
+    # Extract all parameters from the config
+    trading_pair = STRATEGY_CONFIG['trading_pair']
+    exchange = STRATEGY_CONFIG['exchange']
+    base_asset = STRATEGY_CONFIG['base_asset']
+    quote_asset = STRATEGY_CONFIG['quote_asset']
+    history_market = STRATEGY_CONFIG['history_market']
+    min_profitability = STRATEGY_CONFIG['min_profitability']
+    buy_p = STRATEGY_CONFIG['buy_p']
+    sell_p = STRATEGY_CONFIG['sell_p']
+    quote_order_amount = STRATEGY_CONFIG['quote_order_amount']
+    order_amount = STRATEGY_CONFIG['order_amount']
+    max_order_amount = STRATEGY_CONFIG['max_order_amount']
+    maximum_orders = STRATEGY_CONFIG['maximum_orders']
+    inv_target_percent = STRATEGY_CONFIG['inv_target_percent']
+    order_shape_factor = STRATEGY_CONFIG['order_shape_factor']
+    history_name = STRATEGY_CONFIG['history_name']
+    trade_history_name = STRATEGY_CONFIG['trade_history_name']
+    chart_period = STRATEGY_CONFIG['chart_period']
+    volatility_periods = STRATEGY_CONFIG['volatility_periods']
+    rolling_periods = STRATEGY_CONFIG['rolling_periods']
+    trading_style = STRATEGY_CONFIG['trading_style']
 
 
-        # Define your market before the super attempts to call it
-        self.markets = {self.exchange: {self.trading_pair}}
-        super().__init__(connectors)  # Pass an empty dictionary or None if the parent expects it.
+    # Define your market before the super attempts to call it
+    markets = {self.exchange: {self.trading_pair}}
+    def __init__(self, connectors: Dict[str, ConnectorBase]):
+        
+        # Call variable from Parent
+        super().__init__(connectors)
         print(f'Connector : {self.connectors}')
 
 
