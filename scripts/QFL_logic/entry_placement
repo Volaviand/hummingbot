@@ -1,0 +1,261 @@
+
+def determine_entry_placement(self, max_levels=5):
+    # Retrieve current positions and calculate minimum order sizes
+    q, base_balancing_volume, quote_balancing_volume, total_balance_in_base, entry_size_by_percentage, maker_base_balance, quote_balance_in_base = self.get_current_positions()
+    
+    bp, sp = self.determine_log_multipliers()
+
+    optimal_bid_price, optimal_ask_price, bid_reservation_price,\
+    ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
+
+    # Call Trade History
+    breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
+
+    s_bid = self._bid_baseline
+    s_ask = self._ask_baseline
+
+    is_buy_data = breakeven_buy_price > 0
+    is_sell_data = breakeven_sell_price > 0
+
+    is_buy_net = net_value > 0
+    is_sell_net = net_value < 0
+    is_neutral_net = net_value == 0 
+
+    # Set initial minimum order sizes based on the cycle net position to complete a cycle
+    self.min_order_size_bid = quote_balancing_volume # self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a < 0 else 0)
+    self.min_order_size_ask = base_balancing_volume # self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a > 0 else 0)
+
+    # Quantize order sizes according to the exchange's rules
+    self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
+    self.min_order_size_ask = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_ask)
+
+    # Define maximum order size (25th percentile, for instance)
+    max_order_size = self.max_order_amount
+
+    # Calculate order sizes for both sides with dynamic levels
+    order_levels = pd.DataFrame(columns=['price', 'size'])
+
+    def calculate_max_orders(min_order_size, max_order_size ):
+        if min_order_size <= 0:
+            raise ValueError("Order size must be greater than zero.")
+        
+        # Calculate the maximum number of full orders that can fit
+        max_full_orders = max_order_size // min_order_size
+        return max_full_orders
+
+    # Function to calculate order sizes
+    def calculate_dynamic_order_sizes(balance, min_order_size, max_order_size, max_levels):
+        order_levels = pd.DataFrame(columns=['price', 'size', 'flag'])  # Create an empty DataFrame for order levels
+        total_size = 0
+
+        # Handle the case where One side doesn't have an imbalance
+        if balance <= min_order_size:
+
+            max_full_orders = Decimal(max_levels) 
+            # Control the order depth downwards
+            max_full_distance = int(max_levels) 
+
+            trade_direction_flag = True
+            for level in range(max_full_distance):
+                # remaining_balance = balance - total_size
+
+                # if remaining_balance < min_order_size:
+                #     # Add the remainder to the last order if it's too small to be an independent order
+                #     if level > 0:  # Ensure there's at least one previous order
+                #         order_levels.at[level - 1, 'size'] += remaining_balance
+                #     break  # Exit the loop after adjusting the last order
+
+                order_levels.loc[level] = {'price': None, 'size': min_order_size, 'flag' : trade_direction_flag }
+                # total_size += min_order_size
+        else:
+            max_full_orders = Decimal(max_levels) #calculate_max_orders(min_order_size, max_order_size)
+            # max_full_distance = 5 # max_levels * max_full_orders
+            max_full_distance = int(max_levels)
+
+            trade_direction_flag = False
+            # Handle the case where min and max sizes differ
+            for level in range(max_full_distance):
+                remaining_balance = balance - total_size
+
+                if remaining_balance < min_order_size:
+                    # Add the remainder to the last order if it's too small to be an independent order
+                    if level > 0:
+                        order_levels.at[level - 1, 'size'] += remaining_balance
+                    break  # Exit loop after adjusting the last order
+
+                order_size = min_order_size  # You can add custom sizing logic here if desired
+                order_size = min(order_size, remaining_balance)  # Prevent overshooting the balance
+                order_size = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, order_size)
+
+                if order_size >= min_order_size:
+                    order_levels.loc[level] = {'price': None, 'size': order_size, 'flag' : trade_direction_flag}
+                    total_size += order_size
+
+        return order_levels, max_full_orders
+
+
+
+    def find_price_with_cumulative_volume(df, current_price, quantile=0.5, side='ask'):
+        """
+        Find the next price level that accumulates a specified volume threshold based on a quantile.
+        
+        :param df: DataFrame containing price and volume columns
+        :param current_price: The starting price to compare against
+        :param quantile: Quantile to determine the dynamic volume threshold
+        :param side: 'ask' for prices above, 'bid' for prices below
+        :return: Target price based on cumulative volume
+        """
+        # Calculate the volume threshold based on the specified quantile of volumes in the filtered dataframe
+        dynamic_threshold = df[df['Price'] > current_price]['Volume'].quantile(quantile) if side == 'ask' else \
+                            df[df['Price'] < current_price]['Volume'].quantile(quantile)
+
+        cumulative_volume = 0
+        # Sort prices based on 'ask' or 'bid' side
+        price_vol_df = (df[df['Price'] > current_price].sort_values(by='Price') if side == 'ask'
+                        else df[df['Price'] < current_price].sort_values(by='Price', ascending=False))
+
+        for _, row in price_vol_df.iterrows():
+            cumulative_volume += row['Volume']
+            if cumulative_volume >= dynamic_threshold:
+                return row['Price']
+
+        return None  # No price level met the cumulative volume
+
+
+    # Function to calculate prices based on the order levels
+    def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
+        # Retrieve current order book data
+        asks_df, bids_df = self.get_kraken_order_book(self.history_market)
+
+        # Calculate the quantum for both bid and ask prices
+        bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
+        ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
+
+        # print(f'{price_multiplier} : {len(order_levels)}')
+
+        for i in range(len(order_levels)):
+            current_group = i // max_orders
+
+            if i > 0:
+                if price_multiplier > 1:
+                    base_increment = ((price_multiplier - 1) / max_orders) * i
+                    increment_multiplier = 1 + (Decimal.ln(1 + (base_increment)))
+                    if order_levels.at[i,'flag'] == False:
+                        if i % max_orders == 0:
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, starting_price * (price_multiplier ** current_group)
+                            )
+                        else:
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, order_levels.at[i - 1, 'price'] * (increment_multiplier)
+                            )
+                    else:
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                            self.trading_pair, starting_price * (price_multiplier ** i)
+                        )
+                    if not asks_df.empty:
+                        min_above_price = find_price_with_cumulative_volume(
+                            asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
+                        )
+                        if min_above_price:
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, (floor(Decimal(min_above_price) / ask_price_quantum) - 1) * ask_price_quantum
+                            )
+
+                elif price_multiplier < 1:
+                    base_increment = ((1 - price_multiplier ) / max_orders) * i
+                    increment_multiplier =  1 - (Decimal.ln(1 + (base_increment)))
+                    if order_levels.at[i,'flag'] == False:
+
+                        if i % max_orders == 0 or order_levels.at[i,'flag'] == True:
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, starting_price * (price_multiplier ** current_group)
+                            )
+                        else:
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, order_levels.at[i - 1, 'price'] * (increment_multiplier)
+                            )
+                    else:
+                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                            self.trading_pair, starting_price * (price_multiplier ** i)
+                        )
+                    if not bids_df.empty:
+                        max_below_price = find_price_with_cumulative_volume(
+                            bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
+                        )
+                        if max_below_price:
+                            order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                                self.trading_pair, (ceil(Decimal(max_below_price) / bid_price_quantum) + 1) * bid_price_quantum
+                            )
+
+            else:
+                if price_multiplier > 1:
+                    order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                        self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
+                    )
+                if price_multiplier < 1:
+                    order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
+                        self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
+                    )
+
+        return order_levels
+
+    # Main logic for determining order sizes and prices
+    def create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels):
+        # Define the spread of volume before a bp/sp resets,  How many min orders can fit in this max order = levels within a bp
+        max_quote_spread = max(quote_balancing_volume, max_order_size )
+        max_base_spread = max(base_balancing_volume, max_order_size )
+
+        # Find the max of imbalance vs trade cycle completion to place orders. 
+        # If they are together in side, they compliment
+        # If they are oppsite, they will spread out the orders / play on each other as price moves. 
+        max_quote_q_net = max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
+        max_base_q_net = max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
+        # # Depending on the cycle, calculate order sizes
+        # if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
+        #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+
+        # elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
+        #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+
+        # elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
+        #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+
+        # # Mid trade logic
+        # elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
+        #     if is_buy_net: 
+        #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+        #     elif is_sell_net: 
+        #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+        #     elif is_neutral_net: 
+        #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+
+        # Simplify code
+        bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
+        ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
+
+        # Calculate prices for both bid and ask order levels
+        bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
+        ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
+
+        # Log insufficient balance for clarity
+        if bid_order_levels['size'].sum() < self.min_order_size_bid:
+            msg_b = f"Not Enough Balance for bid trade: {quote_balance_in_base:.8f}"
+            self.log_with_clock(logging.INFO, msg_b)
+        if ask_order_levels['size'].sum() < self.min_order_size_ask:
+            msg_a = f"Not Enough Balance for ask trade: {maker_base_balance:.8f}"
+            self.log_with_clock(logging.INFO, msg_a)
+
+        # print(bid_order_levels)
+        # print(ask_order_levels)
+        return bid_order_levels, ask_order_levels
+
+    # Example usage in your main function or workflow
+    bid_order_levels, ask_order_levels = create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels)
+    return bid_order_levels, ask_order_levels

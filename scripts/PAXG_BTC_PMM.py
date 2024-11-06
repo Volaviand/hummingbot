@@ -1729,6 +1729,16 @@ class SimplePMM(ScriptStrategyBase):
             ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
 
             # print(f'{price_multiplier} : {len(order_levels)}')
+            def quantize_and_trail(price, side='ask'):
+                """Quantize the current price that is up for placement and adjust the price to place the order
+                one minimum price movement ahead of that price for better entry fulfillment"""
+                if side == 'bid':
+                    q_and_t = self.connectors[self.exchange].quantize_order_price(\
+                    self.trading_pair,(ceil(Decimal(price) / bid_price_quantum) + 1) * bid_price_quantum)
+                elif side == 'ask':
+                    q_and_t = self.connectors[self.exchange].quantize_order_price(\
+                    self.trading_pair,(floor(Decimal(price) / ask_price_quantum) - 1) * ask_price_quantum)     
+
 
             for i in range(len(order_levels)):
                 current_group = i // max_orders
@@ -1754,10 +1764,10 @@ class SimplePMM(ScriptStrategyBase):
                             min_above_price = find_price_with_cumulative_volume(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
-                            if min_above_price:
-                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, (floor(Decimal(min_above_price) / ask_price_quantum) - 1) * ask_price_quantum
-                                )
+                               
+                        # Quantize all prices        
+                        order_levels.at[i, 'price'] = quantize_and_trail(min_above_price,side='ask')
+                               
 
                     elif price_multiplier < 1:
                         base_increment = ((1 - price_multiplier ) / max_orders) * i
@@ -1780,20 +1790,18 @@ class SimplePMM(ScriptStrategyBase):
                             max_below_price = find_price_with_cumulative_volume(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
-                            if max_below_price:
-                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, (ceil(Decimal(max_below_price) / bid_price_quantum) + 1) * bid_price_quantum
-                                )
+
+                        # Quantize all prices        
+                        order_levels.at[i, 'price'] = quantize_and_trail(max_below_price,side='bid')
 
                 else:
                     if price_multiplier > 1:
-                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                            self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
-                        )
+                        # Quantize all prices        
+                        order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='ask')
+
                     if price_multiplier < 1:
-                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                            self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
-                        )
+                        # Quantize all prices        
+                        order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='bid')
 
             return order_levels
 
