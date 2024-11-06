@@ -1,8 +1,9 @@
 import os
 print(os.getcwd())  # Check the current working directory
-
+import sys
+sys.path.append('home/tyler/hummingbot/hummingbot')
 # Import Selected BOT
-from hummingbot.qfl.Kraken_QFL_Bot import KRAKENQFLBOT
+from qfl.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
 print("Import successful!")
 # from hummingbot.connector.connector_base import ConnectorBase, Dict
