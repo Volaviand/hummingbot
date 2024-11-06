@@ -1,11 +1,3 @@
-import sys
-import os
-
-# # Add the parent directory that contains `qfl` to sys.path
-# sys.path.append('/home/tyler/hummingbot/hummingbot')
-
-# Check if the path has been added successfully
-print("Current sys.path:", sys.path)
 
 # Now try importing your class
 from hummingbot.qfl.Kraken_QFL_Bot import KRAKENQFLBOT
