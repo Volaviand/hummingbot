@@ -751,7 +751,7 @@ class SimplePMM(ScriptStrategyBase):
     
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
-        print(f'Connectors : {self.connectors}')
+        # print(f'Connectors : {self.connectors}')
         # Define Market Parameters and Settings
         self.Kraken_QFL = KRAKENQFL('BSXUSD_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
 
