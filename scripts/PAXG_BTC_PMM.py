@@ -1739,6 +1739,7 @@ class SimplePMM(ScriptStrategyBase):
                     q_and_t = self.connectors[self.exchange].quantize_order_price(\
                     self.trading_pair,(floor(Decimal(price) / ask_price_quantum) - 1) * ask_price_quantum)     
 
+                return q_and_t
 
             for i in range(len(order_levels)):
                 current_group = i // max_orders
