@@ -1,44 +1,9 @@
 # Import Selected BOT
 from Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
+print("Import successful!")
 # from hummingbot.connector.connector_base import ConnectorBase, Dict
-import logging
-import math 
-from math import floor, ceil
 
-import time
-import requests
-import json
-from decimal import Decimal
-from typing import List
-from random import gauss, seed
-
-import datetime
-import datetime as dt
-
-import pandas as pd
-import numpy as np
-from scipy.stats import norm, poisson, stats
-from scipy.optimize import minimize_scalar
-from scipy.signal import argrelextrema
-
-from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
-from arch import arch_model
-
-
-
-from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
-from hummingbot.core.data_type.order_candidate import OrderCandidate
-from hummingbot.core.event.events import OrderFilledEvent
-from hummingbot.strategy.script_strategy_base import ScriptStrategyBase
-from hummingbot.connector.budget_checker import BudgetChecker
-
-
-from hummingbot.client.ui.interface_utils import format_df_for_printout
-from hummingbot.connector.connector_base import ConnectorBase, Dict
-from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
-
-from arch import arch_model
 
 # Possible Parameters::
     # connectors: Dict[str, ConnectorBase],
@@ -63,29 +28,29 @@ from arch import arch_model
     # rolling_periods: int = 12 ,
     # trading_style: str = 'QFL'):
 
-# Initialize bot with one configuration
-KRAKENQFLBOT(\
-    trading_pair= "PAXG-BTC",
-    exchange= "kraken",
-    base_asset= "PAXG",
-    quote_asset= "BTC",
-    history_market = "PAXGXBT",
-    min_profitability= Decimal(0.015),
-    buy_p = Decimal(0.975),
-    sell_p = Decimal(1.025),
-    quote_order_amount= Decimal(0.0001),
-    order_amount = Decimal(0.002),
-    max_order_amount = Decimal(0.01),
-    maximum_orders = 50,
-    inv_target_percent = Decimal(0.50),
-    order_shape_factor = Decimal(2.0),
-    history_name = 'PAXGXBT_60.csv',
-    trade_history_name = 'trades.PAXG_BTC',
-    chart_period = '60',
-    volatility_periods = 168,
-    rolling_periods = 12 ,
-    # Styles = QFL , Account Building
-    trading_style = 'QFL')
+# # Initialize bot with one configuration
+# KRAKENQFLBOT(\
+#     trading_pair= "PAXG-BTC",
+#     exchange= "kraken",
+#     base_asset= "PAXG",
+#     quote_asset= "BTC",
+#     history_market = "PAXGXBT",
+#     min_profitability= Decimal(0.015),
+#     buy_p = Decimal(0.975),
+#     sell_p = Decimal(1.025),
+#     quote_order_amount= Decimal(0.0001),
+#     order_amount = Decimal(0.002),
+#     max_order_amount = Decimal(0.01),
+#     maximum_orders = 50,
+#     inv_target_percent = Decimal(0.50),
+#     order_shape_factor = Decimal(2.0),
+#     history_name = 'PAXGXBT_60.csv',
+#     trade_history_name = 'trades.PAXG_BTC',
+#     chart_period = '60',
+#     volatility_periods = 168,
+#     rolling_periods = 12 ,
+#     # Styles = QFL , Account Building
+#     trading_style = 'QFL')
 
 
 # import logging
