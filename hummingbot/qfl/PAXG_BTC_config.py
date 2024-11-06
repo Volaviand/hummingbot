@@ -22,5 +22,5 @@ STRATEGY_CONFIG = {
     'chart_period': '60',
     'volatility_periods': 168,
     'rolling_periods': 12,
-    'trading_style': 'QFL', # Account Building or QFL
+    'trading_style': 'QFL', # 'Account Building' or 'QFL'
 }
