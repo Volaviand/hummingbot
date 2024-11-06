@@ -58,34 +58,9 @@ from hummingbot.qfl.PAXG_BTC_config import STRATEGY_CONFIG
 # import io
 class RUNKRAKENBOT:
     def __init__(self, config_file_key: str):
+        self.config_file_key = config_file_key
 
-        CONFIG = STRATEGY_CONFIG[config_file_key]
-        # Extract all parameters from the config
-        trading_pair = CONFIG['trading_pair']
-        exchange = CONFIG['exchange']
-        base_asset = CONFIG['base_asset']
-        quote_asset = CONFIG['quote_asset']
-        history_market = CONFIG['history_market']
-        min_profitability = CONFIG['min_profitability']
-        buy_p = CONFIG['buy_p']
-        sell_p = CONFIG['sell_p']
-        quote_order_amount = CONFIG['quote_order_amount']
-        order_amount = CONFIG['order_amount']
-        max_order_amount = CONFIG['max_order_amount']
-        maximum_orders = CONFIG['maximum_orders']
-        inv_target_percent = CONFIG['inv_target_percent']
-        order_shape_factor = CONFIG['order_shape_factor']
-        history_name = CONFIG['history_name']
-        trade_history_name = CONFIG['trade_history_name']
-        chart_period = CONFIG['chart_period']
-        volatility_periods = CONFIG['volatility_periods']
-        rolling_periods = CONFIG['rolling_periods']
-        trading_style = CONFIG['trading_style']
 
-        target_profitability = min_profitability
-
-        # Define Markets for Connector Usage
-        markets = {exchange: {trading_pair}}
 
 
     class KrakenAPI:
@@ -724,7 +699,33 @@ class RUNKRAKENBOT:
 
 
         """
+        CONFIG = STRATEGY_CONFIG[self.config_file_key]
+        # Extract all parameters from the config
+        trading_pair = CONFIG['trading_pair']
+        exchange = CONFIG['exchange']
+        base_asset = CONFIG['base_asset']
+        quote_asset = CONFIG['quote_asset']
+        history_market = CONFIG['history_market']
+        min_profitability = CONFIG['min_profitability']
+        buy_p = CONFIG['buy_p']
+        sell_p = CONFIG['sell_p']
+        quote_order_amount = CONFIG['quote_order_amount']
+        order_amount = CONFIG['order_amount']
+        max_order_amount = CONFIG['max_order_amount']
+        maximum_orders = CONFIG['maximum_orders']
+        inv_target_percent = CONFIG['inv_target_percent']
+        order_shape_factor = CONFIG['order_shape_factor']
+        history_name = CONFIG['history_name']
+        trade_history_name = CONFIG['trade_history_name']
+        chart_period = CONFIG['chart_period']
+        volatility_periods = CONFIG['volatility_periods']
+        rolling_periods = CONFIG['rolling_periods']
+        trading_style = CONFIG['trading_style']
 
+        target_profitability = min_profitability
+
+        # Define Markets for Connector Usage
+        markets = {exchange: {trading_pair}}
         ## Trade Halting Process
         #Flag to avoid trading unless a cycle is complete
         trade_in_progress = False
@@ -741,6 +742,8 @@ class RUNKRAKENBOT:
 
         
         def __init__(self, connectors: Dict[str, ConnectorBase]):
+            
+
             super().__init__(connectors)
 
             # Define Market Parameters and Settings
