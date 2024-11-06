@@ -183,7 +183,7 @@ class KrakenAPI:
 
 # csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{file_name}.csv'
 class KRAKENQFLHISTORY():
-    def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods):
+    def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods, trading_style):
         self.filepath = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{filepath}'
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
@@ -191,7 +191,7 @@ class KRAKENQFLHISTORY():
         self.volatility_periods = volatility_periods
         self.rolling_periods = rolling_periods
         self.interval = interval
-
+        self.trading_style = trading_style
     def call_csv_history(self):
         """
         Opens a CSV file in OHLCVT format and saves the data to a pandas DataFrame.
@@ -535,12 +535,12 @@ class KRAKENQFLHISTORY():
     
     
             
-            if self.symbol == 'BSXUSD' or self.symbol == 'CPOOLEUR':
+            if self.trading_style == 'Account Building':
                 new_high_trailing = df.loc[i, 'Local Max']
                 new_low_trailing = df.loc[i, 'Local Min']
                 new_high = df.loc[i, 'Local Max']
                 new_low = df.loc[i, 'Local Min']
-            else:
+            elif self.trading_style == 'QFL':
                 new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
                 new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
            
@@ -617,9 +617,14 @@ class KRAKENQFLHISTORY():
         _bid_trailing_baseline = df['Trailing Low Line'].iloc[-1]
         _ask_trailing_baseline = df['Trailing High Line'].iloc[-1]
 
-        _bid_baseline = df['Low Line'].iloc[-1]
-        _ask_baseline = df['High Line'].iloc[-1]
-        # print(df)
+
+        if self.trading_style == 'Account Building':
+            _bid_baseline = df['Mid Line'].iloc[-1] 
+            _ask_baseline = df['Mid Line'].iloc[-1]
+        elif self.trading_style == 'QFL':
+            _bid_baseline = df['Low Line'].iloc[-1]
+            _ask_baseline = df['High Line'].iloc[-1]
+ 
         current_vola = df['Volatility'].iloc[-1]
         volatility_rank = df['volatility_rank'].iloc[-1]
     
@@ -712,54 +717,16 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     rolling_periods = STRATEGY_CONFIG['rolling_periods']
     trading_style = STRATEGY_CONFIG['trading_style']
 
-    # bid_spread = 0.05
-    # ask_spread = 0.05
-    # min_profitability = 0.015
     target_profitability = min_profitability
 
 
     ## Trade Halting Process
-
     #Flag to avoid trading unless a cycle is complete
     trade_in_progress = False
 
 
-    # #order_refresh_time = 30
-    # quote_order_amount = Decimal(0.0001)
-    # order_amount = Decimal(0.002)
-    # max_order_amount = Decimal(0.01)
-    # min_order_size_bid = Decimal(0)
-    # min_order_size_ask = Decimal(0)
-
-
-    # trading_pair = "PAXG-BTC"
-    # exchange = "kraken"
-    # base_asset = "PAXG"
-    # quote_asset = "BTC"
-    # history_market = 'PAXGXBT'
-
-    #Maximum amount of orders  Bid + Ask
-    # maximum_orders = 50
-
-    # inv_target_percent = Decimal(0.50)   
-
-    ## how fast/gradual does inventory rebalance? bigger= more rebalance
-    # order_shape_factor = Decimal(2.0) 
-    # Here you can use for example the LastTrade price to use in your strategy
-    #MidPrice 
-    #BestBid 
-    #BestAsk 
-    #LastTrade 
-    #LastOwnTrade 
-    #InventoryCost 
-    #Custom 
-    # _last_trade_price = None
-    # _vwap_midprice = None
-    #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
-
-
 
 
     ## Breakeven Initialization
@@ -776,7 +743,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         super().__init__(connectors)
 
         # Define Market Parameters and Settings
-        self.Kraken_QFL = KRAKENQFLHISTORY('PAXGXBT_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
+        self.Kraken_QFL = KRAKENQFLHISTORY(self.history_name, self.history_market, self.chart_period,\
+        self.volatility_periods, self.rolling_periods, self.trading_style)
 
 
         # Cooldown for how long an order stays in place. 
@@ -882,7 +850,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         
         return None, None
 
-    def call_trade_history(self, file_name='trades_PAXG_BTC'):
+    def call_trade_history(self, file_name):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
         # Start with default values
@@ -1292,7 +1260,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         # Update Trade CSV after a trade completes
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history(self.trade_history_name)
 
 
 
@@ -1630,7 +1598,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         ask_reservation_price, optimal_bid_percent, optimal_ask_percent = self.optimal_bid_ask_spread()
 
         # Call Trade History
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history(self.trade_history_name)
 
         s_bid = self._bid_baseline
         s_ask = self._ask_baseline
@@ -1899,7 +1867,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         
         #self._last_trade_price = self.get_midprice()
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history(self.trade_history_name)
 
 
         # msg_4 = (f"breakeven_buy_price @ {breakeven_buy_price:.8f} ::: breakeven_sell_price @ {breakeven_sell_price:.8f}, realized_pnl :: {realized_pnl:.8f}, net_value :: {net_value:.8f}")
@@ -1927,8 +1895,12 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         breakeven_buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_buy_price)
         breakeven_sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_sell_price)
 
-        lowest_last_bid_trail = np.minimum(self._bid_trailing_baseline, self._last_buy_price)
-        highest_last_ask_trail = np.maximum(self._ask_trailing_baseline, self._last_sell_price)
+        if self.trading_style == 'Account Building':
+            lowest_last_bid_trail = self._last_buy_price
+            highest_last_ask_trail = self._last_sell_price
+        elif self.trading_style == 'QFL':
+            lowest_last_bid_trail = np.minimum(self._bid_trailing_baseline, self._last_buy_price)
+            highest_last_ask_trail = np.maximum(self._ask_trailing_baseline, self._last_sell_price)
 
          # There is no data, Use baselines
         if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
@@ -2088,7 +2060,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
 
 
-        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
+        breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history(self.trade_history_name)
 
         is_buy_data = breakeven_buy_price > 0
         is_sell_data = breakeven_sell_price > 0
