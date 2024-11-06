@@ -677,7 +677,7 @@ class KRAKENQFL():
 
 
 
-class SimplePMM(ScriptStrategyBase):
+class QFL(ScriptStrategyBase):
     """
     BotCamp Cohort: Sept 2022
     Design Template: https://hummingbot-foundation.notion.site/Simple-PMM-63cc765486dd42228d3da0b32537fc92
