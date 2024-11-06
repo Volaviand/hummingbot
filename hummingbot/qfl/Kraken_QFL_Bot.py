@@ -722,8 +722,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         # Call the parent class's constructor to handle the connectors
         super().__init__(connectors)
         # Debug: Print the connectors value
-        print("Connectors:", connectors)
-        self.connectors = connectors
+        print("Connectors:", self.connectors)
         # self.connectors = connectors
         markets = {exchange: {trading_pair}}
 
