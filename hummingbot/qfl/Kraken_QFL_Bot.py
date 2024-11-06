@@ -60,6 +60,8 @@ class RUNKRAKENBOT:
     def __init__(self, config_file_key: str):
         self.config_file_key = config_file_key
 
+        print(f'Initialized bot for {config_file_key}')
+
 
 
 
