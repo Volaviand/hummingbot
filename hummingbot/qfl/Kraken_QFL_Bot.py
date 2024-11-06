@@ -717,10 +717,13 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         # If connectors are not passed, initialize it here, you can set it to None or any default value.
         if connectors is None:
             connectors = {}  # Empty dictionary or any default value
-
+        # Debug: Print the connectors value
+        print("Connectors:", connectors)
         # Call the parent class's constructor to handle the connectors
         super().__init__(connectors)
-
+        # Debug: Print the connectors value
+        print("Connectors:", connectors)
+        self.connectors = connectors
         # self.connectors = connectors
         markets = {exchange: {trading_pair}}
 
