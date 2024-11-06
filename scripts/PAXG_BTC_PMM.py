@@ -1,3 +1,6 @@
+import os
+print(os.getcwd())  # Check the current working directory
+
 # Import Selected BOT
 from hummingbot.qfl.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
