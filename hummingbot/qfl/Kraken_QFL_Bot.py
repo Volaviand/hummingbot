@@ -691,7 +691,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     """
     
     def __init__(self, 
-    # connectors: Dict[str, ConnectorBase],
+    connectors: Dict[str, ConnectorBase] = None,  # Default to None
     trading_pair: str = "PAXG-BTC",
     exchange: str = "kraken",
     base_asset: str = "PAXG",
@@ -714,9 +714,12 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     trading_style: str = 'QFL'):
       
 
+        # If connectors are not passed, initialize it here, you can set it to None or any default value.
+        if connectors is None:
+            connectors = {}  # Empty dictionary or any default value
+
+        # Call the parent class's constructor to handle the connectors
         super().__init__(connectors)
-        # Initialize Base Class
-        self.connectors = connectors
 
         # self.connectors = connectors
         markets = {exchange: {trading_pair}}
