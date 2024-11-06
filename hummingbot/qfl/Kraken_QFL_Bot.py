@@ -747,6 +747,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         self.volatility_periods =  volatility_periods
         self.rolling_periods =  rolling_periods
 
+        self.trading_style = trading_style
 
 
         ## Initialize other global variables
@@ -757,6 +758,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         #Flag to avoid trading unless a cycle is complete
         self.trade_in_progress = False
 
+        
 
 
         ## Breakeven Initialization
