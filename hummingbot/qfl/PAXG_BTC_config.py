@@ -18,7 +18,7 @@ STRATEGY_CONFIG = {
     'inv_target_percent': Decimal(0.50),
     'order_shape_factor': Decimal(2.0),
     'history_name': 'PAXGXBT_60.csv',
-    'trade_history_name': 'trades.PAXG_BTC',
+    'trade_history_name': 'trades_PAXG_BTC',
     'chart_period': '60',
     'volatility_periods': 168,
     'rolling_periods': 12,
