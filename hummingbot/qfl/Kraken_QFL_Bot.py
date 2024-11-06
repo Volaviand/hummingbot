@@ -717,7 +717,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         # super().__init__(connectors)
         super().__init__(connectors={})  # Pass an empty dictionary or None if the parent expects it.
         print(f'Connector : {self.connectors}')
-        markets = {exchange: {trading_pair}}
+        self.markets = {exchange: {trading_pair}}
 
         # Chart Names
         self.trading_pair = trading_pair
