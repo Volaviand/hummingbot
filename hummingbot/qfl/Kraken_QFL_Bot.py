@@ -717,7 +717,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         # Call the parent class's constructor to handle the connectors
-        super().__init__(connectors)
+        super().__init__()
         # Debug: Print the connectors value
         print("Connectors:", self.connectors)
         # self.connectors = connectors
