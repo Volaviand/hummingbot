@@ -1,11 +1,15 @@
-import os
-print(os.getcwd())  # Check the current working directory
 import sys
+import os
+
+# Add the parent directory that contains `qfl` to sys.path
 sys.path.append('/home/tyler/hummingbot/hummingbot')
-# Import Selected BOT
+
+# Check if the path has been added successfully
+print("Current sys.path:", sys.path)
+
+# Now try importing your class
 from qfl.Kraken_QFL_Bot import KRAKENQFLBOT
 from decimal import Decimal
-print("Import successful!")
 # from hummingbot.connector.connector_base import ConnectorBase, Dict
 
 
@@ -33,7 +37,7 @@ print("Import successful!")
     # trading_style: str = 'QFL'):
 
 # Initialize bot with one configuration
-KRAKENQFLBOT(\
+bot = KRAKENQFLBOT(
     trading_pair= "PAXG-BTC",
     exchange= "kraken",
     base_asset= "PAXG",
@@ -56,7 +60,7 @@ KRAKENQFLBOT(\
     # Styles = QFL , Account Building
     trading_style = 'QFL')
 
-
+bot.start()
 # import logging
 # import math 
 # from math import floor, ceil
