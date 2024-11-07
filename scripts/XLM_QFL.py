@@ -697,7 +697,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
     """
 
-    CONFIG = STRATEGY_CONFIG['XLM_USD']
+    CONFIG = STRATEGY_CONFIG['XLM_EUR']
     # Extract all parameters from the config
     trading_pair = CONFIG['trading_pair']
     exchange = CONFIG['exchange']
