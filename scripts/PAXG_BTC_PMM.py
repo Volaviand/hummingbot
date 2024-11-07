@@ -713,6 +713,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     maximum_orders = CONFIG['maximum_orders']
     inv_target_percent = CONFIG['inv_target_percent']
     order_shape_factor = CONFIG['order_shape_factor']
+    percent_base_hold = CONFIG['percent_base_hold']
+    percent_quote_hold = CONFIG['percent_quote_hold']
     history_name = CONFIG['history_name']
     trade_history_name = CONFIG['trade_history_name']
     chart_period = CONFIG['chart_period']
@@ -1484,10 +1486,10 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
-        percent_base_to_hold = Decimal(0.005)
+        percent_base_to_hold = self.percent_base_hold
         # percent_base_rate = Decimal(1.0) - percent_base_to_hold
         
-        percent_quote_to_hold = Decimal(0.005)
+        percent_quote_to_hold = self.percent_quote_hold
         # percent_quote_rate = Decimal(1.0) - percent_quote_to_hold
         
 

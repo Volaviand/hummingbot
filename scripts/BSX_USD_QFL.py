@@ -1,3 +1,6 @@
+# from hummingbot.qfl.Kraken_QFL_Bot import RUNKRAKENBOT
+# RUNKRAKENBOT('PAXG_BTC')
+
 import logging
 import math 
 from math import floor, ceil
@@ -47,6 +50,10 @@ import csv
 sys.path.append('/home/tyler/quant/API_call_tests/')
 # from Kraken_Calculations import BuyTrades, SellTrades
 
+
+# import Config
+
+from hummingbot.qfl.bot_configs import STRATEGY_CONFIG
 ########## Profiling example to find time/speed of code
 
 # import cProfile
@@ -178,8 +185,8 @@ class KrakenAPI:
         return self.data
 
 # csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{file_name}.csv'
-class KRAKENQFL():
-    def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods):
+class KRAKENQFLHISTORY():
+    def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods, trading_style):
         self.filepath = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{filepath}'
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
@@ -187,7 +194,7 @@ class KRAKENQFL():
         self.volatility_periods = volatility_periods
         self.rolling_periods = rolling_periods
         self.interval = interval
-
+        self.trading_style = trading_style
     def call_csv_history(self):
         """
         Opens a CSV file in OHLCVT format and saves the data to a pandas DataFrame.
@@ -531,12 +538,12 @@ class KRAKENQFL():
     
     
             
-            if self.symbol == 'BSXUSD' or self.symbol == 'CPOOLEUR':
+            if self.trading_style == 'Account Building':
                 new_high_trailing = df.loc[i, 'Local Max']
                 new_low_trailing = df.loc[i, 'Local Min']
                 new_high = df.loc[i, 'Local Max']
                 new_low = df.loc[i, 'Local Min']
-            else:
+            elif self.trading_style == 'QFL':
                 new_high_trailing, new_low_trailing = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, True)
                 new_high, new_low = determine_tail_levels(i, previous_low_index, latest_low_index, previous_high_index, latest_high_index, False)
            
@@ -613,9 +620,14 @@ class KRAKENQFL():
         _bid_trailing_baseline = df['Trailing Low Line'].iloc[-1]
         _ask_trailing_baseline = df['Trailing High Line'].iloc[-1]
 
-        _bid_baseline = df['Mid Line'].iloc[-1] # df['Low Line'].iloc[-1]
-        _ask_baseline = df['Mid Line'].iloc[-1] # df['High Line'].iloc[-1]
-        # print(df)
+
+        if self.trading_style == 'Account Building':
+            _bid_baseline = df['Mid Line'].iloc[-1] 
+            _ask_baseline = df['Mid Line'].iloc[-1]
+        elif self.trading_style == 'QFL':
+            _bid_baseline = df['Low Line'].iloc[-1]
+            _ask_baseline = df['High Line'].iloc[-1]
+ 
         current_vola = df['Volatility'].iloc[-1]
         volatility_rank = df['volatility_rank'].iloc[-1]
     
@@ -677,66 +689,49 @@ class KRAKENQFL():
 
 
 
-class SimplePMM(ScriptStrategyBase):
+class KRAKENQFLBOT(ScriptStrategyBase):
     """
-    BotCamp Cohort: Sept 2022
-    Design Template: https://hummingbot-foundation.notion.site/Simple-PMM-63cc765486dd42228d3da0b32537fc92
-    Video: -
-    Description:
-    The bot will place two orders around the price_source (mid price or last traded price) in a trading_pair on
-    exchange, with a distance defined by the ask_spread and bid_spread. Every order_refresh_time in seconds,
-    the bot will cancel and replace the orders.
+    The bot will place layers of orders above and below the defined reservation prices. 
+    These prices are 
+
+
     """
 
-    # bid_spread = 0.05
-    # ask_spread = 0.05
-    min_profitability = 0.015
+    CONFIG = STRATEGY_CONFIG['BSX_USD']
+    # Extract all parameters from the config
+    trading_pair = CONFIG['trading_pair']
+    exchange = CONFIG['exchange']
+    base_asset = CONFIG['base_asset']
+    quote_asset = CONFIG['quote_asset']
+    history_market = CONFIG['history_market']
+    min_profitability = CONFIG['min_profitability']
+    buy_p = CONFIG['buy_p']
+    sell_p = CONFIG['sell_p']
+    quote_order_amount = CONFIG['quote_order_amount']
+    order_amount = CONFIG['order_amount']
+    max_order_amount = CONFIG['max_order_amount']
+    maximum_orders = CONFIG['maximum_orders']
+    inv_target_percent = CONFIG['inv_target_percent']
+    order_shape_factor = CONFIG['order_shape_factor']
+    percent_base_hold = CONFIG['percent_base_hold']
+    percent_quote_hold = CONFIG['percent_quote_hold']
+    history_name = CONFIG['history_name']
+    trade_history_name = CONFIG['trade_history_name']
+    chart_period = CONFIG['chart_period']
+    volatility_periods = CONFIG['volatility_periods']
+    rolling_periods = CONFIG['rolling_periods']
+    trading_style = CONFIG['trading_style']
+
     target_profitability = min_profitability
 
 
     ## Trade Halting Process
-
     #Flag to avoid trading unless a cycle is complete
     trade_in_progress = False
 
 
-    #order_refresh_time = 30
-    quote_order_amount = Decimal(5.0)
-    order_amount = Decimal(130000)
-    max_order_amount = Decimal(260000)
-    min_order_size_bid = Decimal(0)
-    min_order_size_ask = Decimal(0)
-
-
-    trading_pair = "BSX-USD"
-    exchange = "kraken"
-    base_asset = "BSX"
-    quote_asset = "USD"
-    history_market = 'BSXUSD'
-
-
-    #Maximum amount of orders  Bid + Ask
-    maximum_orders = 170
-
-    inv_target_percent = Decimal(0)   
-
-    ## how fast/gradual does inventory rebalance? bigger= more rebalance
-    order_shape_factor = Decimal(2.0) 
-    # Here you can use for example the LastTrade price to use in your strategy
-    #MidPrice 
-    #BestBid 
-    #BestAsk 
-    #LastTrade 
-    #LastOwnTrade 
-    #InventoryCost 
-    #Custom 
-    # _last_trade_price = None
-    _vwap_midprice = None
-    #price_source = self.connectors[self.exchange].get_price_by_type(self.trading_pair, PriceType.LastOwnTrade)
 
     markets = {exchange: {trading_pair}}
-
-
 
 
     ## Breakeven Initialization
@@ -751,9 +746,11 @@ class SimplePMM(ScriptStrategyBase):
     
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
-        # print(f'Connectors : {self.connectors}')
+
         # Define Market Parameters and Settings
-        self.Kraken_QFL = KRAKENQFL('BSXUSD_60.csv', self.history_market, '60', volatility_periods=168, rolling_periods=12)
+        self.Kraken_QFL = KRAKENQFLHISTORY(self.history_name, self.history_market, self.chart_period,\
+        self.volatility_periods, self.rolling_periods, self.trading_style)
+
 
         # Cooldown for how long an order stays in place. 
         self.create_timestamp = 0
@@ -858,7 +855,7 @@ class SimplePMM(ScriptStrategyBase):
         
         return None, None
 
-    def call_trade_history(self, file_name='trades_BSX_USD'):
+    def call_trade_history(self):
         '''Call your CSV of trade history in order to determine Breakevens, PnL, and other metrics'''
 
         # Start with default values
@@ -866,7 +863,7 @@ class SimplePMM(ScriptStrategyBase):
         prev_net_value = 0  # This tracks the previous net value for comparison
 
         # Specify the path to your CSV file
-        csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{file_name}.csv'
+        csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{self.trade_history_name}.csv'
         # Check if the CSV file exists
         if not os.path.isfile(csv_file_path):
             # Return zeros on the class variables
@@ -1417,8 +1414,8 @@ class SimplePMM(ScriptStrategyBase):
         # the strength of volatility.  1 - vr = as volatility ^, % distance decreases
         k = Decimal(1.0) * (Decimal(1.0) - Decimal(self.volatility_rank))
         # Deepest entry % to start off the trade
-        maximum_bp = 0.970
-        maximum_sp = 1.03
+        maximum_bp = 0.975
+        maximum_sp = 1.025
         # Log Transform the values based on q balance and k rate
         bp = log_transform_reverse(q, maximum_bp, self.min_profitability, k)
         sp = log_transform_reverse(q, maximum_sp, self.min_profitability, k)
@@ -1489,10 +1486,10 @@ class SimplePMM(ScriptStrategyBase):
         top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # adjust to hold 0.5% of balance in base. Over time with profitable trades, this will hold a portion of profits in coin: 
-        percent_base_to_hold = Decimal(0.005)
+        percent_base_to_hold = self.percent_base_hold
         # percent_base_rate = Decimal(1.0) - percent_base_to_hold
         
-        percent_quote_to_hold = Decimal(0.005)
+        percent_quote_to_hold = self.percent_quote_hold
         # percent_quote_rate = Decimal(1.0) - percent_quote_to_hold
         
 
@@ -1729,6 +1726,17 @@ class SimplePMM(ScriptStrategyBase):
             ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
 
             # print(f'{price_multiplier} : {len(order_levels)}')
+            def quantize_and_trail(price, side='ask'):
+                """Quantize the current price that is up for placement and adjust the price to place the order
+                one minimum price movement ahead of that price for better entry fulfillment"""
+                if side == 'bid':
+                    q_and_t = self.connectors[self.exchange].quantize_order_price(\
+                    self.trading_pair,(ceil(Decimal(price) / bid_price_quantum) + 1) * bid_price_quantum)
+                elif side == 'ask':
+                    q_and_t = self.connectors[self.exchange].quantize_order_price(\
+                    self.trading_pair,(floor(Decimal(price) / ask_price_quantum) - 1) * ask_price_quantum)     
+
+                return q_and_t
 
             for i in range(len(order_levels)):
                 current_group = i // max_orders
@@ -1755,9 +1763,9 @@ class SimplePMM(ScriptStrategyBase):
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                             if min_above_price:
-                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, (floor(Decimal(min_above_price) / ask_price_quantum) - 1) * ask_price_quantum
-                                )
+                                # Quantize all prices        
+                                order_levels.at[i, 'price'] = quantize_and_trail(min_above_price,side='ask')
+                               
 
                     elif price_multiplier < 1:
                         base_increment = ((1 - price_multiplier ) / max_orders) * i
@@ -1781,19 +1789,17 @@ class SimplePMM(ScriptStrategyBase):
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
                             if max_below_price:
-                                order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                                    self.trading_pair, (ceil(Decimal(max_below_price) / bid_price_quantum) + 1) * bid_price_quantum
-                                )
+                                # Quantize all prices        
+                                order_levels.at[i, 'price'] = quantize_and_trail(max_below_price,side='bid')
 
                 else:
                     if price_multiplier > 1:
-                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                            self.trading_pair, (floor(starting_price / ask_price_quantum) - 1) * ask_price_quantum
-                        )
+                        # Quantize all prices        
+                        order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='ask')
+
                     if price_multiplier < 1:
-                        order_levels.at[i, 'price'] = self.connectors[self.exchange].quantize_order_price(
-                            self.trading_pair, (ceil(starting_price / bid_price_quantum) + 1) * bid_price_quantum
-                        )
+                        # Quantize all prices        
+                        order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='bid')
 
             return order_levels
 
@@ -1894,8 +1900,12 @@ class SimplePMM(ScriptStrategyBase):
         breakeven_buy_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_buy_price)
         breakeven_sell_price = self.connectors[self.exchange].quantize_order_price(self.trading_pair, breakeven_sell_price)
 
-        lowest_last_bid_trail = np.minimum(self._bid_trailing_baseline, self._last_buy_price)
-        highest_last_ask_trail = np.maximum(self._ask_trailing_baseline, self._last_sell_price)
+        if self.trading_style == 'Account Building':
+            lowest_last_bid_trail = self._last_buy_price
+            highest_last_ask_trail = self._last_sell_price
+        elif self.trading_style == 'QFL':
+            lowest_last_bid_trail = np.minimum(self._bid_trailing_baseline, self._last_buy_price)
+            highest_last_ask_trail = np.maximum(self._ask_trailing_baseline, self._last_sell_price)
 
          # There is no data, Use baselines
         if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
@@ -1906,25 +1916,25 @@ class SimplePMM(ScriptStrategyBase):
         # You have started a Buy Cycle, use Bid BE
         elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Buy Cycle"
-            s_bid = self._last_buy_price # breakeven_buy_price
+            s_bid = lowest_last_bid_trail 
             s_ask = breakeven_buy_price
         
         # You have started a Sell Cycle, use Ask BE
         elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
             self.trade_position_text = "Sell Cycle"
             s_bid = breakeven_sell_price
-            s_ask = self._last_sell_price # breakeven_sell_price
+            s_ask = highest_last_ask_trail 
 
         # You are mid trade, use net values to determine locations
         elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
             if is_buy_net: # Mid Buy Trade, Buy Below BE, Sell for profit
                 self.trade_position_text = "Unfinished Buy Cycle"
-                s_bid = self._last_buy_price
+                s_bid = lowest_last_bid_trail
                 s_ask = breakeven_buy_price
             elif is_sell_net: # Mid Sell Trade, Sell Above BE, Buy for profit
                 self.trade_position_text = "Unfinished Sell Cycle"
                 s_bid = breakeven_sell_price
-                s_ask = self._last_sell_price
+                s_ask = highest_last_ask_trail
             elif is_neutral_net: # Price is perfectly neutral, use prospective levels
                 self.trade_position_text = "Neutral Cycle"
                 s_bid = self._last_buy_price # breakeven_buy_price
