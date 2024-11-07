@@ -98,6 +98,6 @@ STRATEGY_CONFIG = {
         'volatility_periods': 168,
         'rolling_periods': 12,
         'trading_style': 'Account Building', # 'Account Building' or 'QFL'
-    },
+    }
 }
 
