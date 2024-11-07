@@ -53,7 +53,7 @@ sys.path.append('/home/tyler/quant/API_call_tests/')
 
 # import Config
 
-from hummingbot.qfl.PAXG_BTC_config import STRATEGY_CONFIG
+from hummingbot.qfl.bot_configs import STRATEGY_CONFIG
 ########## Profiling example to find time/speed of code
 
 # import cProfile
