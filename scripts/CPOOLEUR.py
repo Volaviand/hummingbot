@@ -1718,44 +1718,41 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         def calculate_fair_value_price(df, current_price, quantile=0.5, side='ask'):
             """
             Calculate a fair value price based on a dynamic cumulative volume threshold, 
-            excluding the threshold price's own volume contribution, using DataFrames and Decimal.
+            excluding the threshold price's own volume contribution, using DataFrames and numpy.
             
-            :param df: DataFrame containing 'Price' and 'Volume' columns, expected to be floats initially
-            :param current_price: Decimal representing the starting price to compare against
+            :param df: DataFrame containing 'Price' and 'Volume' columns
+            :param current_price: The starting price to compare against
             :param quantile: Quantile to determine the dynamic volume threshold
             :param side: 'ask' for prices above, 'bid' for prices below
-            :return: Fair value price as a Decimal based on cumulative volume
+            :return: Fair value price based on cumulative volume
             """
-            # Convert 'Price' and 'Volume' columns to Decimal for consistency
-            df['Price'] = df['Price'].apply(Decimal)
-            df['Volume'] = df['Volume'].apply(Decimal)
-            
             # Step 1: Filter and sort the DataFrame by side
             if side == 'ask':
                 side_df = df[df['Price'] > current_price].sort_values(by='Price')
             else:  # 'bid'
                 side_df = df[df['Price'] < current_price].sort_values(by='Price', ascending=False)
             
-            # Step 2: Calculate dynamic volume threshold as a Decimal
-            dynamic_threshold = (side_df['Volume'].quantile(quantile))
+            # Step 2: Calculate dynamic volume threshold
+            dynamic_threshold = side_df['Volume'].quantile(quantile)
             
-            # Step 3: Calculate cumulative volume using numpy and find the threshold price
-            side_df['CumulativeVolume'] = np.cumsum(side_df['Volume'].to_numpy(dtype='object'))  # Use dtype='object' for Decimal compatibility
+            # Step 3: Calculate cumulative volume and find the threshold price
+            side_df['CumulativeVolume'] = np.cumsum(side_df['Volume'])
             threshold_df = side_df[side_df['CumulativeVolume'] >= dynamic_threshold]
             
             if threshold_df.empty:
                 return None  # No price level met the cumulative volume
-
+            
             # Extract the threshold price and exclude it from further calculation
             threshold_price = threshold_df.iloc[0]['Price']
             volume_to_threshold = side_df[side_df['Price'] < threshold_price] if side == 'ask' else side_df[side_df['Price'] > threshold_price]
             
-            # Step 4: Compute the weighted sum with Decimal
-            price_diff = current_price - threshold_price
-            weighted_sum = sum(Decimal(volume) * Decimal(price_diff) for volume in volume_to_threshold['Volume'])
+            # Step 4: Compute the weighted sum with numpy
+            price_diffs = volume_to_threshold['Price'] - threshold_price
+            weighted_sum = np.sum(volume_to_threshold['Volume'] * price_diffs)
             
-            # Final fair value calculation as Decimal
-            fair_value_price = (Decimal(dynamic_threshold) * threshold_price + Decimal(weighted_sum)) / Decimal(dynamic_threshold)
+            # Final fair value calculation
+            fair_value_price = (dynamic_threshold * threshold_price + weighted_sum) / dynamic_threshold
+            fair_value_price = Decimal(fair_value_price)
             return fair_value_price
 
         # Function to calculate prices based on the order levels
