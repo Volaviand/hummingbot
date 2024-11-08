@@ -1616,8 +1616,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         is_neutral_net = net_value == 0 
 
         # Set initial minimum order sizes based on the cycle net position to complete a cycle
-        self.min_order_size_bid = quote_balancing_volume # self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a < 0 else 0)
-        self.min_order_size_ask = base_balancing_volume # self.order_amount # max(self.order_amount, abs(self.n_v_a) if self.n_v_a > 0 else 0)
+        self.min_order_size_bid = max(self.order_amount, quote_balancing_volume )
+        self.min_order_size_ask = max(self.order_amount, base_balancing_volume )
 
         # Quantize order sizes according to the exchange's rules
         self.min_order_size_bid = self.connectors[self.exchange].quantize_order_amount(self.trading_pair, self.min_order_size_bid)
