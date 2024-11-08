@@ -1737,7 +1737,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                 side_df = df[df['Price'] < current_price].sort_values(by='Price', ascending=False)
             
             # Step 2: Calculate dynamic volume threshold as a Decimal
-            dynamic_threshold = Decimal(side_df['Volume'].quantile(quantile))
+            dynamic_threshold = (side_df['Volume'].quantile(quantile))
             
             # Step 3: Calculate cumulative volume using numpy and find the threshold price
             side_df['CumulativeVolume'] = np.cumsum(side_df['Volume'].to_numpy(dtype='object'))  # Use dtype='object' for Decimal compatibility
@@ -1752,10 +1752,10 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             
             # Step 4: Compute the weighted sum with Decimal
             price_diff = current_price - threshold_price
-            weighted_sum = sum(volume * price_diff for volume in volume_to_threshold['Volume'])
+            weighted_sum = sum(Decimal(volume) * Decimal(price_diff) for volume in volume_to_threshold['Volume'])
             
             # Final fair value calculation as Decimal
-            fair_value_price = (dynamic_threshold * threshold_price + weighted_sum) / dynamic_threshold
+            fair_value_price = (Decimal(dynamic_threshold) * threshold_price + Decimal(weighted_sum)) / Decimal(dynamic_threshold)
             return fair_value_price
 
         # Function to calculate prices based on the order levels
