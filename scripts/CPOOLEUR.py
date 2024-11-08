@@ -1726,12 +1726,12 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             :param side: 'ask' for prices above, 'bid' for prices below
             :return: Fair value price based on cumulative volume
             """
-            # Step 1: Filter and sort the DataFrame by side
+            # Step 1: Filter and sort the DataFrame by side and exclude empty volumes
             if side == 'ask':
-                side_df = df[df['Price'] > current_price].sort_values(by='Price')
+                side_df = df[(df['Price'] > current_price) & (df['Volume'] > 0)].sort_values(by='Price')
             else:  # 'bid'
-                side_df = df[df['Price'] < current_price].sort_values(by='Price', ascending=False)
-            
+                side_df = df[(df['Price'] < current_price) & (df['Volume'] > 0)].sort_values(by='Price', ascending=False)
+
             # Step 2: Calculate dynamic volume threshold
             dynamic_threshold = side_df['Volume'].quantile(quantile)
             
