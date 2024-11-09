@@ -1465,8 +1465,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         #     bid_depth = bid_volume_cdf_value
         #     ask_depth = ask_volume_cdf_value
 
-        bid_depth = self.max_order_amount # self.order_amount
-        ask_depth = self.max_order_amount # self.order_amount
+        bid_depth = self.min_order_size_bid # self.order_amount
+        ask_depth = self.min_order_size_ask # self.order_amount
         self.b_d = bid_depth # bid_depth
         self.a_d = ask_depth # ask_depth
         # msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
@@ -1728,9 +1728,9 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             """
             # Step 1: Filter and sort the DataFrame by side and exclude empty volumes
             if side == 'ask':
-                side_df = df[(df['Price'] > current_price) & (df['Volume'] > 0)].sort_values(by='Price')
+                side_df = df[(df['Price'] >= current_price) & (df['Volume'] > 0)].sort_values(by='Price')
             else:  # 'bid'
-                side_df = df[(df['Price'] < current_price) & (df['Volume'] > 0)].sort_values(by='Price', ascending=False)
+                side_df = df[(df['Price'] <= current_price) & (df['Volume'] > 0)].sort_values(by='Price', ascending=False)
 
             # Step 2: Calculate dynamic volume threshold
             dynamic_threshold = side_df['Volume'].quantile(quantile)
@@ -1752,7 +1752,24 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             
             # Final fair value calculation
             fair_value_price = (dynamic_threshold * threshold_price + weighted_sum) / dynamic_threshold
-            fair_value_price = Decimal(fair_value_price)
+
+
+            # Final check: If you are in an illiquid(empty) spot, adjust your order to the next best price
+            if side == 'ask':
+                # If no volume exists at fair_value_price, find the next available price above
+                available_prices = side_df[side_df['Price'] >= fair_value_price]
+                if fair_value_price not in available_prices['Price'].values:
+                    # Find the next price above
+                    next_price = available_prices['Price'].min()  # Get the minimum price above
+                    fair_value_price = Decimal(next_price)
+            else:  # 'bid'
+                # If no volume exists at fair_value_price, find the next available price below
+                available_prices = side_df[side_df['Price'] <= fair_value_price]
+                if fair_value_price not in available_prices['Price'].values:
+                    # Find the next price below
+                    next_price = available_prices['Price'].max()  # Get the maximum price below
+                    fair_value_price = Decimal(next_price)
+
             return fair_value_price
 
         # Function to calculate prices based on the order levels
@@ -2127,12 +2144,12 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         # Market Depth Check to allow for hiding further in the orderbook by the volume vwap
-        top_bid_price, top_ask_price = self.get_current_top_bid_ask()
+        # top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # # # Specified Volume Depth VWAP in the order book
-        # depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
-        # top_bid_price = depth_vwap_bid
-        # top_ask_price = depth_vwap_ask
+        depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
+        top_bid_price = depth_vwap_bid
+        top_ask_price = depth_vwap_ask
 
         # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
         bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(
