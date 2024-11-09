@@ -1246,6 +1246,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         for order in self.get_active_orders(connector_name=self.exchange):
             self.cancel(self.exchange, order.trading_pair, order.client_order_id)
             self.manual_reset_locked_collateral()
+            time.sleep(0.1)
 
             ## Print object attributes. 
             # print(dir(order))
@@ -1258,12 +1259,14 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             if order.is_buy :
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
                 self.manual_reset_locked_collateral()
+                time.sleep(0.1)
 
     def cancel_ask_orders(self):
         for order in self.get_active_orders(connector_name=self.exchange):            
             if not order.is_buy:
                 self.cancel(self.exchange, order.trading_pair, order.client_order_id)
                 self.manual_reset_locked_collateral()
+                time.sleep(0.1)
 
 
 
