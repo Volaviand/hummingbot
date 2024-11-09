@@ -1893,11 +1893,9 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
             # Calculate prices for both bid and ask order levels
-            bid_order_levels, self.bid_dynamic_threshold, bid_threshold_price, bid_weighted_sum = \
-                calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
+            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
 
-            ask_order_levels, self.ask_dynamic_threshold, ask_threshold_price, ask_weighted_sum = \
-                calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
+            ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
             
             # self.total_OB_fair_value = ((self.bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
             #     + (self.ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )\
