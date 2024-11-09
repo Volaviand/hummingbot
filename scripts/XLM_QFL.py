@@ -1874,7 +1874,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
 
-            return order_levels, dynamic_threshold, threshold_price, weighted_sum
+            return order_levels #, dynamic_threshold, threshold_price, weighted_sum
 
         # Main logic for determining order sizes and prices
         def create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels):
