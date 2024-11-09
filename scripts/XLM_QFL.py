@@ -1605,6 +1605,41 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
     
+    def calculate_total_OB_fair_value(self):
+                # Call orderbook Data
+                asks_df, bids_df = self.get_kraken_order_book(self.history_market)
+
+                # Reverse direction of bids to be in the correct arrangement
+                bids_df = bids_df.sort_values(by='Price', ascending=False)
+
+
+                # Find the farthest end of the order book
+                threshold_ask = asks_df['Price'].max()
+                threshold_bid = bids_df['Price'].min()
+
+                # New DF containing the differences in price
+                ask_price_diff = asks_df['Price'] - threshold_ask
+                bid_price_diff = bids_df['Price'] - threshold_bid
+
+                # Volume Sum (Threshold Volume)
+                ask_volume_sum = asks_df['Volume'].sum()
+                bid_volume_sum = bids_df['Volume'].sum()
+
+                # Weighted Sum
+                ask_weighted_sum = np.sum(asks_df['Volume'] * ask_price_diff)
+                bid_weighted_sum = np.sum(bids_df['Volume'] * bid_price_diff)
+
+                # Final fair value calculation
+                # Determine Numerators for each
+                ask_numerator = (ask_volume_sum * threshold_ask + ask_weighted_sum) 
+                bid_numerator = (bid_volume_sum * threshold_bid + bid_weighted_sum) 
+
+                # Determine Denominator
+                total_threshold_volume = ask_volume_sum + bid_volume_sum
+
+                total_OB_fair_value = (bid_numerator + ask_numerator) / total_threshold_volume
+
+                return total_OB_fair_value
 
     def determine_entry_placement(self, max_levels=5):
         # Retrieve current positions and calculate minimum order sizes
@@ -1786,41 +1821,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
             return fair_value_price
 
-        def calculate_total_OB_fair_value(self):
-            # Call orderbook Data
-            asks_df, bids_df = self.get_kraken_order_book(self.history_market)
-
-            # Reverse direction of bids to be in the correct arrangement
-            bids_df = bids_df.sort_values(by='Price', ascending=False)
-
-
-            # Find the farthest end of the order book
-            threshold_ask = asks_df['Price'].max()
-            threshold_bid = bids_df['Price'].min()
-
-            # New DF containing the differences in price
-            ask_price_diff = asks_df['Price'] - threshold_ask
-            bid_price_diff = bids_df['Price'] - threshold_bid
-
-            # Volume Sum (Threshold Volume)
-            ask_volume_sum = asks_df['Volume'].sum()
-            bid_volume_sum = bids_df['Volume'].sum()
-
-            # Weighted Sum
-            ask_weighted_sum = np.sum(asks_df['Volume'] * ask_price_diff)
-            bid_weighted_sum = np.sum(bids_df['Volume'] * bid_price_diff)
-
-            # Final fair value calculation
-            # Determine Numerators for each
-            ask_numerator = (ask_volume_sum * threshold_ask + ask_weighted_sum) 
-            bid_numerator = (bid_volume_sum * threshold_bid + bid_weighted_sum) 
-
-            # Determine Denominator
-            total_threshold_volume = ask_volume_sum + bid_volume_sum
-
-            total_OB_fair_value = (bid_numerator + ask_numerator) / total_threshold_volume
-
-            return total_OB_fair_value
+        
 
 
 
