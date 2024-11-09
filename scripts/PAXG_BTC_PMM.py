@@ -1232,6 +1232,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         for order in proposal:
 
             self.place_order(connector_name=self.exchange, order=order)
+            time.sleep(0.1)
 
     def place_order(self, connector_name: str, order: OrderCandidate):
         if order.order_side == TradeType.SELL:
