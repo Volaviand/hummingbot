@@ -2144,7 +2144,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             self.trading_pair,
             top_ask_price
         )
-
+        print(f'Optimal Bid Spread: {optimal_bid_spread/TWO}')
+        print(f'Optimal Ask Spread: {optimal_ask_spread/TWO}')
         # Spread calculation price vs the minimum profit price for entries
         optimal_bid_price =  np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid) # min_profit_bid #
         optimal_ask_price =  np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask) # min_profit_ask #
