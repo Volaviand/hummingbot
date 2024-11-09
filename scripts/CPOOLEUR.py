@@ -1806,7 +1806,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                     self.trading_pair,(floor(Decimal(price) / ask_price_quantum) - 1) * ask_price_quantum)     
 
                 return q_and_t
-
+            empty_value = 0
             for i in range(len(order_levels)):
                 current_group = i // max_orders
 
@@ -1866,9 +1866,16 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                         # Quantize all prices        
                         order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='ask')
 
+                        empty_value, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
+                            bids_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
+                        )
                     if price_multiplier < 1:
                         # Quantize all prices        
                         order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='bid')
+
+                        empty_value, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
+                            bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
+                        )
 
             return order_levels, dynamic_threshold, threshold_price, weighted_sum
 
