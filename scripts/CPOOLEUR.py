@@ -2146,8 +2146,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         )
 
         # Spread calculation price vs the minimum profit price for entries
-        optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
-        optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
+        optimal_bid_price =  np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid) # min_profit_bid #
+        optimal_ask_price =  np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask) # min_profit_ask #
 
 
         # Calculate the price just above the top bid and just below the top ask (Allow bot to place at widest possible spread)
