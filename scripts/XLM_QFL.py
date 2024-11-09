@@ -772,6 +772,14 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         self.wait_after_cancel_timestamp = 0
         self.cancel_cooldown_duration = 7
 
+        self.min_order_size_bid = self.order_amount 
+        self.min_order_size_ask = self.order_amount
+        self.bid_dynamic_threshold = 0
+        self.ask_dynamic_threshold = 0
+
+        self.obs = 0
+        self.oas = 0
+        self.total_OB_fair_value = 0
 
         self._bid_trailing_baseline = None
         self._ask_trailing_baseline = None
@@ -1313,18 +1321,23 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         lines.extend([f"R_PnL (Quote) :: {self.pnl:.8f} | U_PnL (Quote) :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
-        lines.extend(["", "| Reservation Prices | Baselines | Breakevens | Profit Targets |"])
+        lines.extend(["", "| OB Fair Value | Reservation Prices | Baselines | Breakevens"])
+        lines.extend([f"TOBFV /: {self.total_OB_fair_value:.8f} "])
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"LT /: Ask :: {self._last_sell_price:.8f} || Bid :: {self._last_buy_price:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
-        lines.extend([f"T_Bl /: Ask :: {self._ask_trailing_baseline} | Bid :: {self._bid_trailing_baseline}"])
+        lines.extend([f"T_Bl /: Ask :: {self._ask_trailing_baseline:.8f} | Bid :: {self._bid_trailing_baseline:.8f}"])
         lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
+
+        lines.extend(["", "| Profit Targets | Optimal Spread"])
         lines.extend([f"PT /: Ask(%) :: {self.ask_percent:.4f} | Bid(%) :: {self.bid_percent:.4f}"])
+        lines.extend([f"OP /: Ask(%) :: {self.oas:.4f} | Bid(%) :: {self.obs:.4f}"])
 
 
-        lines.extend(["", "| Market Depth |"])
-        lines.extend([f"Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
 
+        lines.extend(["", "| Market Depth | Threshold Depth"])
+        lines.extend([f"MD /: Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
+        lines.extend([f"TD /: Ask :: {self.ask_dynamic_threshold:.8f} | Bid :: {self.bid_dynamic_threshold:.8f}"])
 
         lines.extend(["", "| Volatility Measurements |"])
         lines.extend([f"Current Volatility(d%) :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
@@ -1465,8 +1478,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         #     bid_depth = bid_volume_cdf_value
         #     ask_depth = ask_volume_cdf_value
 
-        bid_depth = self.max_order_amount # self.order_amount
-        ask_depth = self.max_order_amount # self.order_amount
+        bid_depth = self.min_order_size_bid # self.order_amount
+        ask_depth = self.min_order_size_ask # self.order_amount
         self.b_d = bid_depth # bid_depth
         self.a_d = ask_depth # ask_depth
         # msg_q = (f"bid_depth :: {bid_depth:8f}% :: ask_depth :: {ask_depth:8f}")
@@ -1715,6 +1728,62 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
             return None  # No price level met the cumulative volume
 
+        def calculate_fair_value_price(df, current_price, quantile=0.5, side='ask'):
+            """
+            Calculate a fair value price based on a dynamic cumulative volume threshold, 
+            excluding the threshold price's own volume contribution, using DataFrames and numpy.
+            
+            :param df: DataFrame containing 'Price' and 'Volume' columns
+            :param current_price: The starting price to compare against
+            :param quantile: Quantile to determine the dynamic volume threshold
+            :param side: 'ask' for prices above, 'bid' for prices below
+            :return: Fair value price based on cumulative volume
+            """
+            # Step 1: Filter and sort the DataFrame by side and exclude empty volumes
+            if side == 'ask':
+                side_df = df[(df['Price'] >= current_price) & (df['Volume'] > 0)].sort_values(by='Price')
+            else:  # 'bid'
+                side_df = df[(df['Price'] <= current_price) & (df['Volume'] > 0)].sort_values(by='Price', ascending=False)
+
+            # Step 2: Calculate dynamic volume threshold
+            dynamic_threshold = side_df['Volume'].quantile(quantile)
+            
+            # Step 3: Calculate cumulative volume and find the threshold price
+            side_df['CumulativeVolume'] = np.cumsum(side_df['Volume'])
+            threshold_df = side_df[side_df['CumulativeVolume'] >= dynamic_threshold]
+            
+            if threshold_df.empty:
+                return None  # No price level met the cumulative volume
+            
+            # Extract the threshold price and exclude it from further calculation
+            threshold_price = threshold_df.iloc[0]['Price']
+            volume_to_threshold = side_df[side_df['Price'] < threshold_price] if side == 'ask' else side_df[side_df['Price'] > threshold_price]
+            
+            # Step 4: Compute the weighted sum with numpy
+            price_diffs = volume_to_threshold['Price'] - threshold_price
+            weighted_sum = np.sum(volume_to_threshold['Volume'] * price_diffs)
+            
+            # Final fair value calculation
+            fair_value_price = (dynamic_threshold * threshold_price + weighted_sum) / dynamic_threshold
+
+
+            # Final check: If you are in an illiquid(empty) spot, adjust your order to the next best price
+            if side == 'ask':
+                # If no volume exists at fair_value_price, find the next available price above
+                available_prices = side_df[side_df['Price'] >= fair_value_price]
+                if fair_value_price not in available_prices['Price'].values:
+                    # Find the next price above
+                    next_price = available_prices['Price'].min()  # Get the minimum price above
+                    fair_value_price = Decimal(next_price)
+            else:  # 'bid'
+                # If no volume exists at fair_value_price, find the next available price below
+                available_prices = side_df[side_df['Price'] <= fair_value_price]
+                if fair_value_price not in available_prices['Price'].values:
+                    # Find the next price below
+                    next_price = available_prices['Price'].max()  # Get the maximum price below
+                    fair_value_price = Decimal(next_price)
+
+            return fair_value_price, dynamic_threshold, threshold_price, weighted_sum
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
@@ -1759,7 +1828,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not asks_df.empty:
-                            min_above_price = find_price_with_cumulative_volume(
+                            min_above_price, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                             if min_above_price:
@@ -1785,7 +1854,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not bids_df.empty:
-                            max_below_price = find_price_with_cumulative_volume(
+                            max_below_price, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
                             if max_below_price:
@@ -1801,7 +1870,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                         # Quantize all prices        
                         order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='bid')
 
-            return order_levels
+            return order_levels, dynamic_threshold, threshold_price, weighted_sum
 
         # Main logic for determining order sizes and prices
         def create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels):
@@ -1814,38 +1883,21 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             # If they are oppsite, they will spread out the orders / play on each other as price moves. 
             max_quote_q_net = max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
             max_base_q_net = max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
-            # # Depending on the cycle, calculate order sizes
-            # if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
-            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
-            # elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
-            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
-            # elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
-            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
-            # # Mid trade logic
-            # elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
-            #     if is_buy_net: 
-            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-            #     elif is_sell_net: 
-            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-            #     elif is_neutral_net: 
-            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
+ 
             # Simplify code
             bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
             ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
             # Calculate prices for both bid and ask order levels
-            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
-            ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
+            bid_order_levels, self.bid_dynamic_threshold, bid_threshold_price, bid_weighted_sum = \
+                calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
+
+            ask_order_levels, self.ask_dynamic_threshold, ask_threshold_price, ask_weighted_sum = \
+                calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
+            
+            self.total_OB_fair_value = ((self.bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
+                + (self.ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )\
+                /  (self.bid_dynamic_threshold + self.ask_dynamic_threshold)
 
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
@@ -2063,7 +2115,9 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
-
+       
+        self.obs = (optimal_bid_spread / TWO) / bid_reservation_price * 100
+        self.oas = (optimal_ask_spread / TWO) / ask_reservation_price * 100
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
 
@@ -2088,12 +2142,12 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         # Market Depth Check to allow for hiding further in the orderbook by the volume vwap
-        top_bid_price, top_ask_price = self.get_current_top_bid_ask()
+        # top_bid_price, top_ask_price = self.get_current_top_bid_ask()
 
         # # # Specified Volume Depth VWAP in the order book
-        # depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
-        # top_bid_price = depth_vwap_bid
-        # top_ask_price = depth_vwap_ask
+        depth_vwap_bid, depth_vwap_ask = self.get_vwap_bid_ask()
+        top_bid_price = depth_vwap_bid
+        top_ask_price = depth_vwap_ask
 
         # Calculate the quantum for both bid and ask prices (Convert to chart price decimals)
         bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(
@@ -2106,8 +2160,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         )
 
         # Spread calculation price vs the minimum profit price for entries
-        optimal_bid_price = min_profit_bid # np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid)
-        optimal_ask_price = min_profit_ask # np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask)
+        optimal_bid_price =  np.minimum(bid_reservation_price - (optimal_bid_spread  / TWO), min_profit_bid) # min_profit_bid #
+        optimal_ask_price =  np.maximum(ask_reservation_price + (optimal_ask_spread / TWO), min_profit_ask) # min_profit_ask #
 
 
         # Calculate the price just above the top bid and just below the top ask (Allow bot to place at widest possible spread)
