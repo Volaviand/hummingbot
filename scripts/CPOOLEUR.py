@@ -1894,7 +1894,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                 calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
             
             self.total_OB_fair_value = ((self.bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
-                + (ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) ) /  (self.bid_dynamic_threshold + ask_dynamic_threshold)
+                + (self.ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )\
+                /  (self.bid_dynamic_threshold + self.ask_dynamic_threshold)
 
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
@@ -2113,8 +2114,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
        
-        self.obs = optimal_bid_spread / TWO
-        self.oas = optimal_ask_spread / TWO
+        self.obs = (optimal_bid_spread / TWO) / bid_reservation_price
+        self.oas = (optimal_ask_spread / TWO) / ask_reservation_price
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
 
