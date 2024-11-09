@@ -2114,8 +2114,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         optimal_bid_spread = (y_bid * (Decimal(1) * bid_volatility_in_base) * t) + ((TWO  * bid_log_term) / y_bid)
         optimal_ask_spread = (y_ask * (Decimal(1) * ask_volatility_in_base) * t) + ((TWO  * ask_log_term) / y_ask)
        
-        self.obs = (optimal_bid_spread / TWO) / bid_reservation_price
-        self.oas = (optimal_ask_spread / TWO) / ask_reservation_price
+        self.obs = (optimal_bid_spread / TWO) / bid_reservation_price * 100
+        self.oas = (optimal_ask_spread / TWO) / ask_reservation_price * 100
 
         breakeven_buy_price, breakeven_sell_price, realized_pnl, net_value, new_trade_cycle = self.call_trade_history()
 
