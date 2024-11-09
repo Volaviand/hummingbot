@@ -1587,7 +1587,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
             # In order to balance the Quote, I want to buy more of bid to balance it
             # Using total imbalance for quick rebalancing to reduce risk, vs more gradual rebalancing:
-            quote_balancing_volume =  abs(self.order_amount) * Decimal.exp(self.order_shape_factor * q) 
+            quote_balancing_volume =  abs(self.order_amount) * Decimal.exp(-self.order_shape_factor * q) 
 
 
          
