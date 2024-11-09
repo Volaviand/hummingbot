@@ -758,7 +758,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         min_refresh_time = 90
         max_refresh_time = 300
         
-        self.order_refresh_time = 59 # random.randint(min_refresh_time, max_refresh_time)
+        self.order_refresh_time = 89 # random.randint(min_refresh_time, max_refresh_time)
 
         # Cooldown for Volatility calculations 
         self.create_garch_timestamp = 0
