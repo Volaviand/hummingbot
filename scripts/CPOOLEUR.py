@@ -1322,11 +1322,11 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         lines.extend(["", "OB Fair Value | Reservation Prices | Baselines | Breakevens | Profit Targets | Optimal Spread"])
-        lines.extend([f"Total OB Fair Value :: {self.total_OB_fair_value:.8f} "])
+        lines.extend([f"Total OB Fair Value /: {self.total_OB_fair_value:.8f} "])
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"LT /: Ask :: {self._last_sell_price:.8f} || Bid :: {self._last_buy_price:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
-        lines.extend([f"T_Bl /: Ask :: {self._ask_trailing_baseline} | Bid :: {self._bid_trailing_baseline}"])
+        lines.extend([f"T_Bl /: Ask :: {self._ask_trailing_baseline:.8f} | Bid :: {self._bid_trailing_baseline:.8f}"])
         lines.extend([f"BE /: Ask :: {self.s_be} | Bid :: {self.b_be}"])
         lines.extend([f"PT /: Ask(%) :: {self.ask_percent:.4f} | Bid(%) :: {self.bid_percent:.4f}"])
         lines.extend([f"OP /: Ask(%) :: {self.oas:.4f} | Bid(%) :: {self.obs:.4f}"])
