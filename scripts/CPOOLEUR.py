@@ -1334,8 +1334,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         lines.extend(["", "| Market Depth | Threshold Depth"])
-        lines.extend([f"Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
-        lines.extend([f"Ask :: {self.ask_dynamic_threshold:.8f} | Bid :: {self.bid_dynamic_threshold:.8f}"])
+        lines.extend([f"MD /: Ask :: {self.a_d:.8f} | Bid :: {self.b_d:.8f}"])
+        lines.extend([f"TD /: Ask :: {self.ask_dynamic_threshold:.8f} | Bid :: {self.bid_dynamic_threshold:.8f}"])
 
         lines.extend(["", "| Volatility Measurements |"])
         lines.extend([f"Current Volatility(d%) :: {self.current_vola:.8f} | Volatility Rank :: {self.volatility_rank:.8f}"])
