@@ -1886,7 +1886,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             
             complete_threshold_fair_value = ((bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
                 + (ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )
-            print(f'Total OB Fair Value: {complete_threshold_fair_value}')
+            print(f'Total OB Fair Value: {complete_threshold_fair_value}') / (bid_dynamic_threshold + ask_dynamic_threshold)
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
                 msg_b = f"Not Enough Balance for bid trade: {quote_balance_in_base:.8f}"
