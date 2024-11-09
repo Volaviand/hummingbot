@@ -779,7 +779,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         self.obs = 0
         self.oas = 0
-        # self.total_OB_fair_value = 0
+        self.total_OB_fair_value = 0
 
         self._bid_trailing_baseline = None
         self._ask_trailing_baseline = None
@@ -1304,7 +1304,6 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         _, _, _, _,_, maker_base_balance, quote_balance_in_base = self.get_current_positions()
         bp, sp = self.determine_log_multipliers()
-
         lines = []
         warning_lines = []
         warning_lines.extend(self.network_warning(self.get_market_trading_pair_tuples()))
@@ -1321,8 +1320,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         lines.extend([f"R_PnL (Quote) :: {self.pnl:.8f} | U_PnL (Quote) :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
-        lines.extend(["", "| Reservation Prices | Baselines | Breakevens"])
-        # lines.extend([f"TOBFV /: {self.total_OB_fair_value:.8f} "])
+        lines.extend(["", "| TOB Fair Value | Reservation Prices | Baselines | Breakevens"])
+        lines.extend([f"TOBFV /: {self.total_OB_fair_value:.8f} "])
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"LT /: Ask :: {self._last_sell_price:.8f} || Bid :: {self._last_buy_price:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
@@ -1605,6 +1604,39 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         #Return values
         return q, base_balancing_volume, quote_balancing_volume, total_balance_in_base,  entry_size_by_percentage, maker_base_balance, quote_balance_in_base
     
+    def calculate_total_OB_fair_value(self, asks_df, bids_df):
+
+                # Reverse direction of bids to be in the correct arrangement
+                bids_df = bids_df.sort_values(by='Price', ascending=False)
+
+
+                # Find the farthest end of the order book
+                threshold_ask = asks_df['Price'].max()
+                threshold_bid = bids_df['Price'].min()
+
+                # New DF containing the differences in price
+                ask_price_diff = asks_df['Price'] - threshold_ask
+                bid_price_diff = bids_df['Price'] - threshold_bid
+
+                # Volume Sum (Threshold Volume)
+                ask_volume_sum = asks_df['Volume'].sum()
+                bid_volume_sum = bids_df['Volume'].sum()
+
+                # Weighted Sum
+                ask_weighted_sum = np.sum(asks_df['Volume'] * ask_price_diff)
+                bid_weighted_sum = np.sum(bids_df['Volume'] * bid_price_diff)
+
+                # Final fair value calculation
+                # Determine Numerators for each
+                ask_numerator = (ask_volume_sum * threshold_ask + ask_weighted_sum) 
+                bid_numerator = (bid_volume_sum * threshold_bid + bid_weighted_sum) 
+
+                # Determine Denominator
+                total_threshold_volume = ask_volume_sum + bid_volume_sum
+
+                total_OB_fair_value = (bid_numerator + ask_numerator) / total_threshold_volume
+
+                return total_OB_fair_value
 
     def determine_entry_placement(self, max_levels=5):
         # Retrieve current positions and calculate minimum order sizes
@@ -1786,11 +1818,17 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
             return fair_value_price
 
+        
+
+
+
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
             # Retrieve current order book data
             asks_df, bids_df = self.get_kraken_order_book(self.history_market)
+            
 
+            self.total_OB_fair_value = self.calculate_total_OB_fair_value(asks_df, bids_df)
             # Calculate the quantum for both bid and ask prices
             bid_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
             ask_price_quantum = self.connectors[self.exchange].get_order_price_quantum(self.trading_pair, starting_price)
@@ -1896,10 +1934,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
 
             ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
-            
-            # self.total_OB_fair_value = ((self.bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
-            #     + (self.ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )\
-            #     /  (self.bid_dynamic_threshold + self.ask_dynamic_threshold)
+
 
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
