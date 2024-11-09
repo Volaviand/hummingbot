@@ -772,6 +772,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         self.wait_after_cancel_timestamp = 0
         self.cancel_cooldown_duration = 7
 
+        self.min_order_size_bid = self.order_amount 
+        self.min_order_size_ask = self.order_amount
 
         self._bid_trailing_baseline = None
         self._ask_trailing_baseline = None
