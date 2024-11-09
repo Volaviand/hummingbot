@@ -1772,7 +1772,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                     next_price = available_prices['Price'].max()  # Get the maximum price below
                     fair_value_price = Decimal(next_price)
 
-            return fair_value_price
+            return fair_value_price, dynamic_threshold, threshold_price, weighted_sum
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
@@ -1817,7 +1817,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not asks_df.empty:
-                            min_above_price = calculate_fair_value_price(
+                            min_above_price, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                             if min_above_price:
@@ -1843,7 +1843,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not bids_df.empty:
-                            max_below_price = calculate_fair_value_price(
+                            max_below_price, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
                             if max_below_price:
@@ -1859,7 +1859,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                         # Quantize all prices        
                         order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='bid')
 
-            return order_levels
+            return order_levels, dynamic_threshold, threshold_price, weighted_sum
 
         # Main logic for determining order sizes and prices
         def create_order_levels(is_buy_data, is_sell_data, new_trade_cycle, max_levels):
@@ -1872,39 +1872,21 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             # If they are oppsite, they will spread out the orders / play on each other as price moves. 
             max_quote_q_net = max(quote_balancing_volume, abs(self.n_v_a) if self.n_v_a < 0 else 0 )
             max_base_q_net = max(base_balancing_volume, abs(self.n_v_a) if self.n_v_a > 0 else 0 )
-            # # Depending on the cycle, calculate order sizes
-            # if (not is_buy_data and not is_sell_data) or (new_trade_cycle):
-            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
-            # elif (is_buy_data and not is_sell_data) and (not new_trade_cycle):
-            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
-            # elif (not is_buy_data and is_sell_data) and (not new_trade_cycle):
-            #     bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #     ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
-            # # Mid trade logic
-            # elif (is_buy_data and is_sell_data) and (not new_trade_cycle):
-            #     if is_buy_net: 
-            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-            #     elif is_sell_net: 
-            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-            #     elif is_neutral_net: 
-            #         bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
-            #         ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
-
+ 
             # Simplify code
             bid_order_levels, bid_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_buy_amount, self.min_order_size_bid, max_order_size, max_levels)
             ask_order_levels, ask_max_full_orders = calculate_dynamic_order_sizes(self.imbalance_sell_amount, self.min_order_size_ask, max_order_size, max_levels)
 
             # Calculate prices for both bid and ask order levels
-            bid_order_levels = calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
-            ask_order_levels = calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
+            bid_order_levels, bid_dynamic_threshold, bid_threshold_price, bid_weighted_sum = \
+                calculate_prices(bid_order_levels, optimal_bid_price, bp, bid_max_full_orders)
 
+            ask_order_levels, ask_dynamic_threshold, ask_threshold_price, ask_weighted_sum = \
+                calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
+            
+            complete_threshold_fair_value = ((bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
+                + (ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )
+            print(f'Total OB Fair Value: {complete_threshold_fair_value}')
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
                 msg_b = f"Not Enough Balance for bid trade: {quote_balance_in_base:.8f}"
