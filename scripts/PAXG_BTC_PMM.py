@@ -779,7 +779,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         self.obs = 0
         self.oas = 0
-        self.total_OB_fair_value = 0
+        # self.total_OB_fair_value = 0
 
         self._bid_trailing_baseline = None
         self._ask_trailing_baseline = None
@@ -1321,8 +1321,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         lines.extend([f"R_PnL (Quote) :: {self.pnl:.8f} | U_PnL (Quote) :: {self.u_pnl:.8f} | Net Quote Value :: {self.n_v:.8f}"])
 
 
-        lines.extend(["", "| OB Fair Value | Reservation Prices | Baselines | Breakevens"])
-        lines.extend([f"TOBFV /: {self.total_OB_fair_value:.8f} "])
+        lines.extend(["", "| Reservation Prices | Baselines | Breakevens"])
+        # lines.extend([f"TOBFV /: {self.total_OB_fair_value:.8f} "])
         lines.extend([f"RP /: Ask :: {self.a_r_p:.8f} | | Bid :: {self.b_r_p:.8f}"])
         lines.extend([f"LT /: Ask :: {self._last_sell_price:.8f} || Bid :: {self._last_buy_price:.8f}"])
         lines.extend([f"Bl /: Ask :: {self._ask_baseline} | Bid :: {self._bid_baseline}"])
@@ -1739,51 +1739,52 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             :param side: 'ask' for prices above, 'bid' for prices below
             :return: Fair value price based on cumulative volume
             """
-            # Step 1: Filter and sort the DataFrame by side and exclude empty volumes
-            if side == 'ask':
-                side_df = df[(df['Price'] >= current_price) & (df['Volume'] > 0)].sort_values(by='Price')
-            else:  # 'bid'
-                side_df = df[(df['Price'] <= current_price) & (df['Volume'] > 0)].sort_values(by='Price', ascending=False)
+            if len(df)>0:
+                # Step 1: Filter and sort the DataFrame by side and exclude empty volumes
+                if side == 'ask':
+                    side_df = df[(df['Price'] >= current_price) & (df['Volume'] > 0)].sort_values(by='Price')
+                else:  # 'bid'
+                    side_df = df[(df['Price'] <= current_price) & (df['Volume'] > 0)].sort_values(by='Price', ascending=False)
 
-            # Step 2: Calculate dynamic volume threshold
-            dynamic_threshold = side_df['Volume'].quantile(quantile)
-            
-            # Step 3: Calculate cumulative volume and find the threshold price
-            side_df['CumulativeVolume'] = np.cumsum(side_df['Volume'])
-            threshold_df = side_df[side_df['CumulativeVolume'] >= dynamic_threshold]
-            
-            if threshold_df.empty:
-                return None  # No price level met the cumulative volume
-            
-            # Extract the threshold price and exclude it from further calculation
-            threshold_price = threshold_df.iloc[0]['Price']
-            volume_to_threshold = side_df[side_df['Price'] < threshold_price] if side == 'ask' else side_df[side_df['Price'] > threshold_price]
-            
-            # Step 4: Compute the weighted sum with numpy
-            price_diffs = volume_to_threshold['Price'] - threshold_price
-            weighted_sum = np.sum(volume_to_threshold['Volume'] * price_diffs)
-            
-            # Final fair value calculation
-            fair_value_price = (dynamic_threshold * threshold_price + weighted_sum) / dynamic_threshold
+                # Step 2: Calculate dynamic volume threshold
+                dynamic_threshold = side_df['Volume'].quantile(quantile)
+                
+                # Step 3: Calculate cumulative volume and find the threshold price
+                side_df['CumulativeVolume'] = np.cumsum(side_df['Volume'])
+                threshold_df = side_df[side_df['CumulativeVolume'] >= dynamic_threshold]
+                
+                if threshold_df.empty:
+                    return None  # No price level met the cumulative volume
+                
+                # Extract the threshold price and exclude it from further calculation
+                threshold_price = threshold_df.iloc[0]['Price']
+                volume_to_threshold = side_df[side_df['Price'] < threshold_price] if side == 'ask' else side_df[side_df['Price'] > threshold_price]
+                
+                # Step 4: Compute the weighted sum with numpy
+                price_diffs = volume_to_threshold['Price'] - threshold_price
+                weighted_sum = np.sum(volume_to_threshold['Volume'] * price_diffs)
+                
+                # Final fair value calculation
+                fair_value_price = (dynamic_threshold * threshold_price + weighted_sum) / dynamic_threshold
 
 
-            # Final check: If you are in an illiquid(empty) spot, adjust your order to the next best price
-            if side == 'ask':
-                # If no volume exists at fair_value_price, find the next available price above
-                available_prices = side_df[side_df['Price'] >= fair_value_price]
-                if fair_value_price not in available_prices['Price'].values:
-                    # Find the next price above
-                    next_price = available_prices['Price'].min()  # Get the minimum price above
-                    fair_value_price = Decimal(next_price)
-            else:  # 'bid'
-                # If no volume exists at fair_value_price, find the next available price below
-                available_prices = side_df[side_df['Price'] <= fair_value_price]
-                if fair_value_price not in available_prices['Price'].values:
-                    # Find the next price below
-                    next_price = available_prices['Price'].max()  # Get the maximum price below
-                    fair_value_price = Decimal(next_price)
+                # Final check: If you are in an illiquid(empty) spot, adjust your order to the next best price
+                if side == 'ask':
+                    # If no volume exists at fair_value_price, find the next available price above
+                    available_prices = side_df[side_df['Price'] >= fair_value_price]
+                    if fair_value_price not in available_prices['Price'].values:
+                        # Find the next price above
+                        next_price = available_prices['Price'].min()  # Get the minimum price above
+                        fair_value_price = Decimal(next_price)
+                else:  # 'bid'
+                    # If no volume exists at fair_value_price, find the next available price below
+                    available_prices = side_df[side_df['Price'] <= fair_value_price]
+                    if fair_value_price not in available_prices['Price'].values:
+                        # Find the next price below
+                        next_price = available_prices['Price'].max()  # Get the maximum price below
+                        fair_value_price = Decimal(next_price)
 
-            return fair_value_price, dynamic_threshold, threshold_price, weighted_sum
+            return fair_value_price
 
         # Function to calculate prices based on the order levels
         def calculate_prices(order_levels, starting_price, price_multiplier, max_orders):
@@ -1828,7 +1829,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not asks_df.empty:
-                            min_above_price, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
+                            min_above_price = calculate_fair_value_price(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                             if min_above_price:
@@ -1854,7 +1855,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not bids_df.empty:
-                            max_below_price, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
+                            max_below_price = calculate_fair_value_price(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
                             if max_below_price:
@@ -1866,16 +1867,12 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                         # Quantize all prices        
                         order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='ask')
 
-                        empty_value, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
-                            bids_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
-                        )
+
                     if price_multiplier < 1:
                         # Quantize all prices        
                         order_levels.at[i, 'price'] = quantize_and_trail(starting_price,side='bid')
 
-                        empty_value, dynamic_threshold, threshold_price, weighted_sum = calculate_fair_value_price(
-                            bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
-                        )
+
 
             return order_levels, dynamic_threshold, threshold_price, weighted_sum
 
@@ -1902,9 +1899,9 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             ask_order_levels, self.ask_dynamic_threshold, ask_threshold_price, ask_weighted_sum = \
                 calculate_prices(ask_order_levels, optimal_ask_price, sp, ask_max_full_orders)
             
-            self.total_OB_fair_value = ((self.bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
-                + (self.ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )\
-                /  (self.bid_dynamic_threshold + self.ask_dynamic_threshold)
+            # self.total_OB_fair_value = ((self.bid_dynamic_threshold * bid_threshold_price + bid_weighted_sum) \
+            #     + (self.ask_dynamic_threshold * ask_threshold_price + ask_weighted_sum) )\
+            #     /  (self.bid_dynamic_threshold + self.ask_dynamic_threshold)
 
             # Log insufficient balance for clarity
             if bid_order_levels['size'].sum() < self.min_order_size_bid:
