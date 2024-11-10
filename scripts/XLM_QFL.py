@@ -870,7 +870,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         prev_net_value = 0  # This tracks the previous net value for comparison
 
         # Specify the path to your CSV file
-        csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/{self.trade_history_name}.csv'
+        csv_file_path = f'/home/tyler/hummingbot/data/{self.trade_history_name}.csv'
         # Check if the CSV file exists
         if not os.path.isfile(csv_file_path):
             # Return zeros on the class variables
