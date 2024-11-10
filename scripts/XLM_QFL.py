@@ -1891,7 +1891,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                 return q_and_t
             empty_value = 0
             for i in range(len(order_levels)):
-                current_group = i // max_orders
+                current_group = 1 + (i / max_orders)
 
                 if i > 0:
                     if price_multiplier > 1:
