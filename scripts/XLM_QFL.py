@@ -4,9 +4,10 @@
 import logging
 import math 
 from math import floor, ceil
-
+print("First Import Successful")
 import time
 import requests
+print('Requests import successful')
 import json
 from decimal import Decimal
 from typing import List
@@ -23,8 +24,7 @@ from scipy.signal import argrelextrema
 
 from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
 from arch import arch_model
-
-
+print("Additinal Import Successful")
 
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
@@ -37,7 +37,8 @@ from hummingbot.client.ui.interface_utils import format_df_for_printout
 from hummingbot.connector.connector_base import ConnectorBase, Dict
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
 
-from arch import arch_model
+
+print("Core Import Successful")
 
 
 ### attempt to add your own code from earlier
@@ -49,6 +50,7 @@ import csv
 
 sys.path.append('/home/tyler/quant/API_call_tests/')
 # from Kraken_Calculations import BuyTrades, SellTrades
+print("File Location Import Successful")
 
 
 # import Config
