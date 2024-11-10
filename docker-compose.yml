@@ -2,7 +2,7 @@ version: "3.9"
 services:
   1hummingbot:
     container_name: 1_hummingbot
-    image: hummingbot/hummingbot:latest
+    # image: hummingbot/hummingbot:latest
     build: #Uncomment this and comment image if you want to build it locally
      context: .
      dockerfile: Dockerfile
@@ -28,7 +28,7 @@ services:
 
   2hummingbot:
     container_name: 2_hummingbot
-    image: hummingbot/hummingbot:latest
+    # image: hummingbot/hummingbot:latest
     build: #Uncomment this and comment image if you want to build it locally
      context: .
      dockerfile: Dockerfile
@@ -57,7 +57,7 @@ services:
 
   3hummingbot:
     container_name: 3_hummingbot
-    image: hummingbot/hummingbot:latest
+    # image: hummingbot/hummingbot:latest
     build: #Uncomment this and comment image if you want to build it locally
      context: .
      dockerfile: Dockerfile
@@ -86,7 +86,7 @@ services:
 
   4hummingbot:
     container_name: 4_hummingbot
-    image: hummingbot/hummingbot:latest
+    # image: hummingbot/hummingbot:latest
     build: #Uncomment this and comment image if you want to build it locally
      context: .
      dockerfile: Dockerfile
