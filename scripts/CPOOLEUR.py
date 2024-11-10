@@ -187,7 +187,7 @@ class KrakenAPI:
 # csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{file_name}.csv'
 class KRAKENQFLHISTORY():
     def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods, trading_style):
-        self.filepath = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{filepath}'
+        self.filepath = f'/home/tyler/hummingbot/data/KrakenData/{filepath}'
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
         self.data = []
