@@ -768,25 +768,30 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
     
         def update(self, current_timestamp):
-            # Ensure enough time has passed since the last order fill before placing new orders
-            if self.wait_after_fill_timestamp <= current_timestamp and self.wait_after_cancel_timestamp <= current_timestamp:
+            # Ensure enough time has passed for an open order to reset orders
+            if self.create_timestamp <= current_timestamp:
                 # Cancel any existing orders before placing new ones
                 self.cancel_orders()
+                # If there was a fill or cancel, this timer will halt new orders until timers are met   
+                if self.wait_after_fill_timestamp <= current_timestamp and \
+                self.wait_after_cancel_timestamp <= current_timestamp:
+                    # Update the cancel cooldown timestamp
+                    self.wait_after_cancel_timestamp = current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time
+                   
+                    # Reset the trade in progress halt that helps defend against multiple
+                        # orders in the same miliseconds of trading
+                    self.trade_in_progress = False
 
-                # Update the cancel cooldown timestamp
-                self.wait_after_cancel_timestamp = current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time
-                self.trade_in_progress = False
+                    # Place orders if no trade is currently in progress
+                    if not self.trade_in_progress:
+                        # Call the balance function
+                        # self.get_balance()
 
-                # Place orders if no trade is currently in progress
-                if not self.trade_in_progress:
-                    # Call the balance function
-                    # self.get_balance()
-
-                    # Flag the start of a trade execution
-                    self.trade_in_progress = True
-                    proposal: List[OrderCandidate] = self.create_proposal(self.side)
-                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-                    self.place_orders(proposal_adjusted)
+                        # Flag the start of a trade execution
+                        self.trade_in_progress = True
+                        proposal: List[OrderCandidate] = self.create_proposal(self.side)
+                        proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                        self.place_orders(proposal_adjusted)
 
                     # Set the next create timestamp based on the order refresh rate
                     self.create_timestamp = current_timestamp + self.order_refresh_time
@@ -858,8 +863,6 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
         # Trade Cycle TIMERS and COOLDOWNS
-       # Cooldown for how long an order stays in place. 
-        self.create_timestamp = 0
 
         # If you are using a randomized between values timer(not currently used)
         # min_refresh_time = 90
