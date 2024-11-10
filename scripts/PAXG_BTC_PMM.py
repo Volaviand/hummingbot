@@ -877,7 +877,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         
         # Cooldown after a fill
         self.wait_after_fill_timestamp = 0
-        self.fill_cooldown_duration = 11
+        self.fill_cooldown_duration = 27
         # Cooldown after cancelling orders
         self.wait_after_cancel_timestamp = 0
         self.cancel_cooldown_duration = 7
@@ -1330,7 +1330,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         self.notify_hb_app_with_timestamp(msg)
 
          # Set a delay before placing new orders after a fill
-        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  + self.order_refresh_time  # e.g., 10 seconds
+        self.wait_after_fill_timestamp = self.current_timestamp + self.fill_cooldown_duration  
 
 
 
