@@ -8,14 +8,20 @@ print("First Import Successful")
 import time
 import requests
 print('Requests import successful')
-import json
+#import json
 from decimal import Decimal
+print('decimal import successful')
+
 from typing import List
-from random import gauss, seed
+print('typing import successful')
+
+#from random import gauss, seed
 
 import datetime
-import datetime as dt
 print("datetime Import Successful")
+
+import datetime as dt
+print("dt Import Successful")
 
 import pandas as pd
 import numpy as np
