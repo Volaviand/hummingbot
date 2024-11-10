@@ -1,5 +1,4 @@
-# from hummingbot.qfl.Kraken_QFL_Bot import RUNKRAKENBOT
-# RUNKRAKENBOT('PAXG_BTC')
+
 
 import logging
 import math 
@@ -8,33 +7,21 @@ print("First Import Successful")
 import time
 import requests
 print('Requests import successful')
-#import json
 from decimal import Decimal
-print('decimal import successful')
-
 from typing import List
-print('typing import successful')
 
-#from random import gauss, seed
 
 import datetime
-print("datetime Import Successful")
 
 import datetime as dt
-print("dt Import Successful")
 
 import pandas as pd
 import numpy as np
-print("pandas Import Successful")
 
 from scipy.stats import norm, poisson, stats
-#from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
-print("Scipy Import Successful")
 
-#from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
 from arch import arch_model
-print("Additinal Import Successful")
 
 from hummingbot.core.data_type.common import OrderType, PriceType, TradeType
 from hummingbot.core.data_type.order_candidate import OrderCandidate
@@ -48,11 +35,9 @@ from hummingbot.connector.connector_base import ConnectorBase, Dict
 from hummingbot.data_feed.candles_feed.candles_factory import CandlesConfig, CandlesFactory
 
 
-print("Core Import Successful")
 
 
 ### attempt to add your own code from earlier
-#import sqlite3
 import json
 import sys
 import os
@@ -60,7 +45,6 @@ import csv
 
 sys.path.append('/home/tyler/quant/API_call_tests/')
 # from Kraken_Calculations import BuyTrades, SellTrades
-print("File Location Import Successful")
 
 
 # import Config
@@ -199,7 +183,7 @@ class KrakenAPI:
 # csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{file_name}.csv'
 class KRAKENQFLHISTORY():
     def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods, trading_style):
-        self.filepath = f'/home/hummingbot/data/KrakenData/{filepath}'
+        self.filepath = f'/home/tyler/hummingbot/data/KrakenData/{filepath}'
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
         self.data = []
