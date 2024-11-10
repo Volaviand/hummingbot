@@ -766,11 +766,13 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
     
         def update(self, current_timestamp):
-            # Cancel any existing orders before placing new ones
-            self.cancel_orders()
+
 
             # Ensure enough time has passed since the last order fill before placing new orders
             if self.wait_after_fill_timestamp <= current_timestamp and self.wait_after_cancel_timestamp <= current_timestamp:
+                # Cancel any existing orders before placing new ones
+                self.cancel_orders()
+
                 # Update the cancel cooldown timestamp
                 self.wait_after_cancel_timestamp = current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time
                 self.trade_in_progress = False
