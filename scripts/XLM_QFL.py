@@ -15,12 +15,16 @@ from random import gauss, seed
 
 import datetime
 import datetime as dt
+print("datetime Import Successful")
 
 import pandas as pd
 import numpy as np
+print("pandas Import Successful")
+
 from scipy.stats import norm, poisson, stats
-from scipy.optimize import minimize_scalar
+#from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
+print("Scipy Import Successful")
 
 #from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
 from arch import arch_model
