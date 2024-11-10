@@ -22,7 +22,7 @@ from scipy.stats import norm, poisson, stats
 from scipy.optimize import minimize_scalar
 from scipy.signal import argrelextrema
 
-from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
+#from py_vollib_vectorized import vectorized_implied_volatility as implied_vol
 from arch import arch_model
 print("Additinal Import Successful")
 
