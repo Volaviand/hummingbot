@@ -780,7 +780,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                 # Place orders if no trade is currently in progress
                 if not self.trade_in_progress:
                     # Call the balance function
-                    self.get_balance()
+                    # self.get_balance()
 
                     # Flag the start of a trade execution
                     self.trade_in_progress = True
