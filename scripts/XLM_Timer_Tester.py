@@ -739,6 +739,8 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     break_even_price = None  # Store the break-even price
 
     class TradeCycle:
+        ''' A nested class to track order timing and placement
+        independently for each side bid and ask'''
         def __init__(self, 
             side, 
             cancel_cooldown_duration, 
@@ -1849,7 +1851,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                         next_price = available_prices['Price'].max()  # Get the maximum price below
                         fair_value_price = Decimal(next_price)
 
-            return fair_value_price
+            return fair_value_price, dynamic_threshold
 
         
 
@@ -1900,7 +1902,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not asks_df.empty:
-                            min_above_price = calculate_fair_value_price(
+                            min_above_price, self.ask_dynamic_threshold = calculate_fair_value_price(
                                 asks_df, order_levels.at[i, 'price'], quantile=0.5, side='ask'
                             )
                             if min_above_price:
@@ -1926,7 +1928,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                                 self.trading_pair, starting_price * (price_multiplier ** i)
                             )
                         if not bids_df.empty:
-                            max_below_price = calculate_fair_value_price(
+                            max_below_price, self.bid_dynamic_threshold = calculate_fair_value_price(
                                 bids_df, order_levels.at[i, 'price'], quantile=0.5, side='bid'
                             )
                             if max_below_price:
