@@ -18,9 +18,9 @@ services:
       - ./scripts:/home/hummingbot/scripts
       - ./controllers:/home/hummingbot/controllers
       # Add directories you need
-      - /API_call_tests:/home/hummingbot/API_call_tests
-      - /KrakenData:/home/hummingbot/data/KrakenData
-      - /qfl:/home/hummingbot/qfl
+      - /path/to/your/API_call_tests:/home/hummingbot/API_call_tests
+      - /path/to/your/KrakenData:/home/hummingbot/data/KrakenData
+      - /path/to/your/qfl:/home/hummingbot/qfl
     logging:
       driver: "json-file"
       options:
