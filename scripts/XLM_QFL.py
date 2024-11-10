@@ -187,7 +187,7 @@ class KrakenAPI:
 # csv_file_path = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{file_name}.csv'
 class KRAKENQFLHISTORY():
     def __init__(self, filepath, symbol, interval, volatility_periods, rolling_periods, trading_style):
-        self.filepath = f'/home/tyler/hummingbot/hummingbot/data/KrakenData/{filepath}'
+        self.filepath = f'/home/tyler/hummingbot/data/KrakenData/{filepath}'
         self.symbol = symbol
         self.base_url = 'https://api.kraken.com/0/public/Trades'
         self.data = []
@@ -205,7 +205,6 @@ class KRAKENQFLHISTORY():
         Returns:
             pandas.DataFrame: The DataFrame containing the data from the CSV file.
         """
-
         try:
             # Read the CSV file using pandas.read_csv, specifying the header as the first row
             df = pd.read_csv(self.filepath, header=0)
@@ -221,7 +220,7 @@ class KRAKENQFLHISTORY():
             return df
     
         except FileNotFoundError:
-            print(f"Error: File not found: {filepath}")
+            print(f"Error: File not found: {self.filepath}")
             return None
 
     def get_ohlc_calculations(self, df, fitted_params=None):
