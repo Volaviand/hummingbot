@@ -738,6 +738,56 @@ class KRAKENQFLBOT(ScriptStrategyBase):
     total_sold = 0
     break_even_price = None  # Store the break-even price
 
+    class TradeCycle:
+        def __init__(self, 
+            side, 
+            cancel_cooldown_duration, 
+            order_refresh_time, 
+            get_balance_fn, 
+            create_proposal_fn, 
+            adjust_proposal_fn, 
+            place_orders_fn, 
+            cancel_orders_fn):
+
+            self.side = side  # "bid" or "ask"
+            self.cancel_cooldown_duration = cancel_cooldown_duration
+            self.order_refresh_time = order_refresh_time
+            self.get_balance = get_balance_fn
+            self.create_proposal = create_proposal_fn
+            self.adjust_proposal_to_budget = adjust_proposal_fn
+            self.place_orders = place_orders_fn
+            self.cancel_orders = cancel_orders_fn
+
+            # Timing controls
+            self.wait_after_fill_timestamp = 0
+            self.wait_after_cancel_timestamp = 0
+            self.trade_in_progress = False
+            self.create_timestamp = 0  # Time until next order cycle
+
+    
+        def update(self, current_timestamp):
+            # Cancel any existing orders before placing new ones
+            self.cancel_orders()
+
+            # Ensure enough time has passed since the last order fill before placing new orders
+            if self.wait_after_fill_timestamp <= current_timestamp and self.wait_after_cancel_timestamp <= current_timestamp:
+                # Update the cancel cooldown timestamp
+                self.wait_after_cancel_timestamp = current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time
+                self.trade_in_progress = False
+
+                # Place orders if no trade is currently in progress
+                if not self.trade_in_progress:
+                    # Call the balance function
+                    self.get_balance()
+
+                    # Flag the start of a trade execution
+                    self.trade_in_progress = True
+                    proposal: List[OrderCandidate] = self.create_proposal(self.side)
+                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                    self.place_orders(proposal_adjusted, self.side)
+
+                    # Set the next create timestamp based on the order refresh rate
+                    self.create_timestamp = current_timestamp + self.order_refresh_time
     
     def __init__(self, connectors: Dict[str, ConnectorBase]):
         super().__init__(connectors)
@@ -821,55 +871,27 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         self.trade_position_text = ""
         
-    class TradeCycle:
-        def __init__(self, 
-            side, 
-            cancel_cooldown_duration, 
-            order_refresh_time, 
-            get_balance_fn, 
-            create_proposal_fn, 
-            adjust_proposal_fn, 
-            place_orders_fn, 
-            cancel_orders_fn):
+        self.bid_cycle = self.TradeCycle(
+            side="bid",
+            cancel_cooldown_duration=self.cancel_cooldown_duration,
+            order_refresh_time=self.order_refresh_time,
+            get_balance_fn=self.get_balance_df,
+            create_proposal_fn=self.create_proposal,
+            adjust_proposal_fn=self.adjust_proposal_to_budget,
+            place_orders_fn=self.place_orders,
+            cancel_orders_fn=self.cancel_bid_orders
+        )
 
-            self.side = side  # "bid" or "ask"
-            self.cancel_cooldown_duration = cancel_cooldown_duration
-            self.order_refresh_time = order_refresh_time
-            self.get_balance = get_balance_fn
-            self.create_proposal = create_proposal_fn
-            self.adjust_proposal_to_budget = adjust_proposal_fn
-            self.place_orders = place_orders_fn
-            self.cancel_orders = cancel_orders_fn
-
-            # Timing controls
-            self.wait_after_fill_timestamp = 0
-            self.wait_after_cancel_timestamp = 0
-            self.trade_in_progress = False
-            self.create_timestamp = 0  # Time until next order cycle
-
-        def update(self, current_timestamp):
-            # Cancel any existing orders before placing new ones
-            self.cancel_orders()
-
-            # Ensure enough time has passed since the last order fill before placing new orders
-            if self.wait_after_fill_timestamp <= current_timestamp and self.wait_after_cancel_timestamp <= current_timestamp:
-                # Update the cancel cooldown timestamp
-                self.wait_after_cancel_timestamp = current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time
-                self.trade_in_progress = False
-
-                # Place orders if no trade is currently in progress
-                if not self.trade_in_progress:
-                    # Call the balance function
-                    self.get_balance()
-
-                    # Flag the start of a trade execution
-                    self.trade_in_progress = True
-                    proposal: List[OrderCandidate] = self.create_proposal(self.side)
-                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-                    self.place_orders(proposal_adjusted, self.side)
-
-                    # Set the next create timestamp based on the order refresh rate
-                    self.create_timestamp = current_timestamp + self.order_refresh_time
+        self.ask_cycle = self.TradeCycle(
+            side="ask",
+            cancel_cooldown_duration=self.cancel_cooldown_duration,
+            order_refresh_time=self.order_refresh_time,
+            get_balance_fn=self.get_balance_df,
+            create_proposal_fn=self.create_proposal,
+            adjust_proposal_fn=self.adjust_proposal_to_budget,
+            place_orders_fn=self.place_orders,
+            cancel_orders_fn=self.cancel_ask_orders
+        )
 
     def get_kraken_order_book(self, pair, count=500):
         # Define the API endpoint and parameters
@@ -1129,29 +1151,6 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             self.target_profitability = max(self.min_profitability, self.current_vola)
             self.create_garch_timestamp = self.garch_refresh_time + current_timestamp
 
-        # Ensure that trade cycles are initialized for bids and asks
-        if not hasattr(self, 'bid_cycle') or not hasattr(self, 'ask_cycle'):
-            self.bid_cycle = TradeCycle(
-                side="bid",
-                cancel_cooldown_duration=self.cancel_cooldown_duration,
-                order_refresh_time=self.order_refresh_time,
-                get_balance_fn=self.get_balance_df,
-                create_proposal_fn=self.create_proposal,
-                adjust_proposal_fn=self.adjust_proposal_to_budget,
-                place_orders_fn=self.place_orders,
-                cancel_orders_fn=self.cancel_bid_orders
-            )
-
-            self.ask_cycle = TradeCycle(
-                side="ask",
-                cancel_cooldown_duration=self.cancel_cooldown_duration,
-                order_refresh_time=self.order_refresh_time,
-                get_balance_fn=self.get_balance_df,
-                create_proposal_fn=self.create_proposal,
-                adjust_proposal_fn=self.adjust_proposal_to_budget,
-                place_orders_fn=self.place_orders,
-                cancel_orders_fn=self.cancel_ask_orders
-            )
 
         # Update both bid and ask trade cycles
         self.bid_cycle.update(current_timestamp)
@@ -1224,7 +1223,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
                     )
                     order_counter.append(buy_order)
                     cumulative_order_size_bid += order_size_bid  # Update cumulative order size
-                    
+
         if side == 'ask':
             # Loop through ask levels
             for i in range(len(ask_order_levels)):
