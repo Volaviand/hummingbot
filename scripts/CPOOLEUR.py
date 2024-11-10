@@ -205,7 +205,6 @@ class KRAKENQFLHISTORY():
         Returns:
             pandas.DataFrame: The DataFrame containing the data from the CSV file.
         """
-
         try:
             # Read the CSV file using pandas.read_csv, specifying the header as the first row
             df = pd.read_csv(self.filepath, header=0)
