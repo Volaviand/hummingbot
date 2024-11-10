@@ -1,4 +1,4 @@
-version: "3.9"
+# version: "3.9"
 services:
   1hummingbot:
     container_name: 1_hummingbot
