@@ -3,10 +3,10 @@
 import logging
 import math 
 from math import floor, ceil
-print("First Import Successful")
+
 import time
 import requests
-print('Requests import successful')
+
 from decimal import Decimal
 from typing import List
 
