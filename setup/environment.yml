@@ -23,6 +23,7 @@ dependencies:
   - tabulate==0.8.9
   - ujson
   - zlib
+  - arch
   - pip:
     - aiohttp==3.*
     - aioprocessing==2.0
