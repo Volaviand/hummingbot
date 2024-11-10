@@ -821,6 +821,56 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         self.trade_position_text = ""
         
+    class TradeCycle:
+        def __init__(self, 
+            side, 
+            cancel_cooldown_duration, 
+            order_refresh_time, 
+            get_balance_fn, 
+            create_proposal_fn, 
+            adjust_proposal_fn, 
+            place_orders_fn, 
+            cancel_orders_fn):
+
+            self.side = side  # "bid" or "ask"
+            self.cancel_cooldown_duration = cancel_cooldown_duration
+            self.order_refresh_time = order_refresh_time
+            self.get_balance = get_balance_fn
+            self.create_proposal = create_proposal_fn
+            self.adjust_proposal_to_budget = adjust_proposal_fn
+            self.place_orders = place_orders_fn
+            self.cancel_orders = cancel_orders_fn
+
+            # Timing controls
+            self.wait_after_fill_timestamp = 0
+            self.wait_after_cancel_timestamp = 0
+            self.trade_in_progress = False
+            self.create_timestamp = 0  # Time until next order cycle
+
+        def update(self, current_timestamp):
+            # Cancel any existing orders before placing new ones
+            self.cancel_orders()
+
+            # Ensure enough time has passed since the last order fill before placing new orders
+            if self.wait_after_fill_timestamp <= current_timestamp and self.wait_after_cancel_timestamp <= current_timestamp:
+                # Update the cancel cooldown timestamp
+                self.wait_after_cancel_timestamp = current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time
+                self.trade_in_progress = False
+
+                # Place orders if no trade is currently in progress
+                if not self.trade_in_progress:
+                    # Call the balance function
+                    self.get_balance()
+
+                    # Flag the start of a trade execution
+                    self.trade_in_progress = True
+                    proposal: List[OrderCandidate] = self.create_proposal(self.side)
+                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
+                    self.place_orders(proposal_adjusted, self.side)
+
+                    # Set the next create timestamp based on the order refresh rate
+                    self.create_timestamp = current_timestamp + self.order_refresh_time
+
     def get_kraken_order_book(self, pair, count=500):
         # Define the API endpoint and parameters
         url = f"https://api.kraken.com/0/public/Depth?pair={pair}&count={count}"
@@ -1048,37 +1098,28 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
 
     def on_tick(self):
-        ########## Profiling example to find time/speed of code
+    ########## Profiling example to find time/speed of code
         # Start profiling
         # profiler = cProfile.Profile()
         # profiler.enable()
 
+        current_timestamp = self.current_timestamp
 
-        #Calculate garch every so many seconds
-        if self.create_garch_timestamp <= self.current_timestamp:
-            ### Call Historical Calculations
+        # Calculate GARCH every so many seconds
+        if self.create_garch_timestamp <= current_timestamp:
             csv_df = self.Kraken_QFL.call_csv_history()
             api_df = self.Kraken_QFL.call_kraken_ohlc_data()
-            if csv_df is not None and not csv_df.empty:
-                # print(f"CSV DF :: \n{csv_df}")
-                if api_df is not None and not api_df.empty:
-                    # print(f"API DF :: \n{api_df}")
-                    
-                    # update CSV with new Data!
-                    ###########################################################
-                    # Merge data safely (without duplicates)
-                    combined_df = self.Kraken_QFL.append_non_overlapping_data(csv_df, api_df)
-            
-                    # Save the updated data to CSV (only combined original data, no calculations)
-                    self.Kraken_QFL.save_to_csv(combined_df)
 
-                    # Perform any additional calculations separately (not saved to CSV)
+            if csv_df is not None and not csv_df.empty:
+                if api_df is not None and not api_df.empty:
+                    # Merge historical and live data safely
+                    combined_df = self.Kraken_QFL.append_non_overlapping_data(csv_df, api_df)
+                    self.Kraken_QFL.save_to_csv(combined_df)
                     calculated_df, df_low_tails, df_high_tails, self._bid_baseline, \
                     self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline, \
-                    self.volatility_rank, self.current_vola = self.Kraken_QFL.get_ohlc_calculations(combined_df)                
+                    self.volatility_rank, self.current_vola = self.Kraken_QFL.get_ohlc_calculations(combined_df)
                 else:
                     print(f'API DF Empty, Using only historical Data')
-                    # Perform any additional calculations separately (not saved to CSV)
                     calculated_df, df_low_tails, df_high_tails, self._bid_baseline, \
                     self._ask_baseline, self._bid_trailing_baseline, self._ask_trailing_baseline, \
                     self.volatility_rank, self.current_vola = self.Kraken_QFL.get_ohlc_calculations(csv_df)
@@ -1086,43 +1127,35 @@ class KRAKENQFLBOT(ScriptStrategyBase):
             else:
                 print(f"No CSV data found. Initializing new dataset.")
             self.target_profitability = max(self.min_profitability, self.current_vola)
-            self.create_garch_timestamp = self.garch_refresh_time + self.current_timestamp
+            self.create_garch_timestamp = self.garch_refresh_time + current_timestamp
 
-        # Ensure enough time has passed since the last order fill before placing new orders
-        if self.create_timestamp <= self.current_timestamp:
-            # self.cancel_all_orders()
-            self.cancel_bid_orders()
-            self.cancel_ask_orders()
+        # Ensure that trade cycles are initialized for bids and asks
+        if not hasattr(self, 'bid_cycle') or not hasattr(self, 'ask_cycle'):
+            self.bid_cycle = TradeCycle(
+                side="bid",
+                cancel_cooldown_duration=self.cancel_cooldown_duration,
+                order_refresh_time=self.order_refresh_time,
+                get_balance_fn=self.get_balance_df,
+                create_proposal_fn=self.create_proposal,
+                adjust_proposal_fn=self.adjust_proposal_to_budget,
+                place_orders_fn=self.place_orders,
+                cancel_orders_fn=self.cancel_bid_orders
+            )
 
-            # # Call the balance dataframe
-            # self.get_balance_df()
+            self.ask_cycle = TradeCycle(
+                side="ask",
+                cancel_cooldown_duration=self.cancel_cooldown_duration,
+                order_refresh_time=self.order_refresh_time,
+                get_balance_fn=self.get_balance_df,
+                create_proposal_fn=self.create_proposal,
+                adjust_proposal_fn=self.adjust_proposal_to_budget,
+                place_orders_fn=self.place_orders,
+                cancel_orders_fn=self.cancel_ask_orders
+            )
 
-            # If there was a fill or cancel, this timer will halt new orders until timers are met   
-            if self.wait_after_fill_timestamp <= self.current_timestamp and \
-            self.wait_after_cancel_timestamp <= self.current_timestamp:
-
-
-                # Update Timestamps
-                self.wait_after_cancel_timestamp = self.current_timestamp + self.cancel_cooldown_duration + self.order_refresh_time   # e.g., 10 seconds
-
-                # Reset the Trade Cycle Execution After Timers End
-                self.trade_in_progress = False
-
-
-
-
-                # Open Orders if the halt timer is changed to False
-                if not self.trade_in_progress:
-                    # Call the balance dataframe
-                    self.get_balance_df()
-                    # Flag the start of a trade Execution
-                    self.trade_in_progress = True
-                    proposal: List[OrderCandidate] = self.create_proposal()
-                    proposal_adjusted: List[OrderCandidate] = self.adjust_proposal_to_budget(proposal)
-                    self.place_orders(proposal_adjusted)
-                    
-                    # Update Length of order open Timestamp
-                    self.create_timestamp = self.order_refresh_time + self.current_timestamp
+        # Update both bid and ask trade cycles
+        self.bid_cycle.update(current_timestamp)
+        self.ask_cycle.update(current_timestamp)
         
         ########## Profiling example to find time/speed of code
         # # Stop profiling
@@ -1141,7 +1174,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         #     f.write(s.getvalue())
 
 
-    def create_proposal(self) -> List[OrderCandidate]:
+    def create_proposal(self, side) -> List[OrderCandidate]:
         bp, sp = self.determine_log_multipliers()
         # Fetch balances and optimal bid/ask prices
         _, _, _, _, _, maker_base_balance, quote_balance_in_base = self.get_current_positions()
@@ -1172,43 +1205,45 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         cumulative_order_size_bid = 0
         cumulative_order_size_ask = 0
 
-        # Loop through bid levels
-        for i in range(len(bid_order_levels)):
-            order_size_bid = bid_order_levels.at[i, 'size']
-            order_price_bid = bid_order_levels.at[i, 'price']  # Use the price directly from the DataFrame
+        if side == 'bid':
+            # Loop through bid levels
+            for i in range(len(bid_order_levels)):
+                order_size_bid = bid_order_levels.at[i, 'size']
+                order_price_bid = bid_order_levels.at[i, 'price']  # Use the price directly from the DataFrame
 
-            # Check if there's enough balance to place the order
-            if cumulative_order_size_bid + order_size_bid <= quote_balance_in_base:
-                buy_order = OrderCandidate(
-                    trading_pair=self.trading_pair,
-                    is_maker=True,
-                    order_type=OrderType.LIMIT,
-                    order_side=TradeType.BUY,
-                    amount=Decimal(order_size_bid),
-                    price=order_price_bid,
-                    from_total_balances=False
-                )
-                order_counter.append(buy_order)
-                cumulative_order_size_bid += order_size_bid  # Update cumulative order size
+                # Check if there's enough balance to place the order
+                if cumulative_order_size_bid + order_size_bid <= quote_balance_in_base:
+                    buy_order = OrderCandidate(
+                        trading_pair=self.trading_pair,
+                        is_maker=True,
+                        order_type=OrderType.LIMIT,
+                        order_side=TradeType.BUY,
+                        amount=Decimal(order_size_bid),
+                        price=order_price_bid,
+                        from_total_balances=False
+                    )
+                    order_counter.append(buy_order)
+                    cumulative_order_size_bid += order_size_bid  # Update cumulative order size
+                    
+        if side == 'ask':
+            # Loop through ask levels
+            for i in range(len(ask_order_levels)):
+                order_size_ask = ask_order_levels.at[i, 'size']
+                order_price_ask = ask_order_levels.at[i, 'price']  # Use the price directly from the DataFrame
 
-        # Loop through ask levels
-        for i in range(len(ask_order_levels)):
-            order_size_ask = ask_order_levels.at[i, 'size']
-            order_price_ask = ask_order_levels.at[i, 'price']  # Use the price directly from the DataFrame
-
-            # Check if there's enough balance to place the order
-            if cumulative_order_size_ask + order_size_ask <= maker_base_balance:
-                sell_order = OrderCandidate(
-                    trading_pair=self.trading_pair,
-                    is_maker=True,
-                    order_type=OrderType.LIMIT,
-                    order_side=TradeType.SELL,
-                    amount=Decimal(order_size_ask),
-                    price=order_price_ask,
-                    from_total_balances=True
-                )
-                order_counter.append(sell_order)
-                cumulative_order_size_ask += order_size_ask  # Update cumulative order size
+                # Check if there's enough balance to place the order
+                if cumulative_order_size_ask + order_size_ask <= maker_base_balance:
+                    sell_order = OrderCandidate(
+                        trading_pair=self.trading_pair,
+                        is_maker=True,
+                        order_type=OrderType.LIMIT,
+                        order_side=TradeType.SELL,
+                        amount=Decimal(order_size_ask),
+                        price=order_price_ask,
+                        from_total_balances=True
+                    )
+                    order_counter.append(sell_order)
+                    cumulative_order_size_ask += order_size_ask  # Update cumulative order size
 
         return order_counter
 
