@@ -799,25 +799,7 @@ class KRAKENQFLBOT(ScriptStrategyBase):
         self.volatility_periods, self.rolling_periods, self.trading_style)
 
 
-        # Cooldown for how long an order stays in place. 
-        self.create_timestamp = 0
-
-        min_refresh_time = 90
-        max_refresh_time = 300
-        
-        self.order_refresh_time = 89 # random.randint(min_refresh_time, max_refresh_time)
-
-        # Cooldown for Volatility calculations 
-        self.create_garch_timestamp = 0
-        self.garch_refresh_time = 600 
-        self_last_garch_time_reported = 0
-        
-        # Cooldown after a fill
-        self.wait_after_fill_timestamp = 0
-        self.fill_cooldown_duration = 27
-        # Cooldown after cancelling orders
-        self.wait_after_cancel_timestamp = 0
-        self.cancel_cooldown_duration = 7
+ 
 
         self.min_order_size_bid = self.order_amount 
         self.min_order_size_ask = self.order_amount
@@ -873,6 +855,30 @@ class KRAKENQFLBOT(ScriptStrategyBase):
 
         self.trade_position_text = ""
         
+
+
+        # Trade Cycle TIMERS and COOLDOWNS
+       # Cooldown for how long an order stays in place. 
+        self.create_timestamp = 0
+
+        # If you are using a randomized between values timer(not currently used)
+        # min_refresh_time = 90
+        # max_refresh_time = 300
+        
+        self.order_refresh_time = 89 # random.randint(min_refresh_time, max_refresh_time)
+
+        # Cooldown for Volatility calculations 
+        self.create_garch_timestamp = 0
+        self.garch_refresh_time = 600 
+        self_last_garch_time_reported = 0
+        
+        # Cooldown after a fill
+        self.wait_after_fill_timestamp = 0
+        self.fill_cooldown_duration = 11
+        # Cooldown after cancelling orders
+        self.wait_after_cancel_timestamp = 0
+        self.cancel_cooldown_duration = 7
+
         self.bid_cycle = self.TradeCycle(
             side="bid",
             cancel_cooldown_duration=self.cancel_cooldown_duration,
