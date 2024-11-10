@@ -21,6 +21,7 @@ services:
       - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
       - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
       - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
+      - /home/tyler/hummingbot/data:/home/tyler/hummingbot/data
     logging:
       driver: "json-file"
       options:
@@ -51,6 +52,8 @@ services:
       - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
       - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
       - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
+      - /home/tyler/hummingbot/data:/home/tyler/hummingbot/data
+
     logging:
       driver: "json-file"
       options:
@@ -84,6 +87,8 @@ services:
       - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
       - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
       - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
+      - /home/tyler/hummingbot/data:/home/tyler/hummingbot/data
+
     logging:
       driver: "json-file"
       options:
@@ -117,6 +122,8 @@ services:
       - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
       - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
       - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
+      - /home/tyler/hummingbot/data:/home/tyler/hummingbot/data
+
     logging:
       driver: "json-file"
       options:
