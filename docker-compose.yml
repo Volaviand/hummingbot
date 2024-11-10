@@ -47,6 +47,10 @@ services:
       - ./certs:/home/hummingbot/certs
       - ./scripts:/home/hummingbot/scripts
       - ./controllers:/home/hummingbot/controllers
+      # Add directories you need
+      - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
+      - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
+      - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
     logging:
       driver: "json-file"
       options:
@@ -76,6 +80,10 @@ services:
       - ./certs:/home/hummingbot/certs
       - ./scripts:/home/hummingbot/scripts
       - ./controllers:/home/hummingbot/controllers
+      # Add directories you need
+      - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
+      - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
+      - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
     logging:
       driver: "json-file"
       options:
@@ -105,6 +113,10 @@ services:
       - ./certs:/home/hummingbot/certs
       - ./scripts:/home/hummingbot/scripts
       - ./controllers:/home/hummingbot/controllers
+      # Add directories you need
+      - /home/tyler/quant/API_call_tests:/home/tyler/hummingbot/API_call_tests
+      - /home/tyler/hummingbot/data/KrakenData:/home/tyler/hummingbot/data/KrakenData
+      - /home/tyler/hummingbot/qfl:/home/tyler/hummingbot/qfl
     logging:
       driver: "json-file"
       options:
