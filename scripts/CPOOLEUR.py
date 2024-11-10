@@ -221,7 +221,7 @@ class KRAKENQFLHISTORY():
             return df
     
         except FileNotFoundError:
-            print(f"Error: File not found: {filepath}")
+            print(f"Error: File not found: {self.filepath}")
             return None
 
     def get_ohlc_calculations(self, df, fitted_params=None):
