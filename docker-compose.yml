@@ -73,11 +73,11 @@ services:
      context: .
      dockerfile: Dockerfile
     volumes:
-      - ./conf:/home/hummingbot/conf
-      - ./conf/connectors:/home/hummingbot/conf/connectors
-      - ./conf/strategies:/home/hummingbot/conf/strategies
-      - ./conf/controllers:/home/hummingbot/conf/controllers
-      - ./conf/scripts:/home/hummingbot/conf/scripts
+      - ./conf:/home/hummingbot/conf_2
+      - ./conf/connectors:/home/hummingbot/conf_2/connectors
+      - ./conf/strategies:/home/hummingbot/conf_2/strategies
+      - ./conf/controllers:/home/hummingbot/conf_2/controllers
+      - ./conf/scripts:/home/hummingbot/conf_2/scripts
       - ./logs:/home/hummingbot/logs
       - ./data:/home/hummingbot/data
       - ./certs:/home/hummingbot/certs_2
@@ -108,11 +108,11 @@ services:
      context: .
      dockerfile: Dockerfile
     volumes:
-      - ./conf:/home/hummingbot/conf
-      - ./conf/connectors:/home/hummingbot/conf/connectors
-      - ./conf/strategies:/home/hummingbot/conf/strategies
-      - ./conf/controllers:/home/hummingbot/conf/controllers
-      - ./conf/scripts:/home/hummingbot/conf/scripts
+      - ./conf:/home/hummingbot/conf_2
+      - ./conf/connectors:/home/hummingbot/conf_2/connectors
+      - ./conf/strategies:/home/hummingbot/conf_2/strategies
+      - ./conf/controllers:/home/hummingbot/conf_2/controllers
+      - ./conf/scripts:/home/hummingbot/conf_2/scripts
       - ./logs:/home/hummingbot/logs
       - ./data:/home/hummingbot/data
       - ./certs:/home/hummingbot/certs_2
