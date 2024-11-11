@@ -80,7 +80,7 @@ services:
       - ./conf/scripts:/home/hummingbot/conf/scripts
       - ./logs:/home/hummingbot/logs
       - ./data:/home/hummingbot/data
-      - ./certs:/home/hummingbot/certs
+      - ./certs:/home/hummingbot/certs_2
       - ./scripts:/home/hummingbot/scripts
       - ./controllers:/home/hummingbot/controllers
       # Add directories you need
@@ -115,7 +115,7 @@ services:
       - ./conf/scripts:/home/hummingbot/conf/scripts
       - ./logs:/home/hummingbot/logs
       - ./data:/home/hummingbot/data
-      - ./certs:/home/hummingbot/certs
+      - ./certs:/home/hummingbot/certs_2
       - ./scripts:/home/hummingbot/scripts
       - ./controllers:/home/hummingbot/controllers
       # Add directories you need
